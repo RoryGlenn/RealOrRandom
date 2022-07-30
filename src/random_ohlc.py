@@ -150,8 +150,8 @@ def create_figure(index: pd.RangeIndex, open: pd.Series, high: pd.Series,
 def main() -> None:
     start_price = 100_000
     asset_name = 'Unknown'
-    total_graphs = 20
-    num_days_range = 60
+    total_graphs = 3
+    num_days_range = 120
     answers = {}
 
     data_list = [
@@ -169,6 +169,9 @@ def main() -> None:
         BINANCE_ETHUSDT_FUTURES_DAY: {'start_date': '2019-11-27', 'end_date': '2022-03-15'},
         BINANCE_LTCUSDT_FUTURES_DAY: {'start_date': '2020-01-09', 'end_date': '2022-03-15'},
     }
+
+    # TODO
+    # Double the length, create one file with half that devin gets, another with all of it that I get
 
     for i in range(total_graphs):
         # pick a data set randomly
@@ -214,13 +217,26 @@ def main() -> None:
             open=df['open'], high=df['high'], low=df['low'], close=df['close'])
 
         df.reset_index(inplace=True)
-        testdf = downsample_ohlc_data(df, '4h')
+        # testdf = downsample_ohlc_data(df, '4h')
 
         df.drop(columns=['date'], inplace=True)
 
-        fig = create_figure(df.index, norm_open, norm_high,
-                            norm_low, norm_close, answers[i])
+        # create a new df that contains only half the dates and prices
+        half_df = df.iloc[:len(df)//2]
+        half_norm_open = norm_open.iloc[:len(norm_open)//2]
+        half_norm_high = norm_high.iloc[:len(norm_high)//2]
+        half_norm_low = norm_low.iloc[:len(norm_low)//2]
+        half_norm_close = norm_close.iloc[:len(norm_close)//2]
+
+        fig = create_figure(half_df.index, half_norm_open, half_norm_high,
+                            half_norm_low, half_norm_close, f'Half Graph {i}')
         fig.show()
+
+        fig = create_figure(df.index, norm_open, norm_high,
+                            norm_low, norm_close, f'Graph {i}')
+        fig.show()
+
+        print(answers[i])
 
     pprint(answers)
 
