@@ -134,13 +134,72 @@ def create_half_df(open: pd.Series, high: pd.Series, low: pd.Series, close: pd.S
         low.iloc[:len(low)//2], close.iloc[:len(close)//2]
 
 
+def create_whale_candle(df: pd.DataFrame) -> pd.DataFrame:
+    return df
+
+
 def extend_wicks(df: pd.DataFrame, hl_mult: float) -> pd.DataFrame:
     """Returns a dataframe with the high and low wicks multiplied by the passed in hl_mult"""
     df.reset_index(inplace=True)
-    for r in range(len(df)):
-        df.at[r, 'high'] = df.iloc[r]['high'] * hl_mult
-        df.at[r, 'low'] = df.iloc[r]['low'] * hl_mult
-        print(df.at[r, 'low'])
+    for i in range(len(df)):
+        new_h = df.iloc[i]['high'] * hl_mult
+        new_l = df.iloc[i]['low'] - (df.iloc[i]['low'] * (hl_mult-1))
+
+        if df.iloc[i]['open'] < new_l or \
+                df.iloc[i]['high'] < new_l or \
+                df.iloc[i]['close'] < new_l or \
+                df.iloc[i]['low'] < new_l:
+            # Error: The open value is lower than the new_l value (new low)
+            print('a value is lower than the new low')
+            from sys import exit as sys_exit
+            sys_exit(1)
+
+        if df.iloc[i]['open'] > new_h or \
+                df.iloc[i]['high'] > new_h or \
+                df.iloc[i]['close'] > new_h or \
+                df.iloc[i]['low'] > new_h:
+            # Error: The open value is lower than the new_l value (new low)
+            print('a value is high than the new high')
+            from sys import exit as sys_exit
+            sys_exit(1)
+
+        df.at[i, 'high'] = new_h
+        df.at[i, 'low'] = new_l
+    df.set_index('date', inplace=True)
+    return df
+
+
+def extend_wicks_randomly(df: pd.DataFrame) -> pd.DataFrame:
+    """Returns a dataframe with the highs and lows multiplied by a random float"""
+    df.reset_index(inplace=True)
+    for i in range(len(df)):
+        h_mult = random.uniform(1, 1.001)
+        l_mult = random.uniform(1, 1.001)
+        # extend 1 out of every 3 candles instead of every candle
+
+        new_h = df.iloc[i]['high'] * h_mult
+        new_l = df.iloc[i]['low'] - (df.iloc[i]['low'] * (l_mult-1))
+
+        if df.iloc[i]['open'] < new_l or \
+                df.iloc[i]['high'] < new_l or \
+                df.iloc[i]['close'] < new_l or \
+                df.iloc[i]['low'] < new_l:
+            # Error: The open value is lower than the new_l value (new low)
+            print('a value is lower than the new low')
+            from sys import exit as sys_exit
+            sys_exit(1)
+
+        if df.iloc[i]['open'] > new_h or \
+                df.iloc[i]['high'] > new_h or \
+                df.iloc[i]['close'] > new_h or \
+                df.iloc[i]['low'] > new_h:
+            # Error: The open value is lower than the new_l value (new low)
+            print('a value is high than the new high')
+            from sys import exit as sys_exit
+            sys_exit(1)
+
+        df.at[i, 'high'] = new_h
+        df.at[i, 'low'] = new_l
     df.set_index('date', inplace=True)
     return df
 
@@ -217,23 +276,25 @@ def main() -> None:
 
         start_date, end_date = create_dates(
             num_days_range, adj_start_date_limit, end_date_limit)
-        volatility = random.randint(100, 400)
 
         df = None
 
         # if number is 1 generate real df, else: generate fake (aka random)
         if random.randint(0, 1):
-            print('Real')
+        # if True:
+            # print('Real')
             df = df_real.copy()
             df = real_case(df, start_date, end_date)
             answers[i] = f"Real: {start_date} to {end_date}"
         else:
-            print('Fake')
+            # print('Fake')
+            volatility = random.randint(100, 400)
             df = random_case(num_days_range, start_price, asset_name,
                              start_date, volatility, df)
             answers[i] = f"Fake: {start_date} to {end_date}"
 
-        df = extend_wicks(df, 1.01)
+            # df = extend_wicks(df, 1.002)
+            df = extend_wicks_randomly(df)
 
         norm_open, norm_high, norm_low, norm_close = normalize_ohlc_data(
             df['open'], df['high'], df['low'], df['close'])
