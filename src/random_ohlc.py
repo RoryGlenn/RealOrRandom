@@ -11,8 +11,10 @@ from constants.constants import *
 
 def normalize_ohlc_data(open: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
                         ) -> tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
-    """Normalize OHLC data"""
-    # norm = (data - min) / (max - min)
+    """Normalize OHLC data with random multiplier
+        normalization formula: (data - min) / (max - min)
+    """
+
     _max = np.max([np.max(open), np.max(high), np.max(low), np.max(close)])
     _min = np.min([np.min(open), np.min(high), np.min(low), np.min(close)])
 
@@ -20,8 +22,14 @@ def normalize_ohlc_data(open: pd.Series, high: pd.Series, low: pd.Series, close:
     norm_high = (high - _min) / (_max - _min)
     norm_low = (low - _min) / (_max - _min)
     norm_close = (close - _min) / (_max - _min)
-    return round(norm_open*100, 4), round(norm_high*100, 4), \
-        round(norm_low*100, 4), round(norm_close*100, 4)
+
+    random_multiplier = random.randint(9, 999)
+
+    o = round(norm_open*random_multiplier, 4)
+    h = round(norm_high*random_multiplier, 4)
+    l = round(norm_low*random_multiplier, 4)
+    c = round(norm_close*random_multiplier, 4)
+    return o, h, l, c
 
 
 def generate_random_crypto_df(days: int, start_price: float,
@@ -45,8 +53,8 @@ def generate_random_crypto_df(days: int, start_price: float,
     steps[0] = 0
 
     price = start_price + np.cumsum(steps)
-    price = [abs(p) for p in price]
-    price = [round(p, 6) for p in price]
+    price = [round(abs(p), 6) for p in price]
+    # price = [round(p, 6) for p in price]
 
     return pd.DataFrame({
         'ticker': np.repeat([col_name], periods),
@@ -58,8 +66,6 @@ def downsample_ohlc_data(df: pd.DataFrame, timeframe: str) -> None:
     df['date'] = pd.to_datetime(df['date'])
     df = df.set_index('date')
 
-    # print(df)
-    # print()
     # print(df.index[:7][-1], df['open'][0], max(df['high'][:7]), min(df['low'][:7]), df['close'][:7][-1])
 
     df = df.resample('W').aggregate({
@@ -73,7 +79,7 @@ def downsample_ohlc_data(df: pd.DataFrame, timeframe: str) -> None:
 
 
 def create_dates(num_days_range: int, start_date_limit: str, end_date_limit: str) -> tuple[str, str]:
-    """Randonly pick a start and end date within the given starting and ending bounds"""
+    """Randomly pick a start and end date within the given starting and ending bounds"""
 
     start_date_limit_l = [int(i) for i in start_date_limit.split('-')]
     end_date_limit_l = [int(i) for i in end_date_limit.split('-')]
@@ -121,6 +127,24 @@ def random_case(num_days: int, start_price: float, asset_name: str,
     return df.price.resample('D').ohlc()  # how does this create ohlc?
 
 
+def create_half_df(open: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
+                   ) -> tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
+    """Returns new series objects that contain half the rows as the input series objects"""
+    return open.iloc[:len(open)//2], high.iloc[:len(high)//2], \
+        low.iloc[:len(low)//2], close.iloc[:len(close)//2]
+
+
+def extend_wicks(df: pd.DataFrame, hl_mult: float) -> pd.DataFrame:
+    """Returns a dataframe with the high and low wicks multiplied by the passed in hl_mult"""
+    df.reset_index(inplace=True)
+    for r in range(len(df)):
+        df.at[r, 'high'] = df.iloc[r]['high'] * hl_mult
+        df.at[r, 'low'] = df.iloc[r]['low'] * hl_mult
+        print(df.at[r, 'low'])
+    df.set_index('date', inplace=True)
+    return df
+
+
 def create_figure(index: pd.RangeIndex, open: pd.Series, high: pd.Series,
                   low: pd.Series, close: pd.Series, answer=None) -> go.Figure:
     fig = go.Figure(data=go.Candlestick(
@@ -150,7 +174,7 @@ def create_figure(index: pd.RangeIndex, open: pd.Series, high: pd.Series,
 def main() -> None:
     start_price = 100_000
     asset_name = 'Unknown'
-    total_graphs = 3
+    total_graphs = 1
     num_days_range = 120
     answers = {}
 
@@ -169,9 +193,6 @@ def main() -> None:
         BINANCE_ETHUSDT_FUTURES_DAY: {'start_date': '2019-11-27', 'end_date': '2022-03-15'},
         BINANCE_LTCUSDT_FUTURES_DAY: {'start_date': '2020-01-09', 'end_date': '2022-03-15'},
     }
-
-    # TODO
-    # Double the length, create one file with half that devin gets, another with all of it that I get
 
     for i in range(total_graphs):
         # pick a data set randomly
@@ -202,38 +223,41 @@ def main() -> None:
 
         # if number is 1 generate real df, else: generate fake (aka random)
         if random.randint(0, 1):
+            print('Real')
             df = df_real.copy()
             df = real_case(df, start_date, end_date)
             answers[i] = f"Real: {start_date} to {end_date}"
         else:
+            print('Fake')
             df = random_case(num_days_range, start_price, asset_name,
                              start_date, volatility, df)
             answers[i] = f"Fake: {start_date} to {end_date}"
 
-        # df.reset_index(inplace=True)
-        # df.drop(columns=['date'], inplace=True)
+        df = extend_wicks(df, 1.01)
 
         norm_open, norm_high, norm_low, norm_close = normalize_ohlc_data(
-            open=df['open'], high=df['high'], low=df['low'], close=df['close'])
+            df['open'], df['high'], df['low'], df['close'])
 
         df.reset_index(inplace=True)
+
         # testdf = downsample_ohlc_data(df, '4h')
 
         df.drop(columns=['date'], inplace=True)
 
         # create a new df that contains only half the dates and prices
         half_df = df.iloc[:len(df)//2]
-        half_norm_open = norm_open.iloc[:len(norm_open)//2]
-        half_norm_high = norm_high.iloc[:len(norm_high)//2]
-        half_norm_low = norm_low.iloc[:len(norm_low)//2]
-        half_norm_close = norm_close.iloc[:len(norm_close)//2]
+
+        half_norm_open, half_norm_high, half_norm_low, half_norm_close = create_half_df(
+            norm_open, norm_high, norm_low, norm_close)
 
         fig = create_figure(half_df.index, half_norm_open, half_norm_high,
-                            half_norm_low, half_norm_close, f'Half Graph {i}')
+                            half_norm_low, half_norm_close, f'H_Graph {i}')
+        fig.write_html(f"html/H_Graph {i}.html")
         fig.show()
 
         fig = create_figure(df.index, norm_open, norm_high,
-                            norm_low, norm_close, f'Graph {i}')
+                            norm_low, norm_close, f'F_Graph {i}')
+        fig.write_html(f"html/F_Graph {i}.html")
         fig.show()
 
         print(answers[i])
@@ -242,7 +266,7 @@ def main() -> None:
 
 
 """
-TODO: 
+TODO:
     Resample time frame to 1min, 5min, 15min, 1hr, 4hr, 1d, 1w
 
 """
