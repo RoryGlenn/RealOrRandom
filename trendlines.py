@@ -14,13 +14,12 @@ pio.renderers.default = 'browser'
 df = pd.read_csv('data/Binance_BTCUSDT_d.csv', usecols=[
     'date', 'symbol', 'open', 'high', 'low', 'close'], skiprows=1)[::-1]
 
-trend_line_df = df
 
 # Perform the date filtering to get the plotting df, and the df to get the
-df = (
-    df[(df['date'] > '2020-11-01') & (df['date'] < '2022-01-01')]
-    .reset_index(drop=True)
-)
+# df = (
+#     df[(df['date'] > '2020-11-01') & (df['date'] < '2022-01-01')]
+#     .reset_index(drop=True)
+# )
 
 # Plot the figure with plotly
 layout = go.Layout(
@@ -29,7 +28,6 @@ layout = go.Layout(
     yaxis={'title': 'Price'},
 )
 
-fig: go.Figure
 data = [
     go.Candlestick(
         x=df['date'],
@@ -41,18 +39,18 @@ data = [
     ),
 ]
 
-delta = timedelta(days=7)
-start_date_i = date(2021, 1, 1)
-end_date_i = date(2022, 1, 1)
+delta = timedelta(days=14)
+start_date_i = date(2022, 1, 1)
+end_date_i = date(2022, 7, 21)
 end_date_j = start_date_i + delta
-
 end_date_inner = start_date_i + delta
-
 
 m_res = None
 m_supp = None
 c_res = None
 c_supp = None
+trend_line_df = None
+
 
 while start_date_i <= end_date_i:
     while end_date_j <= end_date_inner:
@@ -72,7 +70,7 @@ while start_date_i <= end_date_i:
             trend_line_df.low.values,
         )
 
-        end_date_j += timedelta(days=1)
+        end_date_j += delta
 
     data.append(
         go.Scatter(
