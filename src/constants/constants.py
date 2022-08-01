@@ -14,6 +14,9 @@ BINANCE_LTCUSDT_FUTURES_DAY = 'data/LTCUSDT_Binance_futures_data_day.csv'
 BINANCE_XMRUSDT_FUTURES_DAY = 'data/XMRUSDT_Binance_futures_data_day.csv'
 BINANCE_ADAUSDT_FUTURES_DAY = 'data/ADAUSDT_Binance_futures_data_day.csv'
 
+RANDOM_LOWER_LIMIT = 1
+RANDOM_UPPER_LIMIT = 1.001
+
 BTCUSD_DECIMAL_PLACES = 5
 TEN_THOUSAND = 10_000
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"

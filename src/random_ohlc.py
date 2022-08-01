@@ -175,7 +175,6 @@ def create_shrimp_candles(df: pd.DataFrame) -> pd.DataFrame:
 
     for i in range(len(df)):
         if random.randint(1, 10) == 1:
-
             new_o = df.iloc[i]['open'] * 0.99
             new_h = df.iloc[i]['high'] * 0.99
             # new_l = df.iloc[i]['low'] / 0.99
@@ -241,8 +240,8 @@ def extend_wicks_randomly(df: pd.DataFrame) -> pd.DataFrame:
     """Returns a dataframe with the highs and lows multiplied by a random float"""
     df.reset_index(inplace=True)
     for i in range(len(df)):
-        h_mult = random.uniform(1, 1.001)
-        l_mult = random.uniform(1, 1.001)
+        h_mult = random.uniform(RANDOM_LOWER_LIMIT, RANDOM_UPPER_LIMIT)
+        l_mult = random.uniform(RANDOM_LOWER_LIMIT, RANDOM_UPPER_LIMIT)
 
         new_h = df.iloc[i]['high'] * h_mult
         new_l = df.iloc[i]['low'] - (df.iloc[i]['low'] * (l_mult-1))
@@ -257,6 +256,7 @@ def connect_open_close_candles(df: pd.DataFrame) -> pd.DataFrame:
     """Returns a dataframe where every candles close is the next candles open and
     every candles open is the previously candles close"""
     df.reset_index(inplace=True)
+
     for i in range(1, len(df)):
         # connects each open and close together
         df.at[i, 'open'] = df.iloc[i-1]['close']
@@ -316,7 +316,8 @@ def main() -> None:
     num_days_range = 120
     answers = {}
 
-    date_range_dict = {
+    data_date_ranges = {
+        # spot
         BINANCE_BTCUSDT_DAY: {'start_date': '2019-09-08', 'end_date': '2022-06-16'},
         BINANCE_AAVEUSDT_DAY: {'start_date': '2020-10-16', 'end_date': '2022-06-16'},
         BINANCE_ADAUSDT_DAY: {'start_date': '2018-04-17', 'end_date': '2022-07-30'},
@@ -327,6 +328,7 @@ def main() -> None:
         BINANCE_ETCUSDT_DAY: {'start_date': '2018-06-12', 'end_date': '2022-07-30'},
         BINANCE_ETHUSDT_DAY: {'start_date': '2017-08-17', 'end_date': '2022-07-30'},
 
+        # spot
         BINANCE_ETHUSDT_FUTURES_DAY: {'start_date': '2019-11-27', 'end_date': '2022-03-15'},
         BINANCE_LTCUSDT_FUTURES_DAY: {'start_date': '2020-01-09', 'end_date': '2022-03-15'},
         BINANCE_ADAUSDT_FUTURES_DAY: {'start_date': '2020-01-31', 'end_date': '2022-07-30'},
@@ -337,9 +339,9 @@ def main() -> None:
 
     for i in range(total_graphs):
         # pick a data set randomly
-        data_choice = random.choice(list(date_range_dict.keys()))
+        data_choice = random.choice(list(data_date_ranges.keys()))
 
-        d_range = date_range_dict.get(data_choice)
+        d_range = data_date_ranges.get(data_choice)
         start_date__limit_l = [int(i)
                                for i in d_range['start_date'].split('-')]
 
