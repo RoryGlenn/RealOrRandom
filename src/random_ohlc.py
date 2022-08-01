@@ -99,8 +99,8 @@ def create_dates(num_days_range: int, start_date_limit: str, end_date_limit: str
     dt_list = [start_limit_dt +
                datetime.timedelta(days=x) for x in range(date_range_limit.days)]
 
-    # pick a random day to start minus the given range and the hidden days
-    start_i = random.randint(0, len(dt_list) - num_days_range - HIDDEN_DAYS)
+    # pick a random day to start minus the given range
+    start_i = random.randint(0, len(dt_list) - num_days_range)
     end_i = start_i + num_days_range
 
     start_random_dt = dt_list[start_i]
@@ -138,30 +138,16 @@ def create_whale_candle(df: pd.DataFrame) -> pd.DataFrame:
     return df
 
 
+def create_shrimp_candle(df: pd.DataFrame) -> pd.DataFrame:
+    return df
+
+
 def extend_wicks(df: pd.DataFrame, hl_mult: float) -> pd.DataFrame:
     """Returns a dataframe with the high and low wicks multiplied by the passed in hl_mult"""
     df.reset_index(inplace=True)
     for i in range(len(df)):
         new_h = df.iloc[i]['high'] * hl_mult
         new_l = df.iloc[i]['low'] - (df.iloc[i]['low'] * (hl_mult-1))
-
-        if df.iloc[i]['open'] < new_l or \
-                df.iloc[i]['high'] < new_l or \
-                df.iloc[i]['close'] < new_l or \
-                df.iloc[i]['low'] < new_l:
-            # Error: The open value is lower than the new_l value (new low)
-            print('a value is lower than the new low')
-            from sys import exit as sys_exit
-            sys_exit(1)
-
-        if df.iloc[i]['open'] > new_h or \
-                df.iloc[i]['high'] > new_h or \
-                df.iloc[i]['close'] > new_h or \
-                df.iloc[i]['low'] > new_h:
-            # Error: The open value is lower than the new_l value (new low)
-            print('a value is high than the new high')
-            from sys import exit as sys_exit
-            sys_exit(1)
 
         df.at[i, 'high'] = new_h
         df.at[i, 'low'] = new_l
@@ -175,28 +161,9 @@ def extend_wicks_randomly(df: pd.DataFrame) -> pd.DataFrame:
     for i in range(len(df)):
         h_mult = random.uniform(1, 1.001)
         l_mult = random.uniform(1, 1.001)
-        # extend 1 out of every 3 candles instead of every candle
 
         new_h = df.iloc[i]['high'] * h_mult
         new_l = df.iloc[i]['low'] - (df.iloc[i]['low'] * (l_mult-1))
-
-        if df.iloc[i]['open'] < new_l or \
-                df.iloc[i]['high'] < new_l or \
-                df.iloc[i]['close'] < new_l or \
-                df.iloc[i]['low'] < new_l:
-            # Error: The open value is lower than the new_l value (new low)
-            print('a value is lower than the new low')
-            from sys import exit as sys_exit
-            sys_exit(1)
-
-        if df.iloc[i]['open'] > new_h or \
-                df.iloc[i]['high'] > new_h or \
-                df.iloc[i]['close'] > new_h or \
-                df.iloc[i]['low'] > new_h:
-            # Error: The open value is lower than the new_l value (new low)
-            print('a value is high than the new high')
-            from sys import exit as sys_exit
-            sys_exit(1)
 
         df.at[i, 'high'] = new_h
         df.at[i, 'low'] = new_l
@@ -237,25 +204,28 @@ def main() -> None:
     num_days_range = 120
     answers = {}
 
-    data_list = [
-        BINANCE_BTCUSDT_DAY,
-        BINANCE_BTCUSDT_FUTURES_DAY,
-        BINANCE_AAVEUSDT_DAY,
-        BINANCE_ETHUSDT_FUTURES_DAY,
-        BINANCE_LTCUSDT_FUTURES_DAY,
-    ]
-
     date_range_dict = {
         BINANCE_BTCUSDT_DAY: {'start_date': '2019-09-08', 'end_date': '2022-06-16'},
-        BINANCE_BTCUSDT_FUTURES_DAY: {'start_date': '2019-09-08', 'end_date': '2022-03-15'},
         BINANCE_AAVEUSDT_DAY: {'start_date': '2020-10-16', 'end_date': '2022-06-16'},
+        BINANCE_ADAUSDT_DAY: {'start_date': '2018-04-17', 'end_date': '2022-07-30'},
+        BINANCE_CELRUSDT_DAY: {'start_date': '2019-03-25', 'end_date': '2022-07-30'},
+        BINANCE_DASHUSDT_DAY: {'start_date': '2019-03-28', 'end_date': '2022-07-30'},
+        BINANCE_DOGEUSDT_DAY: {'start_date': '2020-07-10', 'end_date': '2022-07-30'},
+        BINANCE_DOTUSDT_DAY: {'start_date': '2020-08-18', 'end_date': '2022-07-30'},
+        BINANCE_ETCUSDT_DAY: {'start_date': '2018-06-12', 'end_date': '2022-07-30'},
+        BINANCE_ETHUSDT_DAY: {'start_date': '2017-08-17', 'end_date': '2022-07-30'},
+
         BINANCE_ETHUSDT_FUTURES_DAY: {'start_date': '2019-11-27', 'end_date': '2022-03-15'},
         BINANCE_LTCUSDT_FUTURES_DAY: {'start_date': '2020-01-09', 'end_date': '2022-03-15'},
+        BINANCE_ADAUSDT_FUTURES_DAY: {'start_date': '2020-01-31', 'end_date': '2022-07-30'},
+        BINANCE_BTCUSDT_FUTURES_DAY: {'start_date': '2019-09-08', 'end_date': '2022-03-15'},
+        BINANCE_XMRUSDT_FUTURES_DAY: {
+            'start_date': '2020-02-03', 'end_date': '2022-07-30'}
     }
 
     for i in range(total_graphs):
         # pick a data set randomly
-        data_choice = random.choice(data_list)
+        data_choice = random.choice(list(date_range_dict.keys()))
 
         d_range = date_range_dict.get(data_choice)
         start_date__limit_l = [int(i)
@@ -280,12 +250,12 @@ def main() -> None:
         df = None
 
         # if number is 1 generate real df, else: generate fake (aka random)
-        if random.randint(0, 1):
-        # if True:
+        # if random.randint(0, 1):
+        if True:
             # print('Real')
             df = df_real.copy()
             df = real_case(df, start_date, end_date)
-            answers[i] = f"Real: {start_date} to {end_date}"
+            answers[i] = f"Real: {start_date} to {end_date} {data_choice}"
         else:
             # print('Fake')
             volatility = random.randint(100, 400)
