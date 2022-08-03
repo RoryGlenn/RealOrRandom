@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 import plotly.io as pio
 import plotly.graph_objects as go
-
 from get_trend_line import find_grad_intercept
 from constants.constants import BINANCE_BTCUSDT_DAY
 
@@ -132,6 +131,7 @@ def main() -> None:
 
     fig = go.Figure(layout=get_layout(), data=data)
     fig.update_xaxes(rangeslider_visible=False)
+    fig.write_html('html/ABC-USD.html')
     fig.show()
 
 

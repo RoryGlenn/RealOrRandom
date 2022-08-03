@@ -63,7 +63,6 @@ def generate_random_crypto_df(days: int, start_price: float,
 
     price = start_price + np.cumsum(steps)
     price = [round(abs(p), 6) for p in price]
-    # price = [round(p, 6) for p in price]
 
     return pd.DataFrame({
         'ticker': np.repeat([col_name], periods),
@@ -143,83 +142,39 @@ def create_half_df(open: pd.Series, high: pd.Series, low: pd.Series, close: pd.S
         low.iloc[:len(low)//2], close.iloc[:len(close)//2]
 
 
-def create_whale_candles(df: pd.DataFrame) -> pd.DataFrame:
-    """Returns a modified df contains whale values.
+def create_whale_candles(df: pd.DataFrame, random_chance: int) -> pd.DataFrame:
+    """Returns a modified df containing whale values.
         Iterates over the dataframe and extends all values
-        of the candle given a 10% chance,
+        of the candle given a random chance.
+
+        A single graph will have a random chance until a new graph is created.
     """
-    for i in range(len(df)):
-        if random.randint(1, 10) == 1:
-            df.reset_index(inplace=True)
-            df.at[i, 'open'] = df.iloc[i]['open'] * 1.01
-            df.at[i, 'high'] = df.iloc[i]['high'] * 1.01
-            df.at[i, 'low'] = df.iloc[i]['low'] / 1.01
-            df.at[i, 'close'] = df.iloc[i]['close'] / 1.01
 
-            # after a whale candle is created, the rest of the candles that follow need to be shifted
-            # to either the whales open or close value, otherwise it will look strange.
-
-            # if candle created is red, shift low,
-            # if the candle created is gree, shift high
-
-            df.set_index('date', inplace=True)
-    return df
-
-
-def create_shrimp_candles(df: pd.DataFrame) -> pd.DataFrame:
-    """Returns a modified df contains shrimp values.
-        Iterates over the dataframe and reduces all values
-        of the candle given a 10% chance,
-    """
     df.reset_index(inplace=True)
+    print(f"Whale candle probability: {random_chance}")
+    whale_candles_created = 0
 
     for i in range(len(df)):
-        if random.randint(1, 10) == 1:
-            new_o = df.iloc[i]['open'] * 0.99
-            new_h = df.iloc[i]['high'] * 0.99
-            # new_l = df.iloc[i]['low'] / 0.99
-            # new_c = df.iloc[i]['close'] / 0.99
+        if random.randint(1, 100) <= random_chance:
+            # if the random number chosen is less than or equal
+            # to random_chance, create a whale candle
 
-            if df.iloc[i]['open'] < df.iloc[i]['low']:
-                print(df.iloc[i]['open'], df.iloc[i]['low'])
-            if df.iloc[i]['high'] < df.iloc[i]['low']:
-                print(df.iloc[i]['high'], df.iloc[i]['low'])
-            if df.iloc[i]['close'] < df.iloc[i]['low']:
-                print(df.iloc[i]['close'], df.iloc[i]['low'])
+            # assigns a random floating point multiplier [1.005, 1.02]
+            # this is needed so every time a whale candle is created, it will
+            # not be stretched with the same ratio as the previous whale candle
+            #  or even the next whale candle
+            whale_mult = random.uniform(WHALE_LOWER_MULT, WHALE_UPPER_MULT)
 
-            # if new_o < new_l:
-            #     print(i, new_o, new_l)
-            # if new_h < new_l:
-            #     print(i, new_h, new_l)
-            # if new_c < new_l:
-            #     print(i, new_c, new_l)
+            df.at[i, 'open'] = df.iloc[i]['open'] * whale_mult
+            df.at[i, 'high'] = df.iloc[i]['high'] * whale_mult
+            df.at[i, 'low'] = df.iloc[i]['low'] / whale_mult
+            df.at[i, 'close'] = df.iloc[i]['close'] / whale_mult
 
-            # if new_o > new_h:
-            #     print(i, new_o, new_h)
-            # if new_l > new_h:
-            #     print(i, new_h, new_h)
-            # if new_c > new_h:
-            #     print(i, new_c, new_h)
+            print(f"Whale candle created: index: {i}")
+            whale_candles_created += 1
 
-            # if new_o < new_l or new_h < new_l or new_c < new_l:
-            #     print('a value is lower than the new low')
-            #     print(
-            #         f'new_o: {new_o}, new_l: {new_l}, new_h: {new_h}, new_c: {new_c}')
-            #     from sys import exit as sys_exit
-            #     sys_exit(1)
-
-            # if new_o > new_h or new_c > new_h or new_l > new_h:
-            #     print('a value is high than the new high')
-            #     print(
-            #         f'new_o: {new_o}, new_l: {new_l}, new_h: {new_h}, new_c: {new_c}')
-            #     from sys import exit as sys_exit
-            #     sys_exit(1)
-
-            df.at[i, 'open'] = new_o
-            df.at[i, 'high'] = new_h
-            # df.at[i, 'low'] = new_l
-            # df.at[i, 'close'] = new_c
     df.set_index('date', inplace=True)
+    print(f"Total whale candles created: {whale_candles_created}")
     return df
 
 
@@ -253,8 +208,10 @@ def extend_wicks_randomly(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def connect_open_close_candles(df: pd.DataFrame) -> pd.DataFrame:
-    """Returns a dataframe where every candles close is the next candles open and
-    every candles open is the previously candles close"""
+    """Returns a dataframe where every candles close is the next candles open.
+        This is needed because cryptocurrencies run 24/7. 
+        There are no breaks or pauses so each candle is connected to the next candle. 
+    """
     df.reset_index(inplace=True)
 
     for i in range(1, len(df)):
@@ -264,20 +221,30 @@ def connect_open_close_candles(df: pd.DataFrame) -> pd.DataFrame:
         min_value = min(df.iloc[i]['open'], df.iloc[i]['high'],
                         df.iloc[i]['close'])
 
+        max_value = max(df.iloc[i]['open'], df.iloc[i]['low'],
+                        df.iloc[i]['close'])
+
         # something went wrong and the low is not the lowest value
         if df.iloc[i]['low'] > min_value:
             # get the difference between the low and the lowest value and subtract it from the low
+            # df.at[i, 'low'] = df.iloc[i]['low'] - \
+            #     abs(min_value - df.iloc[i]['close'])
             df.at[i, 'low'] = df.iloc[i]['low'] - \
-                abs(min_value - df.iloc[i]['close'])
+                abs(min_value - df.iloc[i]['low'])
 
         # corrects any high/low error
-        if df.iloc[i]['high'] < df.iloc[i]['open']:
-            df.at[i, 'high'] = df.iloc[i]['open'] + \
-                abs(df.iloc[i]['high'] - df.iloc[i]['open'])
+        # if df.iloc[i]['high'] < df.iloc[i]['open']:
+        #     df.at[i, 'high'] = df.iloc[i]['open'] + \
+        #         abs(df.iloc[i]['high'] - df.iloc[i]['open'])
 
-        # the open can be lower than the low
-        # if df.iloc[i]['open'] < df.iloc[i]['low']:
-        #     df.at[i, 'low'] = df.iloc[i]['close'] - abs(df.iloc[i]['low'] - df.iloc[i]['close'])
+        # get the difference between the highest value and the high and add it to the high
+        if df.iloc[i]['high'] < max_value:
+            df.at[i, 'high'] = df.iloc[i]['high'] + \
+                abs(max_value - df.iloc[i]['high'])
+
+            # the open can be lower than the low
+            # if df.iloc[i]['open'] < df.iloc[i]['low']:
+            #     df.at[i, 'low'] = df.iloc[i]['close'] - abs(df.iloc[i]['low'] - df.iloc[i]['close'])
 
     df.set_index('date', inplace=True)
     return df
@@ -364,8 +331,8 @@ def main() -> None:
         df = None
 
         # if number is 1 generate real df, else: generate fake (aka random)
-        if random.randint(0, 1):
-            # if True:
+        # if random.randint(0, 1):
+        if False:
             # print('Real')
             df = df_real.copy()
             df = real_case(df, start_date, end_date)
@@ -378,9 +345,14 @@ def main() -> None:
             answers[i] = f"Fake: {start_date} to {end_date}"
 
             # make the candles look a little bit more real
-            # df = create_whale_candles(df)
-            df = connect_open_close_candles(df)
+            #############################################
+            # probability for creating a whale candle will be from 1-20%
+            random_chance = random.randint(1, 20)
+
+            df = create_whale_candles(df, random_chance)
             df = extend_wicks_randomly(df)
+            df = connect_open_close_candles(df)
+            #############################################
 
         norm_open, norm_high, norm_low, norm_close = normalize_ohlc_data(
             df['open'], df['high'], df['low'], df['close'])
@@ -418,3 +390,6 @@ TODO:
 
 if __name__ == '__main__':
     main()
+
+
+# 4 wrong, 6 right
