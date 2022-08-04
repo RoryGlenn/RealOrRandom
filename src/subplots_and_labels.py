@@ -2,7 +2,7 @@ import pandas as pd
 import plotly.io as pio
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from src.constants.constants import *
+from constants.constants import *
 
 pio.renderers.default = 'browser'
 
@@ -11,22 +11,9 @@ def get_candlestick_plot(
         df: pd.DataFrame,
         ma1: int,
         ma2: int,
-        ticker: str
-):
-    '''
-    Create the candlestick chart with two moving avgs + a plot of the volume
-
-    Parameters
-    ----------
-    df : pd.DataFrame
-        The price dataframe
-    ma1 : int
-        The length of the first moving average (days)
-    ma2 : int
-        The length of the second moving average (days)
-    ticker : str
-        The ticker we are plotting (for the title).
-    '''
+        ma3: int,
+        ma4: int,
+        ticker: str) -> go.Figure:
 
     fig = make_subplots(
         rows=2,
@@ -63,6 +50,18 @@ def get_candlestick_plot(
     )
 
     fig.add_trace(
+        go.Line(x=df['date'], y=df[f'{ma3}_ma'], name=f'{ma3} SMA'),
+        row=1,
+        col=1,
+    )
+
+    fig.add_trace(
+        go.Line(x=df['date'], y=df[f'{ma4}_ma'], name=f'{ma4} SMA'),
+        row=1,
+        col=1,
+    )
+
+    fig.add_trace(
         go.Bar(x=df['date'], y=df['Volume BTC'], name='Volume BTC'),
         row=2,
         col=1,
@@ -81,21 +80,16 @@ def get_candlestick_plot(
 
 
 if __name__ == '__main__':
-
-    # df = pd.read_csv('TSLA.csv')
     df = pd.read_csv(BINANCE_BTCUSDT_DAY, usecols=[
         'date', 'symbol', 'open', 'high', 'low', 'close', 'Volume BTC'], skiprows=1)
 
-    # df['10_ma'] = df['close'].rolling(10).mean()
-    # df['20_ma'] = df['close'].rolling(20).mean()
+    df['10_ma'] = df['close'].rolling(10).mean()
+    df['20_ma'] = df['close'].rolling(20).mean()
+    df['50_ma'] = df['close'].rolling(50).mean()
+    df['100_ma'] = df['close'].rolling(100).mean()
 
     # reverse the data
     df = df[::-1]
 
-    print(df)
-
-    df['10_ma'] = df['close'].rolling(10).mean()
-    df['20_ma'] = df['close'].rolling(20).mean()
-
-    fig = get_candlestick_plot(df[-120:], 10, 20, BINANCE_BTCUSDT_DAY)
+    fig = get_candlestick_plot(df[-120:], 10, 20, 50, 100, BINANCE_BTCUSDT_DAY)
     fig.show()

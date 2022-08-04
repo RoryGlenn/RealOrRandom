@@ -2,20 +2,13 @@ import random
 import datetime
 from pprint import pprint
 
+import dash
+from dash import dcc, html
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
+import plotly.graph_objects as go  # or plotly.express as px
 
 from constants.constants import *
-
-
-"""
-Praews notes: 
-    The bodies of the fake candles look very similar to each other
-        1. There are many candles of the same body size
-        2. There are also many candle wicks of the same size
-
-"""
 
 
 data_date_ranges = {
@@ -38,6 +31,31 @@ data_date_ranges = {
     BINANCE_XMRUSDT_FUTURES_DAY: {
         'start_date': '2020-02-03', 'end_date': '2022-07-30'}
 }
+
+
+fig = go.Figure()  # or any Plotly Express function e.g. px.bar(...)
+app = dash.Dash()
+
+
+def app_update_layout(fig: go.Figure) -> html.Div:
+    return html.Div([
+        dcc.Graph(figure=fig,
+                  config={'modeBarButtonsToAdd': ['drawline',
+                                                  'drawopenpath',
+                                                  'drawclosedpath',
+                                                  'eraseshape',
+                                                  ],
+                          'scrollZoom': True,
+
+                          # double click the graph to reset position
+                          'doubleClickDelay': 1000,
+                          'displayModeBar': True,
+                          'showTips': True,
+                          'displaylogo': True,
+                          'fillFrame': True,
+                          #   'autosizable': True,
+                          }
+                  )])
 
 
 def brownian_motion(rows: int) -> np.ndarray:
@@ -194,8 +212,9 @@ def real_case(df: pd.DataFrame, start_date: str, end_date: str) -> pd.DataFrame:
 
 
 def random_case(num_days: int, start_price: float, asset_name: str,
-                start_date: str, volatility: int) -> pd.DataFrame:
+                start_date: str) -> pd.DataFrame:
     """Create a dataframe for random data"""
+    volatility = random.randint(100, 200)
 
     df = generate_random_crypto_df(
         num_days, start_price, asset_name, start_date, volatility=volatility)
@@ -277,7 +296,6 @@ def extend_all_wicks_randomly(df: pd.DataFrame) -> pd.DataFrame:
         df.at[i, 'high'] = new_h
         df.at[i, 'low'] = new_l
     df.set_index('date', inplace=True)
-
     df = extend_wicks_randomly(df)
     return df
 
@@ -316,8 +334,8 @@ def extend_wicks_randomly(df: pd.DataFrame) -> pd.DataFrame:
 
 def connect_open_close_candles(df: pd.DataFrame) -> pd.DataFrame:
     """Returns a dataframe where every candles close is the next candles open.
-        This is needed because cryptocurrencies run 24/7. 
-        There are no breaks or pauses so each candle is connected to the next candle. 
+        This is needed because cryptocurrencies run 24/7.
+        There are no breaks or pauses so each candle is connected to the next candle.
     """
     df.reset_index(inplace=True)
 
@@ -356,19 +374,31 @@ def create_figure(index: pd.RangeIndex, open: pd.Series, high: pd.Series,
         close=close,
     ))
 
-    fig.update_yaxes(showticklabels=False)
-    fig.update_xaxes(showticklabels=False)
-
     fig.update_layout(
+        template='plotly_dark',
         title=answer,
         xaxis_title="Time",
         yaxis_title="Value",
+        dragmode='zoom',
+        newshape_line_color='white',
+
         font=dict(
             family="Courier New, monospace",
             size=18,
             color="RebeccaPurple"
-        )
+        ),
+
+        # hides the xaxis range slider
+        xaxis=dict(
+            rangeslider=dict(
+                visible=False
+            )
+        ),
+
     )
+
+    # fig.update_yaxes(showticklabels=True)
+    # fig.update_xaxes(showticklabels=True)
     return fig
 
 
@@ -378,6 +408,7 @@ def main() -> None:
     total_graphs = 1
     num_days_range = 120
     answers = {}
+    global app
 
     for i in range(total_graphs):
         # pick a data set randomly
@@ -414,10 +445,10 @@ def main() -> None:
             answers[i] = f"Real: {start_date} to {end_date} {data_choice}"
         else:
             # print('Fake')
-            volatility = random.randint(100, 200)
+
             df = random_case(num_days_range, start_price, asset_name,
-                             start_date, volatility)
-            print(df)
+                             start_date)
+            # print(df)
             answers[i] = f"Fake: {start_date} to {end_date}"
 
             # make the candles look a little bit more real
@@ -444,15 +475,21 @@ def main() -> None:
 
         fig = create_figure(half_df.index, half_norm_open, half_norm_high,
                             half_norm_low, half_norm_close, f'HABC/USD #{i}')
-        fig.write_html(f"html/HABC-USD_{i}.html")
-        fig.show()
 
+        fig.write_html(f"html/HABC-USD_{i}.html")
+        app.layout = app_update_layout(fig)
+
+        # This is the full graph that only the admin should be able to see!
+        ####################################################################
         # fig = create_figure(df.index, norm_open, norm_high,
         #                     norm_low, norm_close, f'FABC/USD {i}')
         # fig.write_html(f"html/FABC/USD {i}.html")
         # fig.show()
+        ####################################################################
 
     pprint(answers)
+
+    app.run_server(debug=True, use_reloader=True)
 
 
 if __name__ == '__main__':

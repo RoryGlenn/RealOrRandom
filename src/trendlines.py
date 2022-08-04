@@ -8,10 +8,10 @@ import pandas as pd
 import plotly.io as pio
 import plotly.graph_objects as go
 from get_trend_line import find_grad_intercept
-from constants.constants import BINANCE_BTCUSDT_DAY
+from constants.constants import BINANCE_BTCUSDT_DAY, FORMAT_STR
+
 
 pio.renderers.default = 'browser'
-FORMAT_STR = "%Y-%m-%d"
 
 
 def get_layout() -> go.Layout:
@@ -21,6 +21,18 @@ def get_layout() -> go.Layout:
         xaxis={'title': 'Date'},
         yaxis={'title': 'Price'},
     )
+
+
+def get_config() -> dict:
+    return {'modeBarButtonsToAdd': ['drawline',
+                                    'drawopenpath',
+                                    'drawclosedpath',
+                                    'eraseshape',
+                                    ],
+            'scrollZoom': True,
+            'doubleClickDelay': 1000,  # double click the graph to reset position
+            'displayModeBar': True,
+            }
 
 
 def normalize_ohlc_data(df: pd.DataFrame) -> pd.DataFrame:
@@ -47,6 +59,13 @@ def normalize_ohlc_data(df: pd.DataFrame) -> pd.DataFrame:
     return pd.DataFrame({'date': d, 'open': o, 'high': h, 'low': l, 'close': c})
 
 
+def drop_data(df: pd.DataFrame, start_date: str, end_date: str) -> pd.DataFrame:
+    """Returns a dataframe that has dropped the data outside of the start and end dates"""
+    df = (df[(df['date'] > start_date) & (df['date'] < end_date)].reset_index(drop=True)
+          )
+    return df
+
+
 def main() -> None:
     df = pd.read_csv(BINANCE_BTCUSDT_DAY, usecols=[
         'date', 'symbol', 'open', 'high', 'low', 'close'], skiprows=1)[::-1]
@@ -59,9 +78,12 @@ def main() -> None:
     draw_start_date_i = date(2021, 12, 3)
     draw_end_date_i = date(2021, 12, 16)
 
+    draw_start_date_i = date(2021, 1, 1)
+    draw_end_date_i = date(2022, 1, 1)
+
     # create the dates to draw the s/r lines
     end_date_j = draw_start_date_i + delta
-    end_date_inner = draw_start_date_i + delta
+    # end_date_inner = draw_start_date_i + delta
 
     m_res = None
     m_supp = None
@@ -73,10 +95,7 @@ def main() -> None:
     graph_end_date = draw_end_date_i.strftime(FORMAT_STR)
 
     # drop data we are not looking at
-    df = (
-        df[(df['date'] > graph_start_date) & (df['date'] < graph_end_date)]
-        .reset_index(drop=True)
-    )
+    df = drop_data(df, graph_start_date, graph_end_date)
 
     data = [
         go.Candlestick(
@@ -85,30 +104,31 @@ def main() -> None:
             high=df['high'],
             low=df['low'],
             close=df['close'],
-            name='Candlestick chart'
+            name='Candlestick chart',
         ),
+
     ]
 
     # iterate over all the dates we want to draw support and resistance lines
     while draw_start_date_i <= draw_end_date_i:
-        while end_date_j <= end_date_inner:
-            trend_line_df = df[(df['date'] > draw_start_date_i.strftime(FORMAT_STR)) &
-                               (df['date'] < end_date_j.strftime(FORMAT_STR))]
+        # while end_date_j <= end_date_inner:
+        trend_line_df = df[(df['date'] > draw_start_date_i.strftime(FORMAT_STR)) &
+                           (df['date'] < end_date_j.strftime(FORMAT_STR))]
 
-            # Using the trend-line algorithm, deduce the
-            # gradient and intercept terms of the straight lines
-            m_res, c_res = find_grad_intercept(
-                'resistance',
-                trend_line_df.index.values,
-                trend_line_df.high.values,
-            )
-            m_supp, c_supp = find_grad_intercept(
-                'support',
-                trend_line_df.index.values,
-                trend_line_df.low.values,
-            )
+        # Using the trend-line algorithm, deduce the
+        # gradient and intercept terms of the straight lines
+        m_res, c_res = find_grad_intercept(
+            'resistance',
+            trend_line_df.index.values,
+            trend_line_df.high.values,
+        )
+        m_supp, c_supp = find_grad_intercept(
+            'support',
+            trend_line_df.index.values,
+            trend_line_df.low.values,
+        )
 
-            end_date_j += delta
+        end_date_j += delta
 
         # add the dates to draw the s/r lines
         data.append(
@@ -126,13 +146,47 @@ def main() -> None:
             ),
         )
 
+        # change the start date to the next delta after each iteration
         draw_start_date_i += delta
-        end_date_inner = draw_start_date_i + delta
 
-    fig = go.Figure(layout=get_layout(), data=data)
+        # end_date_inner = draw_start_date_i + delta
+
+    fig = go.Figure(layout=get_layout(), data=data, )
     fig.update_xaxes(rangeslider_visible=False)
+
+    # fig.add_annotation(
+    #     x=0.5,
+    #     y=0.5,
+    #     text=text,
+    #     xref="paper",
+    #     yref="paper",
+    #     showarrow=False,
+    #     font_size=20
+    # )
+
+    # define dragmode and add modebar buttons
+    fig.update_layout(dragmode='zoom', newshape_line_color='salmon')
+    # fig.update_traces(line_color='red', selector=dict(type='scatter'))
+    fig.show(config=get_config())
     fig.write_html('html/ABC-USD.html')
-    fig.show()
+
+
+# TODO:
+    # Create a google document like page with plotly integrated
+    # only show 1 graph per page
+    # do not allow the user to go forward or backward
+    # Integrate drawing tools and have all the data that the users plots on the graph be saved when they continue onto the next graph.
+    # Do not reveal any answers until the test is complete.
+    # Create a time limit for the entire test (maybe even for each graph?)
+    # Create additional notes section at the bottom to allow the user to say anything they want. This will have no effect on score
+
+    # Checkbox: real or fake
+    # Checkbox: Skip -> offer this because the user cannot see a pattern but dock them points if they do so.
+    # confidence slider: 10% increments
+    # price prediction input for 1 bar, 5, bars, 10 bars, 20 bars in the future
+    # The farther out, the user can predict, the more points are awarded.
+    # Give the user a choice for an exact number or for a lower limit and upper limit.
+    # The more precise the user is, the more point are awarded. The less precise, the less points are awarded.
 
 
 if __name__ == '__main__':

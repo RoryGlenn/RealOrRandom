@@ -11,6 +11,14 @@
             "program": "${file}",
             "console": "integratedTerminal",
             "justMyCode": true
+        },
+        {
+            "name": "App",
+            "type": "python",
+            "request": "launch",
+            "program": "src/app.py",
+            "console": "integratedTerminal",
+            "justMyCode": true
         }
     ]
 }
