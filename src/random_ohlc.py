@@ -40,6 +40,18 @@ data_date_ranges = {
 }
 
 
+def get_config() -> dict:
+    return {'modeBarButtonsToAdd': ['drawline',
+                                    'drawopenpath',
+                                    'drawclosedpath',
+                                    'eraseshape',
+                                    ],
+            'scrollZoom': True,
+            'doubleClickDelay': 1000,  # double click the graph to reset position
+            'displayModeBar': True,
+            }
+
+
 def brownian_motion(rows: int) -> np.ndarray:
     """Creates a brownian motion ndarray"""
     T = 1.
@@ -356,18 +368,30 @@ def create_figure(index: pd.RangeIndex, open: pd.Series, high: pd.Series,
         close=close,
     ))
 
-    fig.update_yaxes(showticklabels=False)
-    fig.update_xaxes(showticklabels=False)
+    # fig.update_yaxes(showticklabels=False)
+    # fig.update_xaxes(showticklabels=False)
 
     fig.update_layout(
+        template='plotly_dark',
         title=answer,
         xaxis_title="Time",
         yaxis_title="Value",
+        dragmode='zoom',
+        newshape_line_color='white',
+
         font=dict(
             family="Courier New, monospace",
             size=18,
             color="RebeccaPurple"
-        )
+        ),
+
+        # hides the xaxis range slider
+        xaxis=dict(
+            rangeslider=dict(
+                visible=False
+            )
+        ),
+
     )
     return fig
 
@@ -408,16 +432,13 @@ def main() -> None:
         # if number is 1 generate real df, else: generate fake (aka random)
         if random.randint(0, 1):
             # if False:
-            # print('Real')
             df = df_real.copy()
             df = real_case(df, start_date, end_date)
             answers[i] = f"Real: {start_date} to {end_date} {data_choice}"
         else:
-            # print('Fake')
             volatility = random.randint(100, 200)
             df = random_case(num_days_range, start_price, asset_name,
                              start_date, volatility)
-            print(df)
             answers[i] = f"Fake: {start_date} to {end_date}"
 
             # make the candles look a little bit more real
@@ -445,14 +466,12 @@ def main() -> None:
         fig = create_figure(half_df.index, half_norm_open, half_norm_high,
                             half_norm_low, half_norm_close, f'HABC/USD #{i}')
         fig.write_html(f"html/HABC-USD_{i}.html")
-        fig.show()
+        fig.show(config=get_config())
 
         # fig = create_figure(df.index, norm_open, norm_high,
         #                     norm_low, norm_close, f'FABC/USD {i}')
         # fig.write_html(f"html/FABC/USD {i}.html")
         # fig.show()
-
-    pprint(answers)
 
 
 if __name__ == '__main__':
