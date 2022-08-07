@@ -6,7 +6,9 @@ from constants.constants import *
 
 
 class RandomOHLC:
-    def __init__(self, num_days_range: int, start_price: float, start_date: str, name: str) -> None:
+
+    def __init__(self, num_days_range: int, start_price: float,
+                 start_date: str, name: str) -> None:
         self.num_days_range = num_days_range
         self.start_price = start_price
         self.start_date = start_date
@@ -41,7 +43,7 @@ class RandomOHLC:
         _min = np.min(data)
 
         norm_data: np.ndarray = ((data - _min) / (_max - _min)).tolist()
-        return [round(i*random_multiplier, 4) for i in norm_data]
+        return [round(i * random_multiplier, 4) for i in norm_data]
 
     # def normalize_ohlc_data(self, open: pd.Series, high: pd.Series, low: pd.Series, close: pd.Series
     #                         ) -> tuple[pd.Series, pd.Series, pd.Series, pd.Series]:
@@ -66,7 +68,8 @@ class RandomOHLC:
     #     return o, h, l, c
 
     def __generate_random_crypto_df(self, days: int, start_price: float,
-                                    col_name: str, start_date: str, volatility: int) -> pd.DataFrame:
+                                    col_name: str, start_date: str,
+                                    volatility: int) -> pd.DataFrame:
         """Need to generate 1min, 5min, 15min, 1hr, 4hr, 1day, 1week"""
 
         distribution_dict = {
@@ -76,7 +79,7 @@ class RandomOHLC:
         }
 
         # periods = days * 1440 # minutes
-        periods = days * 24     # hours
+        periods = days * 24  # hours
         # periods = days        # days
         # periods = days / 7    # weeks ?
 
@@ -89,11 +92,15 @@ class RandomOHLC:
         price = [round(abs(p), 6) for p in price]
 
         return pd.DataFrame({
-            'ticker': np.repeat([col_name], periods),
+            'ticker':
+            np.repeat([col_name], periods),
 
             # <------ TEST THIS WITH 'D' INSTEAD OF 'H' <------
-            'date': np.tile(pd.date_range(self.start_date, periods=periods, freq='H'), 1),
-            'price': (price)})
+            'date':
+            np.tile(pd.date_range(self.start_date, periods=periods, freq='H'),
+                    1),
+            'price': (price)
+        })
 
     def __downsample_ohlc_data(self, df: pd.DataFrame, timeframe: str) -> None:
         """Converts a higher resolution dataframe into a lower one.
@@ -158,7 +165,7 @@ class RandomOHLC:
         df.reset_index(inplace=True)
         for i in range(len(df)):
             new_h = df.iloc[i]['high'] * hl_mult
-            new_l = df.iloc[i]['low'] - (df.iloc[i]['low'] * (hl_mult-1))
+            new_l = df.iloc[i]['low'] - (df.iloc[i]['low'] * (hl_mult - 1))
 
             df.at[i, 'high'] = new_h
             df.at[i, 'low'] = new_l
@@ -173,7 +180,7 @@ class RandomOHLC:
             l_mult = random.uniform(RANDOM_LOWER_LIMIT, RANDOM_UPPER_LIMIT)
 
             new_h = df.iloc[i]['high'] * h_mult
-            new_l = df.iloc[i]['low'] - (df.iloc[i]['low'] * (l_mult-1))
+            new_l = df.iloc[i]['low'] - (df.iloc[i]['low'] * (l_mult - 1))
 
             df.at[i, 'high'] = new_h
             df.at[i, 'low'] = new_l
@@ -221,7 +228,7 @@ class RandomOHLC:
 
         for i in range(1, len(df)):
             # connects each open and close together
-            df.at[i, 'open'] = df.iloc[i-1]['close']
+            df.at[i, 'open'] = df.iloc[i - 1]['close']
 
             min_value = min(df.iloc[i]['open'], df.iloc[i]['high'],
                             df.iloc[i]['close'])
@@ -253,8 +260,11 @@ class RandomOHLC:
         """Create a dataframe for random data"""
         volatility = random.randint(100, 200)
 
-        df = self.__generate_random_crypto_df(
-            self.num_days_range, self.start_price, self.name, self.start_date, volatility=volatility)
+        df = self.__generate_random_crypto_df(self.num_days_range,
+                                              self.start_price,
+                                              self.name,
+                                              self.start_date,
+                                              volatility=volatility)
 
         df.index = pd.to_datetime(df.date)
 
