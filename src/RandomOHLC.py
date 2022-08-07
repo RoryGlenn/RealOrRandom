@@ -6,9 +6,9 @@ from constants.constants import *
 
 
 class RandomOHLC:
-
-    def __init__(self, num_days_range: int, start_price: float,
-                 start_date: str, name: str) -> None:
+    def __init__(
+        self, num_days_range: int, start_price: float, start_date: str, name: str
+    ) -> None:
         self.num_days_range = num_days_range
         self.start_price = start_price
         self.start_date = start_date
@@ -16,9 +16,9 @@ class RandomOHLC:
 
     def __brownian_motion(self, rows: int) -> np.ndarray:
         """Creates a brownian motion ndarray"""
-        T = 1.
+        T = 1.0
         dimensions = 1
-        times = np.linspace(0., T, rows)
+        times = np.linspace(0.0, T, rows)
         dt = times[1] - times[0]
 
         # Bt2 - Bt1 ~ Normal with mean 0 and variance t2-t1
@@ -35,7 +35,7 @@ class RandomOHLC:
 
     def __normalize_ohlc_list(self, data: list) -> list:
         """Normalize OHLC data with random multiplier
-            normalization formula: (data - min) / (max - min)
+        normalization formula: (data - min) / (max - min)
         """
         random_multiplier = random.randint(9, 999)
 
@@ -67,9 +67,14 @@ class RandomOHLC:
     #     c = round(norm_close*random_multiplier, 4)
     #     return o, h, l, c
 
-    def __generate_random_crypto_df(self, days: int, start_price: float,
-                                    col_name: str, start_date: str,
-                                    volatility: int) -> pd.DataFrame:
+    def __generate_random_crypto_df(
+        self,
+        days: int,
+        start_price: float,
+        col_name: str,
+        start_date: str,
+        volatility: int,
+    ) -> pd.DataFrame:
         """Need to generate 1min, 5min, 15min, 1hr, 4hr, 1day, 1week"""
 
         distribution_dict = {
@@ -91,16 +96,16 @@ class RandomOHLC:
         price = start_price + np.cumsum(steps)
         price = [round(abs(p), 6) for p in price]
 
-        return pd.DataFrame({
-            'ticker':
-            np.repeat([col_name], periods),
-
-            # <------ TEST THIS WITH 'D' INSTEAD OF 'H' <------
-            'date':
-            np.tile(pd.date_range(self.start_date, periods=periods, freq='H'),
-                    1),
-            'price': (price)
-        })
+        return pd.DataFrame(
+            {
+                "ticker": np.repeat([col_name], periods),
+                # <------ TEST THIS WITH 'D' INSTEAD OF 'H' <------
+                "date": np.tile(
+                    pd.date_range(self.start_date, periods=periods, freq="H"), 1
+                ),
+                "price": (price),
+            }
+        )
 
     def __downsample_ohlc_data(self, df: pd.DataFrame, timeframe: str) -> None:
         """Converts a higher resolution dataframe into a lower one.
@@ -113,30 +118,32 @@ class RandomOHLC:
             Resample time frame to 1min, 5min, 15min, 1hr, 4hr, 1d, 1w
         """
 
-        df['date'] = pd.to_datetime(df['date'])
-        df = df.set_index('date')
+        df["date"] = pd.to_datetime(df["date"])
+        df = df.set_index("date")
 
-        df = df.resample('W').aggregate({
-            'open': lambda s: s[0],
-            'high': lambda df: df.max(),
-            'low': lambda df: df.min(),
-            'close': lambda df: df[-1]
-        })
+        df = df.resample("W").aggregate(
+            {
+                "open": lambda s: s[0],
+                "high": lambda df: df.max(),
+                "low": lambda df: df.min(),
+                "close": lambda df: df[-1],
+            }
+        )
         return df
 
     def __create_whale_candles(self, df: pd.DataFrame) -> pd.DataFrame:
         """Returns a modified df containing whale values.
-            Iterates over the dataframe and extends all values
-            of the candle given a random chance.
+        Iterates over the dataframe and extends all values
+        of the candle given a random chance.
 
-            A single graph will have a random chance until a new graph is created.
-            If the random number chosen is less than or equal to random_chance, create a whale candle.
+        A single graph will have a random chance until a new graph is created.
+        If the random number chosen is less than or equal to random_chance, create a whale candle.
 
-            whale_mult:
-                assigns a random floating point multiplier between the range of [WHALE_LOWER_MULT, WHALE_UPPER_MULT].
-                By doing this, every time a whale candle is created, the probability
-                of it being stretched with the same ratio as the
-                previous whale candle or even the next whale candle is essentially 0%
+        whale_mult:
+            assigns a random floating point multiplier between the range of [WHALE_LOWER_MULT, WHALE_UPPER_MULT].
+            By doing this, every time a whale candle is created, the probability
+            of it being stretched with the same ratio as the
+            previous whale candle or even the next whale candle is essentially 0%
         """
 
         # probability for creating a whale candle will be from 1-20%
@@ -152,24 +159,24 @@ class RandomOHLC:
                 # previous whale candle or even the next whale candle is essentially 0%
                 whale_mult = random.uniform(WHALE_LOWER_MULT, WHALE_UPPER_MULT)
 
-                df.at[i, 'open'] = df.iloc[i]['open'] * whale_mult
-                df.at[i, 'high'] = df.iloc[i]['high'] * whale_mult
-                df.at[i, 'low'] = df.iloc[i]['low'] / whale_mult
-                df.at[i, 'close'] = df.iloc[i]['close'] / whale_mult
+                df.at[i, "open"] = df.iloc[i]["open"] * whale_mult
+                df.at[i, "high"] = df.iloc[i]["high"] * whale_mult
+                df.at[i, "low"] = df.iloc[i]["low"] / whale_mult
+                df.at[i, "close"] = df.iloc[i]["close"] / whale_mult
 
-        df.set_index('date', inplace=True)
+        df.set_index("date", inplace=True)
         return df
 
     def __extend_wicks(self, df: pd.DataFrame, hl_mult: float) -> pd.DataFrame:
         """Returns a dataframe with the high and low wicks multiplied by the passed in hl_mult"""
         df.reset_index(inplace=True)
         for i in range(len(df)):
-            new_h = df.iloc[i]['high'] * hl_mult
-            new_l = df.iloc[i]['low'] - (df.iloc[i]['low'] * (hl_mult - 1))
+            new_h = df.iloc[i]["high"] * hl_mult
+            new_l = df.iloc[i]["low"] - (df.iloc[i]["low"] * (hl_mult - 1))
 
-            df.at[i, 'high'] = new_h
-            df.at[i, 'low'] = new_l
-        df.set_index('date', inplace=True)
+            df.at[i, "high"] = new_h
+            df.at[i, "low"] = new_l
+        df.set_index("date", inplace=True)
         return df
 
     def __extend_all_wicks_randomly(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -179,22 +186,22 @@ class RandomOHLC:
             h_mult = random.uniform(RANDOM_LOWER_LIMIT, RANDOM_UPPER_LIMIT)
             l_mult = random.uniform(RANDOM_LOWER_LIMIT, RANDOM_UPPER_LIMIT)
 
-            new_h = df.iloc[i]['high'] * h_mult
-            new_l = df.iloc[i]['low'] - (df.iloc[i]['low'] * (l_mult - 1))
+            new_h = df.iloc[i]["high"] * h_mult
+            new_l = df.iloc[i]["low"] - (df.iloc[i]["low"] * (l_mult - 1))
 
-            df.at[i, 'high'] = new_h
-            df.at[i, 'low'] = new_l
-        df.set_index('date', inplace=True)
+            df.at[i, "high"] = new_h
+            df.at[i, "low"] = new_l
+        df.set_index("date", inplace=True)
         df = self.__extend_wicks_randomly(df)
         return df
 
     def __extend_wicks_randomly(self, df: pd.DataFrame) -> pd.DataFrame:
         """Returns a dataframe with the highs, lows multiplied by a random float
 
-            3 possibilities:
-                extend only the high
-                extend only the low
-                extend both
+        3 possibilities:
+            extend only the high
+            extend only the low
+            extend both
         """
 
         df.reset_index(inplace=True)
@@ -206,48 +213,44 @@ class RandomOHLC:
 
             if random_choice == 1:
                 # extend only the high
-                df.at[i, 'high'] = df.iloc[i]['high'] * h_mult
+                df.at[i, "high"] = df.iloc[i]["high"] * h_mult
             elif random_choice == 2:
                 # extend only the low
-                df.at[i, 'low'] = df.iloc[i]['low'] - \
-                    (df.iloc[i]['low'] * (l_mult-1))
+                df.at[i, "low"] = df.iloc[i]["low"] - (df.iloc[i]["low"] * (l_mult - 1))
             else:
                 # extend both
-                df.at[i, 'high'] = df.iloc[i]['high'] * h_mult
-                df.at[i, 'low'] = df.iloc[i]['low'] - \
-                    (df.iloc[i]['low'] * (l_mult-1))
-        df.set_index('date', inplace=True)
+                df.at[i, "high"] = df.iloc[i]["high"] * h_mult
+                df.at[i, "low"] = df.iloc[i]["low"] - (df.iloc[i]["low"] * (l_mult - 1))
+        df.set_index("date", inplace=True)
         return df
 
     def __connect_open_close_candles(self, df: pd.DataFrame) -> pd.DataFrame:
         """Returns a dataframe where every candles close is the next candles open.
-            This is needed because cryptocurrencies run 24/7.
-            There are no breaks or pauses so each candle is connected to the next candle.
+        This is needed because cryptocurrencies run 24/7.
+        There are no breaks or pauses so each candle is connected to the next candle.
         """
         df.reset_index(inplace=True)
 
         for i in range(1, len(df)):
             # connects each open and close together
-            df.at[i, 'open'] = df.iloc[i - 1]['close']
+            df.at[i, "open"] = df.iloc[i - 1]["close"]
 
-            min_value = min(df.iloc[i]['open'], df.iloc[i]['high'],
-                            df.iloc[i]['close'])
+            min_value = min(df.iloc[i]["open"], df.iloc[i]["high"], df.iloc[i]["close"])
 
-            max_value = max(df.iloc[i]['open'], df.iloc[i]['low'],
-                            df.iloc[i]['close'])
+            max_value = max(df.iloc[i]["open"], df.iloc[i]["low"], df.iloc[i]["close"])
 
             # something went wrong and the low is not the lowest value
-            if df.iloc[i]['low'] > min_value:
+            if df.iloc[i]["low"] > min_value:
                 # get the difference between the low and the lowest value and subtract it from the low
-                df.at[i, 'low'] = df.iloc[i]['low'] - \
-                    abs(min_value - df.iloc[i]['low'])
+                df.at[i, "low"] = df.iloc[i]["low"] - abs(min_value - df.iloc[i]["low"])
 
             # get the difference between the highest value and the high and add it to the high
-            if df.iloc[i]['high'] < max_value:
-                df.at[i, 'high'] = df.iloc[i]['high'] + \
-                    abs(max_value - df.iloc[i]['high'])
+            if df.iloc[i]["high"] < max_value:
+                df.at[i, "high"] = df.iloc[i]["high"] + abs(
+                    max_value - df.iloc[i]["high"]
+                )
 
-        df.set_index('date', inplace=True)
+        df.set_index("date", inplace=True)
         return df
 
     def create_realistic_candles(self, df: pd.DataFrame) -> pd.DataFrame:
@@ -260,17 +263,19 @@ class RandomOHLC:
         """Create a dataframe for random data"""
         volatility = random.randint(100, 200)
 
-        df = self.__generate_random_crypto_df(self.num_days_range,
-                                              self.start_price,
-                                              self.name,
-                                              self.start_date,
-                                              volatility=volatility)
+        df = self.__generate_random_crypto_df(
+            self.num_days_range,
+            self.start_price,
+            self.name,
+            self.start_date,
+            volatility=volatility,
+        )
 
         df.index = pd.to_datetime(df.date)
 
         # 25% to use a brownian motion distribution instead
         if random.randint(1, 4) == 4:
-            df['price'] = self.__brownian_motion_distribution()
+            df["price"] = self.__brownian_motion_distribution()
 
         # HOW DOES this WORK?
-        return df.price.resample('D').ohlc()
+        return df.price.resample("D").ohlc()

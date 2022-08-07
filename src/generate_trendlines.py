@@ -9,86 +9,70 @@ import plotly.graph_objects as go
 from get_trend_line import find_grad_intercept
 from constants.constants import BINANCE_BTCUSDT_DAY, FORMAT_STR
 
-pio.renderers.default = 'browser'
+pio.renderers.default = "browser"
 
 
 def get_layout() -> go.Layout:
     """Returns a layout for plotly"""
     return go.Layout(
-        title='ABC/USD',
-        xaxis={'title': 'Date'},
-        yaxis={'title': 'Price'},
+        title="ABC/USD",
+        xaxis={"title": "Date"},
+        yaxis={"title": "Price"},
     )
 
 
 def get_config() -> dict:
     return {
-        'modeBarButtonsToAdd': [
-            'drawline',
-            'drawopenpath',
-            'drawclosedpath',
-            'eraseshape',
+        "modeBarButtonsToAdd": [
+            "drawline",
+            "drawopenpath",
+            "drawclosedpath",
+            "eraseshape",
         ],
-        'scrollZoom':
-        True,
-        'doubleClickDelay':
-        1000,  # double click the graph to reset position
-        'displayModeBar':
-        True,
+        "scrollZoom": True,
+        "doubleClickDelay": 1000,  # double click the graph to reset position
+        "displayModeBar": True,
     }
 
 
 def normalize_ohlc_data(df: pd.DataFrame) -> pd.DataFrame:
     """Normalize OHLC data from 0 to 100
-        normalization formula: (data - min) / (max - min)
+    normalization formula: (data - min) / (max - min)
     """
 
-    _max = np.max([
-        np.max(df['open']),
-        np.max(df['high']),
-        np.max(df['low']),
-        np.max(df['close'])
-    ])
-    _min = np.min([
-        np.min(df['open']),
-        np.min(df['high']),
-        np.min(df['low']),
-        np.min(df['close'])
-    ])
+    _max = np.max(
+        [np.max(df["open"]), np.max(df["high"]), np.max(df["low"]), np.max(df["close"])]
+    )
+    _min = np.min(
+        [np.min(df["open"]), np.min(df["high"]), np.min(df["low"]), np.min(df["close"])]
+    )
 
-    norm_open = (df['open'] - _min) / (_max - _min)
-    norm_high = (df['high'] - _min) / (_max - _min)
-    norm_low = (df['low'] - _min) / (_max - _min)
-    norm_close = (df['close'] - _min) / (_max - _min)
+    norm_open = (df["open"] - _min) / (_max - _min)
+    norm_high = (df["high"] - _min) / (_max - _min)
+    norm_low = (df["low"] - _min) / (_max - _min)
+    norm_close = (df["close"] - _min) / (_max - _min)
 
     mult = 100
-    d = df['date']
+    d = df["date"]
     o = round(norm_open * mult, 2)
     h = round(norm_high * mult, 2)
     l = round(norm_low * mult, 2)
     c = round(norm_close * mult, 2)
-    return pd.DataFrame({
-        'date': d,
-        'open': o,
-        'high': h,
-        'low': l,
-        'close': c
-    })
+    return pd.DataFrame({"date": d, "open": o, "high": h, "low": l, "close": c})
 
 
-def drop_data(df: pd.DataFrame, start_date: str,
-              end_date: str) -> pd.DataFrame:
+def drop_data(df: pd.DataFrame, start_date: str, end_date: str) -> pd.DataFrame:
     """Returns a dataframe that has dropped the data outside of the start and end dates"""
-    df = (df[(df['date'] > start_date)
-             & (df['date'] < end_date)].reset_index(drop=True))
+    df = df[(df["date"] > start_date) & (df["date"] < end_date)].reset_index(drop=True)
     return df
 
 
 def main() -> None:
     df = pd.read_csv(
         BINANCE_BTCUSDT_DAY,
-        usecols=['date', 'symbol', 'open', 'high', 'low', 'close'],
-        skiprows=1)[::-1]
+        usecols=["date", "symbol", "open", "high", "low", "close"],
+        skiprows=1,
+    )[::-1]
     df = normalize_ohlc_data(df)
 
     # support and resistance lines will be 'delta' bars long
@@ -119,12 +103,12 @@ def main() -> None:
 
     data = [
         go.Candlestick(
-            x=df['date'],
-            open=df['open'],
-            high=df['high'],
-            low=df['low'],
-            close=df['close'],
-            name='Candlestick chart',
+            x=df["date"],
+            open=df["open"],
+            high=df["high"],
+            low=df["low"],
+            close=df["close"],
+            name="Candlestick chart",
         ),
     ]
 
@@ -132,18 +116,19 @@ def main() -> None:
     while draw_start_date_i <= draw_end_date_i:
         # while end_date_j <= end_date_inner:
         trend_line_df = df[
-            (df['date'] > draw_start_date_i.strftime(FORMAT_STR))
-            & (df['date'] < end_date_j.strftime(FORMAT_STR))]
+            (df["date"] > draw_start_date_i.strftime(FORMAT_STR))
+            & (df["date"] < end_date_j.strftime(FORMAT_STR))
+        ]
 
         # Using the trend-line algorithm, deduce the
         # gradient and intercept terms of the straight lines
         m_res, c_res = find_grad_intercept(
-            'resistance',
+            "resistance",
             trend_line_df.index.values,
             trend_line_df.high.values,
         )
         m_supp, c_supp = find_grad_intercept(
-            'support',
+            "support",
             trend_line_df.index.values,
             trend_line_df.low.values,
         )
@@ -152,13 +137,19 @@ def main() -> None:
 
         # add the dates to draw the s/r lines
         data.append(
-            go.Scatter(x=trend_line_df['date'],
-                       y=m_res * trend_line_df.index + c_res,
-                       name='Resistance line '), )
+            go.Scatter(
+                x=trend_line_df["date"],
+                y=m_res * trend_line_df.index + c_res,
+                name="Resistance line ",
+            ),
+        )
         data.append(
-            go.Scatter(x=trend_line_df['date'],
-                       y=m_supp * trend_line_df.index + c_supp,
-                       name='Support line'), )
+            go.Scatter(
+                x=trend_line_df["date"],
+                y=m_supp * trend_line_df.index + c_supp,
+                name="Support line",
+            ),
+        )
 
         # change the start date to the next delta after each iteration
         draw_start_date_i += delta
@@ -179,10 +170,10 @@ def main() -> None:
     # )
 
     # define dragmode and add modebar buttons
-    fig.update_layout(dragmode='zoom', newshape_line_color='salmon')
+    fig.update_layout(dragmode="zoom", newshape_line_color="salmon")
     # fig.update_traces(line_color='red', selector=dict(type='scatter'))
     fig.show(config=get_config())
-    fig.write_html('html/ABC-USD.html')
+    fig.write_html("html/ABC-USD.html")
 
 
 # TODO:
@@ -206,5 +197,5 @@ def main() -> None:
 # Give the user a choice for an exact number or for a lower limit and upper limit.
 # The more precise the user is, the more point are awarded. The less precise, the less points are awarded.
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
