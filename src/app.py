@@ -123,7 +123,7 @@ def create_dates(
     ]
 
     # pick a random day to start minus the given range
-    start_i = random.randint(0, len(dt_list) - num_days_range)
+    start_i = random.randint(a=0, b=len(dt_list) - num_days_range)
     end_i = start_i + num_days_range
 
     start_random_dt = dt_list[start_i]
@@ -183,30 +183,32 @@ def main() -> None:
             df = real_ohlc.real_case(df, start_date, end_date)
             answers[i] = f"Real: {start_date} to {end_date} {data_choice}"
         else:
+            volatility = random.randint(100, 200)
             random_ohlc = RandomOHLC(
-                num_days_range, start_price, start_date, asset_name
+                num_days_range, start_price, asset_name, volatility
             )
-            df = random_ohlc.create_random_df()
-            df = random_ohlc.create_realistic_candles(df)
+            # df = random_ohlc.create_random_df()
+            random_ohlc.create_random_df()
+            # df = random_ohlc.create_realistic_candles(df)
+            random_ohlc.create_realistic_candles()
+            df = random_ohlc.df
             answers[i] = f"Fake"
 
         df = normalize_ohlc_data(df)
+
         df.reset_index(inplace=True)
         df.drop(columns=["date"], inplace=True)
+
         # create a new df that contains only half the dates and prices
         half_df = df.iloc[: len(df) // 2]
         fig = create_figure(half_df)
         fig.write_html(f"html/HABC-USD_{i}.html")
         app.layout = app_update_layout(fig)
 
-        # delete when done testing!
-        # fig.show()
-
         # This is the full graph that only the admin should be able to see!
         ####################################################################
         fig = create_figure(df)
         fig.write_html(f"html/FABC-USD_{i}.html")
-        # fig.show()
         ####################################################################
 
     pprint(answers)
