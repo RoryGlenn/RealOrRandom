@@ -159,43 +159,11 @@ def main() -> None:
     fig = go.Figure(layout=get_layout(), data=data)
     fig.update_xaxes(rangeslider_visible=False)
 
-    # fig.add_annotation(
-    #     x=0.5,
-    #     y=0.5,
-    #     text=text,
-    #     xref="paper",
-    #     yref="paper",
-    #     showarrow=False,
-    #     font_size=20
-    # )
-
     # define dragmode and add modebar buttons
     fig.update_layout(dragmode="zoom", newshape_line_color="salmon")
-    # fig.update_traces(line_color='red', selector=dict(type='scatter'))
     fig.show(config=get_config())
     fig.write_html("html/ABC-USD.html")
 
-
-# TODO:
-# Create a google document like page with plotly integrated
-# only show 1 graph per page
-# do not allow the user to go forward or backward
-# Integrate drawing tools and have all the data that the users plots on the graph be saved when they continue onto the next graph.
-# Do not reveal any answers until the test is complete.
-# Create a time limit for the entire test (maybe even for each graph?)
-# Create additional notes section at the bottom to allow the user to say anything they want. This will have no effect on score
-
-# Checkbox: real or fake
-# Checkbox: Skip -> offer this because the user cannot see a pattern but dock them points if they do so.
-# confidence slider: 10% increments
-
-# What is your exact price prediction 1, 10, 30, 60 bars from the last bar?
-# What are the upper bounds and what are the lower bounds for your price prediction 1, 10, 30, 60 bars from the last bar?
-# Do you see a recognizable pattern in the graph? If so, which pattern is it?
-
-# The farther out, the user can predict, the more points are awarded.
-# Give the user a choice for an exact number or for a lower limit and upper limit.
-# The more precise the user is, the more point are awarded. The less precise, the less points are awarded.
 
 if __name__ == "__main__":
     main()

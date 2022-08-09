@@ -1,4 +1,3 @@
-from logging import getLogger
 import random
 import numpy as np
 import pandas as pd
@@ -26,7 +25,6 @@ class RandomOHLC:
         self.start_price = start_price
         self.name = name
         self.volatility = volatility
-
         self.distribution_functions = {
             1: np.random.normal,
             2: np.random.laplace,
@@ -35,6 +33,19 @@ class RandomOHLC:
         }
 
         self.__df: pd.DataFrame = None
+        self.resampled_data = {
+            '1min': None,
+            "5min": None,
+            "15Min": None,
+            "30Min": None,
+            "1H": None,
+            "2H": None,
+            "4H": None,
+            "1D": None,
+            "3D": None,
+            "1W": None,
+            "1M": None,
+        }
 
     @property
     def df(self) -> pd.DataFrame:
@@ -118,15 +129,17 @@ class RandomOHLC:
 
         Need to generate 1min, 5min, 15min, 1hr, 4hr, 1day, 1week"""
 
+        periods = days * 86400 # seconds
         # periods = days * 1440 # minutes
-        periods = days * 24  # hours
+        # periods = days * 24  # hours
         # periods = days        # days
         # periods = days / 7    # weeks ?
         price = None
 
         # randomly pick a distribution function
         dist_func = self.distribution_functions.get(
-            random.randint(1, len(self.distribution_functions)))
+            random.randint(1, len(self.distribution_functions))
+        )
 
         # if dist_func != brownian:
         steps = dist_func(loc=0, scale=volatility, size=periods)
@@ -134,36 +147,17 @@ class RandomOHLC:
         price = start_price + np.cumsum(steps)
         price = [round(abs(p), 6) for p in price]
 
-        # we will make the code below work but later on
-        # else:
-        #     # The Wiener process parameter.
-        #     delta = 2
+        # start date is arbitrary
+        start_date = "2000-01-01"
 
-        #     total_time = 10.0
-        #     num_steps = 500
-        #     time_step_size = total_time / num_steps # volatility?
-        #     num_realizations = 20 # number of rows
+        # the smallest unit of measurement used is 1 second
+        smallest_freq = '1S'
 
-        #     # Create an empty array to store the realizations.
-        #     x = np.empty((num_realizations, num_steps + 1))
-
-        #     # Initial values of x.
-        #     x[:, 0] = 10_000
-
-        #     bm = brownian(x[:, 0], num_steps, time_step_size, delta, out=x[:, 1:])
-        #     price = bm
-        #     print(price)
-
-        return pd.DataFrame(
-            {
-                "ticker": np.repeat([col_name], periods),
-                # <------ TEST THIS WITH 'D' INSTEAD OF 'H' <------
-                # I think we are doing this because the original example used 'H' (hours) as the smallest unit of measurement
-                "date": np.tile(
-                    pd.date_range(self.start_date, periods=periods, freq="H"), 1),
-                "price": (price),
-            }
-        )
+        return pd.DataFrame({
+            "ticker": np.repeat([col_name], periods),
+            "date": np.tile( pd.date_range(start_date, periods=periods, freq=smallest_freq), 1),
+            "price": (price),
+        })
 
     def __downsample_ohlc_data(self, timeframe: str) -> None:
         """Converts a higher resolution dataframe into a lower one.
@@ -182,14 +176,17 @@ class RandomOHLC:
         self.__df["date"] = pd.to_datetime(self.__df["date"])
         self.__df = self.__df.set_index("date")
 
-        self.__df = self.__df.resample("W").aggregate(
-            {
-                "open": lambda s: s[0],
-                "high": lambda df: self.__df.max(),
-                "low": lambda df: self.__df.min(),
-                "close": lambda df: self.__df[-1],
-            }
-        )
+        # resample to all times
+        for t in self.resampled_data:
+            self.__df = self.__df.resample(t).aggregate(
+                {
+                    "open": lambda s: s[0],
+                    "high": lambda df: df.max(),
+                    "low": lambda df: df.min(),
+                    "close": lambda df: df[-1],
+                }
+            )
+        print(self.__df)
 
     def __create_whale_candles(self) -> None:
         """Returns a modified self.df containing whale values.
@@ -230,7 +227,9 @@ class RandomOHLC:
         self.__df.reset_index(inplace=True)
         for i in range(len(self.__df)):
             new_h = self.__df.iloc[i]["high"] * hl_mult
-            new_l = self.__df.iloc[i]["low"] - (self.__df.iloc[i]["low"] * (hl_mult - 1))
+            new_l = self.__df.iloc[i]["low"] - (
+                self.__df.iloc[i]["low"] * (hl_mult - 1)
+            )
 
             self.__df.at[i, "high"] = new_h
             self.__df.at[i, "low"] = new_l
@@ -325,32 +324,31 @@ class RandomOHLC:
         return self.__df
 
     def create_realistic_candles(self) -> None:
-        # make the candles look a little bit more real
-        if self.__df is None:
-            print(
-                "You must call create_random_df before calling create_realistic_candles!"
-            )
-            return
-
+        """Process for creating slightly more realistic candles"""
         self.__create_whale_candles()
         self.__extend_all_wicks_randomly()
         self.__connect_open_close_candles()
 
-    def create_random_df(self) -> None:
+    def create_df(self) -> None:
         """Create a dataframe for random data"""
-
-        self.__df = self.__generate_random_df(
+        df_1second = self.__generate_random_df(
             self.num_days_range,
             self.start_price,
             self.name,
             self.volatility,
         )
 
-        self.__df.index = pd.to_datetime(self.__df.date)
+        df_1second.index = pd.to_datetime(df_1second.date)
+        self.__df = df_1second.price.resample('1min').ohlc(_method="ohlc")
+        
 
         # 25% to use a brownian motion distribution instead
         # if random.randint(1, 4) == 4:
         #     self.__df["price"] = self.__brownian_motion_distribution()
 
-        # return self.df.price.resample("D").ohlc()
-        self.__df = self.__df.price.resample("D").ohlc(_method="ohlc")
+
+    def resample_timeframes(self) -> None:
+        """Iterates over all the timeframe keys in resampled_data and creates a
+        resampled dataframe corresponding to that timeframe"""
+        for timeframe in self.resampled_data:
+            self.resampled_data[timeframe] = self.__df.price.resample(timeframe).ohlc(_method="ohlc")

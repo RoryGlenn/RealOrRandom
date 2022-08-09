@@ -9,30 +9,49 @@ import plotly.graph_objects as go  # or plotly.express as px
 import numpy as np
 
 from constants.constants import *
-from RandomOHLC import RandomOHLC
-from RealOHLC import RealOHLC
+from random_ohlc import RandomOHLC
+from real_ohlc import RealOHLC
 
-data_date_ranges = {
-    # spot
-    BINANCE_BTCUSDT_DAY: {"start_date": "2019-09-08", "end_date": "2022-06-16"},
-    BINANCE_AAVEUSDT_DAY: {"start_date": "2020-10-16", "end_date": "2022-06-16"},
-    BINANCE_ADAUSDT_DAY: {"start_date": "2018-04-17", "end_date": "2022-07-30"},
-    BINANCE_CELRUSDT_DAY: {"start_date": "2019-03-25", "end_date": "2022-07-30"},
-    BINANCE_DASHUSDT_DAY: {"start_date": "2019-03-28", "end_date": "2022-07-30"},
-    BINANCE_DOGEUSDT_DAY: {"start_date": "2020-07-10", "end_date": "2022-07-30"},
-    BINANCE_DOTUSDT_DAY: {"start_date": "2020-08-18", "end_date": "2022-07-30"},
-    BINANCE_ETCUSDT_DAY: {"start_date": "2018-06-12", "end_date": "2022-07-30"},
-    BINANCE_ETHUSDT_DAY: {"start_date": "2017-08-17", "end_date": "2022-07-30"},
-    # spot
-    BINANCE_ETHUSDT_FUTURES_DAY: {"start_date": "2019-11-27", "end_date": "2022-03-15"},
-    BINANCE_LTCUSDT_FUTURES_DAY: {"start_date": "2020-01-09", "end_date": "2022-03-15"},
-    BINANCE_ADAUSDT_FUTURES_DAY: {"start_date": "2020-01-31", "end_date": "2022-07-30"},
-    BINANCE_BTCUSDT_FUTURES_DAY: {"start_date": "2019-09-08", "end_date": "2022-03-15"},
-    BINANCE_XMRUSDT_FUTURES_DAY: {"start_date": "2020-02-03", "end_date": "2022-07-30"},
-}
+
+def get_data_date_ranges() -> dict:
+    """Returns a dictionary will the earliest start date and latest end date we can use for each real data file"""
+    return {
+        # spot
+        BINANCE_BTCUSDT_DAY: {"start_date": "2019-09-08", "end_date": "2022-06-16"},
+        BINANCE_AAVEUSDT_DAY: {"start_date": "2020-10-16", "end_date": "2022-06-16"},
+        BINANCE_ADAUSDT_DAY: {"start_date": "2018-04-17", "end_date": "2022-07-30"},
+        BINANCE_CELRUSDT_DAY: {"start_date": "2019-03-25", "end_date": "2022-07-30"},
+        BINANCE_DASHUSDT_DAY: {"start_date": "2019-03-28", "end_date": "2022-07-30"},
+        BINANCE_DOGEUSDT_DAY: {"start_date": "2020-07-10", "end_date": "2022-07-30"},
+        BINANCE_DOTUSDT_DAY: {"start_date": "2020-08-18", "end_date": "2022-07-30"},
+        BINANCE_ETCUSDT_DAY: {"start_date": "2018-06-12", "end_date": "2022-07-30"},
+        BINANCE_ETHUSDT_DAY: {"start_date": "2017-08-17", "end_date": "2022-07-30"},
+        # spot
+        BINANCE_ETHUSDT_FUTURES_DAY: {
+            "start_date": "2019-11-27",
+            "end_date": "2022-03-15",
+        },
+        BINANCE_LTCUSDT_FUTURES_DAY: {
+            "start_date": "2020-01-09",
+            "end_date": "2022-03-15",
+        },
+        BINANCE_ADAUSDT_FUTURES_DAY: {
+            "start_date": "2020-01-31",
+            "end_date": "2022-07-30",
+        },
+        BINANCE_BTCUSDT_FUTURES_DAY: {
+            "start_date": "2019-09-08",
+            "end_date": "2022-03-15",
+        },
+        BINANCE_XMRUSDT_FUTURES_DAY: {
+            "start_date": "2020-02-03",
+            "end_date": "2022-07-30",
+        },
+    }
 
 
 def app_update_layout(fig: go.Figure) -> html.Div:
+    """Updates the layout for the graph figure"""
     return html.Div(
         [
             dcc.Graph(
@@ -80,7 +99,8 @@ def normalize_ohlc_data(df: pd.DataFrame) -> pd.DataFrame:
 
 
 def get_date_limits(days: int, data_choice: int) -> Tuple[str, str]:
-    d_range = data_date_ranges.get(data_choice)
+    """Returns the absolute start and end date for a specific data file"""
+    d_range = get_data_date_ranges().get(data_choice)
     start_date__limit_l = [int(i) for i in d_range["start_date"].split("-")]
 
     # adjust the start_date 91 days after the original start date
@@ -123,7 +143,7 @@ def create_dates(
     ]
 
     # pick a random day to start minus the given range
-    start_i = random.randint(a=0, b=len(dt_list) - num_days_range)
+    start_i = random.randint(0, len(dt_list) - num_days_range)
     end_i = start_i + num_days_range
 
     start_random_dt = dt_list[start_i]
@@ -150,6 +170,7 @@ def create_figure(df: pd.DataFrame) -> go.Figure:
         dragmode="zoom",
         newshape_line_color="white",
         font=dict(family="Courier New, monospace", size=18, color="RebeccaPurple"),
+        
         # hides the xaxis range slider
         xaxis=dict(rangeslider=dict(visible=False)),
     )
@@ -170,37 +191,38 @@ def main() -> None:
 
     for i in range(total_graphs):
         df = None
-        data_choice = random.choice(list(data_date_ranges.keys()))
-        adj_start_date_limit, end_date_limit = get_date_limits(days, data_choice)
+        data_choice = random.choice(list(get_data_date_ranges().keys()))
 
-        start_date, end_date = create_dates(
-            num_days_range, adj_start_date_limit, end_date_limit
-        )
+        # if random.randint(0, 1):
+        if False:
+            adj_start_date_limit, end_date_limit = get_date_limits(days, data_choice)
 
-        if random.randint(0, 1):
+            start_date, end_date = create_dates(
+                num_days_range, adj_start_date_limit, end_date_limit
+            )
+
             real_ohlc = RealOHLC(data_choice)
             df = real_ohlc.create_df()
             df = real_ohlc.real_case(df, start_date, end_date)
             answers[i] = f"Real: {start_date} to {end_date} {data_choice}"
         else:
-            volatility = random.randint(100, 200)
             random_ohlc = RandomOHLC(
-                num_days_range, start_price, asset_name, volatility
+                num_days_range, start_price, asset_name, random.randint(1, 10)
             )
-            # df = random_ohlc.create_random_df()
-            random_ohlc.create_random_df()
-            # df = random_ohlc.create_realistic_candles(df)
+            random_ohlc.create_df()
+            
             random_ohlc.create_realistic_candles()
+            random_ohlc.resample_timeframes()
             df = random_ohlc.df
             answers[i] = f"Fake"
 
         df = normalize_ohlc_data(df)
-
         df.reset_index(inplace=True)
         df.drop(columns=["date"], inplace=True)
 
         # create a new df that contains only half the dates and prices
         half_df = df.iloc[: len(df) // 2]
+
         fig = create_figure(half_df)
         fig.write_html(f"html/HABC-USD_{i}.html")
         app.layout = app_update_layout(fig)
