@@ -1,13 +1,12 @@
 import random
 import datetime
 from pprint import pprint
-from time import time
 from typing import Tuple
 
-from dash import Dash, dcc, html
-import pandas as pd
-import plotly.graph_objects as go  # or plotly.express as px
 import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+from dash import Dash, dcc, html
 
 from constants.constants import *
 from random_ohlc import RandomOHLC
@@ -63,7 +62,7 @@ def app_update_layout(fig: go.Figure) -> html.Div:
                     "displayModeBar": True,
                     "showTips": True,
                     "displaylogo": True,
-                    #   'fillFrame': True,
+                    "fillFrame": False,
                     "autosizable": True,
                     "modeBarButtonsToAdd": [
                         "drawline",
@@ -74,6 +73,26 @@ def app_update_layout(fig: go.Figure) -> html.Div:
                 },
             )
         ]
+    )
+
+
+def get_config() -> dict:
+    return (
+        {
+            "doubleClickDelay": 1000,
+            "scrollZoom": True,
+            "displayModeBar": True,
+            "showTips": True,
+            "displaylogo": True,
+            "fillFrame": False,
+            "autosizable": True,
+            "modeBarButtonsToAdd": [
+                "drawline",
+                "drawopenpath",
+                "drawclosedpath",
+                "eraseshape",
+            ],
+        },
     )
 
 
@@ -172,7 +191,7 @@ def create_figure(df: pd.DataFrame) -> go.Figure:
         newshape_line_color="white",
         font=dict(family="Courier New, monospace", size=18, color="RebeccaPurple"),
         # hides the xaxis range slider
-        xaxis=dict(rangeslider=dict(visible=False)),
+        xaxis=dict(rangeslider=dict(visible=True)),
     )
 
     # fig.update_yaxes(showticklabels=True)
@@ -180,17 +199,32 @@ def create_figure(df: pd.DataFrame) -> go.Figure:
     return fig
 
 
+def create_half_dataframes(
+    dataframes: dict[str, pd.DataFrame]
+) -> dict[str, pd.DataFrame]:
+    """Creates a new dict that contains only the first half the data in the dataframes"""
+    # for timeframe, df in dataframes.items():
+    #     dataframes[timeframe] = df.iloc[: len(df) // 2]
+    # return dataframes
+    return {
+        timeframe: dataframes[timeframe].iloc[: len(dataframes[timeframe]) // 2]
+        for timeframe in dataframes
+    }
+
+
 def main() -> None:
     start_price = 100_000
     asset_name = "Unknown"
-    total_graphs = 5
-    num_days_range = 120
+    total_graphs = 1
+    num_days_range = 120  # 120 will be the standard
+    volatility = random.uniform(1, 2)
     answers = {}
     days = 91
     app = Dash()
 
     for i in range(total_graphs):
         dataframes = None
+        half_dataframes = None
         data_choice = random.choice(list(get_data_date_ranges().keys()))
 
         # if random.randint(0, 1):
@@ -207,34 +241,30 @@ def main() -> None:
             dataframes = normalize_ohlc_data(dataframes)
             answers[i] = f"Real: {start_date} to {end_date} {data_choice}"
         else:
+            # how to show dates???
             random_ohlc = RandomOHLC(
-                num_days_range, start_price, asset_name, random.randint(1, 10)
+                num_days_range, start_price, asset_name, volatility
             )
             random_ohlc.create_df()
             random_ohlc.create_realistic_ohlc()
             random_ohlc.normalize_ohlc_data()
             random_ohlc.resample_timeframes()
-            random_ohlc.drop_dates()
+            # random_ohlc.drop_dates()
+            half_dataframes = create_half_dataframes(random_ohlc.resampled_data)
             dataframes = random_ohlc.resampled_data
             answers[i] = f"Fake"
 
-        # for timeframe in dataframes.values():
-        #     dataframes[timeframe].reset_index(inplace=True)
-        #     dataframes[timeframe].drop(columns=["date"], inplace=True)
-
-        # create a new df that contains only half the dates and prices
-        half_dataframes = { timeframe: dataframes[timeframe].iloc[:len(dataframes[timeframe]) // 2] for timeframe in dataframes.values() }
-
-        for timeframe, df in half_dataframes.items():
+        for df in half_dataframes.values():
             fig = create_figure(df)
             fig.write_html(f"html/HABC-USD_{i}.html")
+            fig.show(config=get_config())
             app.layout = app_update_layout(fig)
 
         # This is the full graph that only the admin should be able to see!
         ####################################################################
-        for timeframe, df in dataframes.items():
-            fig = create_figure(df)
-            fig.write_html(f"html/FABC-USD_{i}.html")
+        # for timeframe, df in dataframes.items():
+        #     fig = create_figure(df)
+        #     fig.write_html(f"html/FABC-USD_{i}.html")
         ####################################################################
 
     pprint(answers)
