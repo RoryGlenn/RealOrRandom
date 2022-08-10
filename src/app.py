@@ -1,6 +1,7 @@
 import random
 import datetime
 from pprint import pprint
+from time import time
 from typing import Tuple
 
 from dash import Dash, dcc, html
@@ -170,7 +171,6 @@ def create_figure(df: pd.DataFrame) -> go.Figure:
         dragmode="zoom",
         newshape_line_color="white",
         font=dict(family="Courier New, monospace", size=18, color="RebeccaPurple"),
-        
         # hides the xaxis range slider
         xaxis=dict(rangeslider=dict(visible=False)),
     )
@@ -190,7 +190,7 @@ def main() -> None:
     app = Dash()
 
     for i in range(total_graphs):
-        df = None
+        dataframes = None
         data_choice = random.choice(list(get_data_date_ranges().keys()))
 
         # if random.randint(0, 1):
@@ -202,63 +202,44 @@ def main() -> None:
             )
 
             real_ohlc = RealOHLC(data_choice)
-            df = real_ohlc.create_df()
-            df = real_ohlc.real_case(df, start_date, end_date)
+            dataframes = real_ohlc.create_df()
+            dataframes = real_ohlc.real_case(dataframes, start_date, end_date)
+            dataframes = normalize_ohlc_data(dataframes)
             answers[i] = f"Real: {start_date} to {end_date} {data_choice}"
         else:
             random_ohlc = RandomOHLC(
                 num_days_range, start_price, asset_name, random.randint(1, 10)
             )
             random_ohlc.create_df()
-            
-            random_ohlc.create_realistic_candles()
+            random_ohlc.create_realistic_ohlc()
+            random_ohlc.normalize_ohlc_data()
             random_ohlc.resample_timeframes()
-            df = random_ohlc.df
+            random_ohlc.drop_dates()
+            dataframes = random_ohlc.resampled_data
             answers[i] = f"Fake"
 
-        df = normalize_ohlc_data(df)
-        df.reset_index(inplace=True)
-        df.drop(columns=["date"], inplace=True)
+        # for timeframe in dataframes.values():
+        #     dataframes[timeframe].reset_index(inplace=True)
+        #     dataframes[timeframe].drop(columns=["date"], inplace=True)
 
         # create a new df that contains only half the dates and prices
-        half_df = df.iloc[: len(df) // 2]
+        half_dataframes = { timeframe: dataframes[timeframe].iloc[:len(dataframes[timeframe]) // 2] for timeframe in dataframes.values() }
 
-        fig = create_figure(half_df)
-        fig.write_html(f"html/HABC-USD_{i}.html")
-        app.layout = app_update_layout(fig)
+        for timeframe, df in half_dataframes.items():
+            fig = create_figure(df)
+            fig.write_html(f"html/HABC-USD_{i}.html")
+            app.layout = app_update_layout(fig)
 
         # This is the full graph that only the admin should be able to see!
         ####################################################################
-        fig = create_figure(df)
-        fig.write_html(f"html/FABC-USD_{i}.html")
+        for timeframe, df in dataframes.items():
+            fig = create_figure(df)
+            fig.write_html(f"html/FABC-USD_{i}.html")
         ####################################################################
 
     pprint(answers)
     app.run_server(debug=True)
 
-
-"""
-TODO:
-    Create a google document like page with plotly integrated
-    only show 1 graph per page
-    do not allow the user to go forward or backward
-    Integrate drawing tools and have all the data that the users plots on the graph be saved when they continue onto the next graph.
-    Do not reveal any answers until the test is complete.
-    Create a time limit for the entire test (maybe even for each graph?)
-    Create additional notes section at the bottom to allow the user to say anything they want. This will have no effect on score
-
-    Checkbox: real or fake
-    Checkbox: Skip -> offer this because the user cannot see a pattern but dock them points if they do so.
-    confidence slider: 10% increments
-    price prediction input for 1 bar, 5, bars, 10 bars, 20 bars in the future
-    The farther out, the user can predict, the more points are awarded.
-    Give the user a choice for an exact number or for a lower limit and upper limit.
-    The more precise the user is, the more point are awarded. The less precise, the less points are awarded.
-
-    after user has drawn a graph with s/r lines, have the bot generate a trend line start at the same point and ending at the same point of the user
-
-    is it possible to generate s/r lines but starting at the end date and working backwards?
-"""
 
 if __name__ == "__main__":
     main()

@@ -34,3 +34,5 @@ LONG = "long"
 HTML = ".html"
 QTY_MAX_DEC = 6
 FORMAT_STR = "%Y-%m-%d"
+
+SECONDS_IN_1DAY = 86400

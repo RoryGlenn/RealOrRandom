@@ -1,15 +1,12 @@
 import random
 import numpy as np
 import pandas as pd
+from time import perf_counter
+from tqdm import tqdm
+
 from brownian import brownian
 
 from constants.constants import *
-
-"""
-TODO:
-    create functions to perform the operations on the df inside the class
-
-"""
 
 
 class RandomOHLC:
@@ -32,9 +29,11 @@ class RandomOHLC:
             # 4: brownian,
         }
 
-        self.__df: pd.DataFrame = None
+        self.df_pre = None
+        self.df_post = None
+
         self.resampled_data = {
-            '1min': None,
+            "1min": None,
             "5min": None,
             "15Min": None,
             "30Min": None,
@@ -47,9 +46,8 @@ class RandomOHLC:
             "1M": None,
         }
 
-    @property
-    def df(self) -> pd.DataFrame:
-        return self.__df
+    def get_time_elapsed(self, start_time: float) -> float:
+        return round(perf_counter() - start_time, 2)
 
     def __brownian_motion(self, rows: int) -> np.ndarray:
         """Creates a brownian motion ndarray"""
@@ -75,35 +73,38 @@ class RandomOHLC:
         normalization formula: (data - min) / (max - min)
         """
 
+        start_time = perf_counter()
+        print("Normalizing OHLC data..")
+
         _max = np.max(
             [
-                np.max(self.__df.open),
-                np.max(self.__df.high),
-                np.max(self.__df.low),
-                np.max(self.__df.close),
+                np.max(self.df_post.open),
+                np.max(self.df_post.high),
+                np.max(self.df_post.low),
+                np.max(self.df_post.close),
             ]
         )
         _min = np.min(
             [
-                np.min(self.__df.open),
-                np.min(self.__df.high),
-                np.min(self.__df.low),
-                np.min(self.__df.close),
+                np.min(self.df_post.open),
+                np.min(self.df_post.high),
+                np.min(self.df_post.low),
+                np.min(self.df_post.close),
             ]
         )
 
-        norm_open = (self.__df.open - _min) / (_max - _min)
-        norm_high = (self.__df.high - _min) / (_max - _min)
-        norm_low = (self.__df.low - _min) / (_max - _min)
-        norm_close = (self.__df.close - _min) / (_max - _min)
+        norm_open = (self.df_post.open - _min) / (_max - _min)
+        norm_high = (self.df_post.high - _min) / (_max - _min)
+        norm_low = (self.df_post.low - _min) / (_max - _min)
+        norm_close = (self.df_post.close - _min) / (_max - _min)
 
         random_multiplier = random.randint(9, 999)
 
-        self.__df["open"] = round(norm_open * random_multiplier, 4)
-        self.__df["high"] = round(norm_high * random_multiplier, 4)
-        self.__df["low"] = round(norm_low * random_multiplier, 4)
-        self.__df["close"] = round(norm_close * random_multiplier, 4)
-        return self.__df
+        self.df_post["open"] = round(norm_open * random_multiplier, 4)
+        self.df_post["high"] = round(norm_high * random_multiplier, 4)
+        self.df_post["low"] = round(norm_low * random_multiplier, 4)
+        self.df_post["close"] = round(norm_close * random_multiplier, 4)
+        print(f"Finished normalize_ohlc_data: {self.get_time_elapsed(start_time)}")
 
     def __normalize_ohlc_list(self, data: list) -> list:
         """Normalize OHLC data with random multiplier
@@ -125,15 +126,9 @@ class RandomOHLC:
         volatility: int,
     ) -> None:
         """
-        Randomly selects
+        generates 1min, 5min, 15min, 1hr, 4hr, 1day, 1week"""
 
-        Need to generate 1min, 5min, 15min, 1hr, 4hr, 1day, 1week"""
-
-        periods = days * 86400 # seconds
-        # periods = days * 1440 # minutes
-        # periods = days * 24  # hours
-        # periods = days        # days
-        # periods = days / 7    # weeks ?
+        periods = days * SECONDS_IN_1DAY
         price = None
 
         # randomly pick a distribution function
@@ -151,42 +146,17 @@ class RandomOHLC:
         start_date = "2000-01-01"
 
         # the smallest unit of measurement used is 1 second
-        smallest_freq = '1S'
+        smallest_freq = "1S"
 
-        return pd.DataFrame({
-            "ticker": np.repeat([col_name], periods),
-            "date": np.tile( pd.date_range(start_date, periods=periods, freq=smallest_freq), 1),
-            "price": (price),
-        })
-
-    def __downsample_ohlc_data(self, timeframe: str) -> None:
-        """Converts a higher resolution dataframe into a lower one.
-        For example: converts 1min candle sticks into 5min candle sticks.
-
-        # A helpful hint
-            https://towardsdatascience.com/pandas-resample-tricks-you-should-know-for-manipulating-time-series-data-7e9643a7e7f3
-
-        # some previous answers
-            https://stackoverflow.com/questions/36222928/pandas-ohlc-aggregation-on-ohlc-data
-
-        TODO:
-            Resample time frame to 1min, 5min, 15min, 1hr, 4hr, 1d, 1w
-        """
-
-        self.__df["date"] = pd.to_datetime(self.__df["date"])
-        self.__df = self.__df.set_index("date")
-
-        # resample to all times
-        for t in self.resampled_data:
-            self.__df = self.__df.resample(t).aggregate(
-                {
-                    "open": lambda s: s[0],
-                    "high": lambda df: df.max(),
-                    "low": lambda df: df.min(),
-                    "close": lambda df: df[-1],
-                }
-            )
-        print(self.__df)
+        return pd.DataFrame(
+            {
+                "ticker": np.repeat([col_name], periods),
+                "date": np.tile(
+                    pd.date_range(start_date, periods=periods, freq=smallest_freq), 1
+                ),
+                "price": (price),
+            }
+        )
 
     def __create_whale_candles(self) -> None:
         """Returns a modified self.df containing whale values.
@@ -202,13 +172,14 @@ class RandomOHLC:
             of it being stretched with the same ratio as the
             previous whale candle or even the next whale candle is essentially 0%
         """
+        start_time = perf_counter()
+        print("Creating whale candles...")
 
         # probability for creating a whale candle will be from 1-20%
         random_chance = random.randint(1, 20)
 
-        self.__df.reset_index(inplace=True)
 
-        for i in range(len(self.__df)):
+        for i in tqdm(range(len(self.df_post))):
             if random.randint(1, 100) <= random_chance:
                 # assigns a random floating point multiplier between the range of [WHALE_LOWER_MULT, WHALE_UPPER_MULT].
                 # By doing this, every time a whale candle is created, the probability
@@ -216,40 +187,46 @@ class RandomOHLC:
                 # previous whale candle or even the next whale candle is essentially 0%
                 whale_mult = random.uniform(WHALE_LOWER_MULT, WHALE_UPPER_MULT)
 
-                self.__df.at[i, "open"] = self.__df.iloc[i]["open"] * whale_mult
-                self.__df.at[i, "high"] = self.__df.iloc[i]["high"] * whale_mult
-                self.__df.at[i, "low"] = self.__df.iloc[i]["low"] / whale_mult
-                self.__df.at[i, "close"] = self.__df.iloc[i]["close"] / whale_mult
-        self.__df.set_index("date", inplace=True)
+                self.df_post.at[i, "open"] = self.df_post.iloc[i]["open"] * whale_mult
+                self.df_post.at[i, "high"] = self.df_post.iloc[i]["high"] * whale_mult
+                self.df_post.at[i, "low"] = self.df_post.iloc[i]["low"] / whale_mult
+                self.df_post.at[i, "close"] = self.df_post.iloc[i]["close"] / whale_mult
+        print(f"Finished __create_whale_candles: {self.get_time_elapsed(start_time)}")
 
     def __extend_wicks(self, hl_mult: float) -> None:
         """Returns a dataframe with the high and low wicks multiplied by the passed in hl_mult"""
-        self.__df.reset_index(inplace=True)
-        for i in range(len(self.__df)):
-            new_h = self.__df.iloc[i]["high"] * hl_mult
-            new_l = self.__df.iloc[i]["low"] - (
-                self.__df.iloc[i]["low"] * (hl_mult - 1)
+        self.df_post.reset_index(inplace=True)
+        for i in range(len(self.df_post)):
+            new_h = self.df_post.iloc[i]["high"] * hl_mult
+            new_l = self.df_post.iloc[i]["low"] - (
+                self.df_post.iloc[i]["low"] * (hl_mult - 1)
             )
 
-            self.__df.at[i, "high"] = new_h
-            self.__df.at[i, "low"] = new_l
-        self.__df.set_index("date", inplace=True)
-        return self.__df
+            self.df_post.at[i, "high"] = new_h
+            self.df_post.at[i, "low"] = new_l
+        self.df_post.set_index("date", inplace=True)
+        return self.df_post
 
     def __extend_all_wicks_randomly(self) -> None:
         """Returns a dataframe with the highs and lows multiplied by a random float"""
-        self.__df.reset_index(inplace=True)
-        for i in range(len(self.__df)):
+        start_time = perf_counter()
+        print("Extending all wicks randomly...")
+
+        for i in tqdm(range(len(self.df_post))):
             h_mult = random.uniform(RANDOM_LOWER_LIMIT, RANDOM_UPPER_LIMIT)
             l_mult = random.uniform(RANDOM_LOWER_LIMIT, RANDOM_UPPER_LIMIT)
 
-            new_h = self.__df.iloc[i]["high"] * h_mult
-            new_l = self.__df.iloc[i]["low"] - (self.__df.iloc[i]["low"] * (l_mult - 1))
+            new_h = self.df_post.iloc[i]["high"] * h_mult
+            new_l = self.df_post.iloc[i]["low"] - (
+                self.df_post.iloc[i]["low"] * (l_mult - 1)
+            )
 
-            self.__df.at[i, "high"] = new_h
-            self.__df.at[i, "low"] = new_l
-        self.__df.set_index("date", inplace=True)
+            self.df_post.at[i, "high"] = new_h
+            self.df_post.at[i, "low"] = new_l
         self.__extend_wicks_randomly()
+        print(
+            f"Finished __extend_all_wicks_randomly: {self.get_time_elapsed(start_time)}"
+        )
 
     def __extend_wicks_randomly(self) -> None:
         """Returns a dataframe with the highs, lows multiplied by a random float
@@ -260,8 +237,7 @@ class RandomOHLC:
             extend both
         """
 
-        self.__df.reset_index(inplace=True)
-        for i in range(len(self.__df)):
+        for i in tqdm(range(len(self.df_post))):
             h_mult = random.uniform(RANDOM_LOWER_LIMIT, RANDOM_UPPER_LIMIT)
             l_mult = random.uniform(RANDOM_LOWER_LIMIT, RANDOM_UPPER_LIMIT)
 
@@ -269,86 +245,118 @@ class RandomOHLC:
 
             if random_choice == 1:
                 # extend only the high
-                self.__df.at[i, "high"] = self.__df.iloc[i]["high"] * h_mult
+                self.df_post.at[i, "high"] = self.df_post.iloc[i]["high"] * h_mult
             elif random_choice == 2:
                 # extend only the low
-                self.__df.at[i, "low"] = self.__df.iloc[i]["low"] - (
-                    self.__df.iloc[i]["low"] * (l_mult - 1)
+                self.df_post.at[i, "low"] = self.df_post.iloc[i]["low"] - (
+                    self.df_post.iloc[i]["low"] * (l_mult - 1)
                 )
             else:
                 # extend both
-                self.__df.at[i, "high"] = self.__df.iloc[i]["high"] * h_mult
-                self.__df.at[i, "low"] = self.__df.iloc[i]["low"] - (
-                    self.__df.iloc[i]["low"] * (l_mult - 1)
+                self.df_post.at[i, "high"] = self.df_post.iloc[i]["high"] * h_mult
+                self.df_post.at[i, "low"] = self.df_post.iloc[i]["low"] - (
+                    self.df_post.iloc[i]["low"] * (l_mult - 1)
                 )
-        self.__df.set_index("date", inplace=True)
-        return self.__df
+        return self.df_post
 
     def __connect_open_close_candles(self) -> None:
         """Returns a dataframe where every candles close is the next candles open.
         This is needed because cryptocurrencies run 24/7.
         There are no breaks or pauses so each candle is connected to the next candle.
         """
-        self.__df.reset_index(inplace=True)
+        start_time = perf_counter()
+        print("Connecting open and closing candles...")
 
-        for i in range(1, len(self.__df)):
-            # connects each open and close together
-            self.__df.at[i, "open"] = self.__df.iloc[i - 1]["close"]
+        for i in tqdm(range(1, len(self.df_post))):
+            self.df_post.at[i, "open"] = self.df_post.iloc[i - 1]["close"]
 
             min_value = min(
-                self.__df.iloc[i]["open"],
-                self.__df.iloc[i]["high"],
-                self.__df.iloc[i]["close"],
+                self.df_post.iloc[i]["open"],
+                self.df_post.iloc[i]["high"],
+                self.df_post.iloc[i]["close"],
             )
 
             max_value = max(
-                self.__df.iloc[i]["open"],
-                self.__df.iloc[i]["low"],
-                self.__df.iloc[i]["close"],
+                self.df_post.iloc[i]["open"],
+                self.df_post.iloc[i]["low"],
+                self.df_post.iloc[i]["close"],
             )
 
             # something went wrong and the low is not the lowest value
-            if self.__df.iloc[i]["low"] > min_value:
+            if self.df_post.iloc[i]["low"] > min_value:
                 # get the difference between the low and the lowest value and subtract it from the low
-                self.__df.at[i, "low"] = self.__df.iloc[i]["low"] - abs(
-                    min_value - self.__df.iloc[i]["low"]
+                self.df_post.at[i, "low"] = self.df_post.iloc[i]["low"] - abs(
+                    min_value - self.df_post.iloc[i]["low"]
                 )
 
             # get the difference between the highest value and the high and add it to the high
-            if self.__df.iloc[i]["high"] < max_value:
-                self.__df.at[i, "high"] = self.__df.iloc[i]["high"] + abs(
-                    max_value - self.__df.iloc[i]["high"]
+            if self.df_post.iloc[i]["high"] < max_value:
+                self.df_post.at[i, "high"] = self.df_post.iloc[i]["high"] + abs(
+                    max_value - self.df_post.iloc[i]["high"]
                 )
 
-        self.__df.set_index("date", inplace=True)
-        return self.__df
 
-    def create_realistic_candles(self) -> None:
+        print(
+            f"Finished __connect_open_close_candles: {self.get_time_elapsed(start_time)}"
+        )
+
+    def create_realistic_ohlc(self) -> None:
         """Process for creating slightly more realistic candles"""
+        self.df_post.reset_index(inplace=True)
         self.__create_whale_candles()
         self.__extend_all_wicks_randomly()
         self.__connect_open_close_candles()
+        self.df_post.set_index("date", inplace=True)
 
     def create_df(self) -> None:
-        """Create a dataframe for random data"""
-        df_1second = self.__generate_random_df(
+        """Creates a dataframe for random data"""
+
+        print("Creating random dataframe...")
+        start_time = perf_counter()
+
+        self.df_pre = self.__generate_random_df(
             self.num_days_range,
             self.start_price,
             self.name,
             self.volatility,
         )
 
-        df_1second.index = pd.to_datetime(df_1second.date)
-        self.__df = df_1second.price.resample('1min').ohlc(_method="ohlc")
-        
+        self.df_pre.index = pd.to_datetime(self.df_pre.date)
+
+        # assign the first ohlc df
+        self.df_post = self.df_pre.price.resample("1min").ohlc(_method="ohlc")
+
+        print(f"Finished create_df: {self.get_time_elapsed(start_time)}")
 
         # 25% to use a brownian motion distribution instead
         # if random.randint(1, 4) == 4:
         #     self.__df["price"] = self.__brownian_motion_distribution()
 
-
     def resample_timeframes(self) -> None:
         """Iterates over all the timeframe keys in resampled_data and creates a
         resampled dataframe corresponding to that timeframe"""
+
+        start_time = perf_counter()
+
+        print(f"Resampling dataframe for {list(self.resampled_data.keys())}")
+
+        # WHERE IS THE SELF.DF_POST?????????????????????
+        # WHY ISN'T IT BEING USED HERE?
+
+        # need to resample df using aggregate functions 
+
         for timeframe in self.resampled_data:
-            self.resampled_data[timeframe] = self.__df.price.resample(timeframe).ohlc(_method="ohlc")
+            self.resampled_data[timeframe] = self.df_pre.price.resample(timeframe).ohlc(
+                _method="ohlc"
+            )
+
+        print(f"Finished resample_timeframes: {self.get_time_elapsed(start_time)}")
+
+    def drop_dates(self) -> None:
+        # [print(key, value) for key, value in self.resampled_data.items()]
+
+        print("Dropping date columns...")
+        for timeframe, df in self.resampled_data.items():
+            print(timeframe, df)
+            self.resampled_data[timeframe].reset_index(inplace=True)
+            self.resampled_data[timeframe].drop(columns=["date"], inplace=True)
