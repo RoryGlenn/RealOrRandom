@@ -171,7 +171,7 @@ def create_dates(
     return start_random_dt.strftime("%Y-%m-%d"), end_random_dt.strftime("%Y-%m-%d")
 
 
-def create_figure(df: pd.DataFrame) -> go.Figure:
+def create_figure(df: pd.DataFrame, graph_title: str) -> go.Figure:
     fig = go.Figure(
         data=go.Candlestick(
             x=df.index,
@@ -184,9 +184,9 @@ def create_figure(df: pd.DataFrame) -> go.Figure:
 
     fig.update_layout(
         template="plotly_dark",
-        # title=answer,
-        xaxis_title="Time",
-        yaxis_title="Value",
+        title="",
+        xaxis_title="Dates",
+        yaxis_title="Price",
         dragmode="zoom",
         newshape_line_color="white",
         font=dict(family="Courier New, monospace", size=18, color="RebeccaPurple"),
@@ -203,9 +203,6 @@ def create_half_dataframes(
     dataframes: dict[str, pd.DataFrame]
 ) -> dict[str, pd.DataFrame]:
     """Creates a new dict that contains only the first half the data in the dataframes"""
-    # for timeframe, df in dataframes.items():
-    #     dataframes[timeframe] = df.iloc[: len(df) // 2]
-    # return dataframes
     return {
         timeframe: dataframes[timeframe].iloc[: len(dataframes[timeframe]) // 2]
         for timeframe in dataframes
@@ -241,7 +238,6 @@ def main() -> None:
             dataframes = normalize_ohlc_data(dataframes)
             answers[i] = f"Real: {start_date} to {end_date} {data_choice}"
         else:
-            # how to show dates???
             random_ohlc = RandomOHLC(
                 num_days_range, start_price, asset_name, volatility
             )
@@ -249,14 +245,14 @@ def main() -> None:
             random_ohlc.create_realistic_ohlc()
             random_ohlc.normalize_ohlc_data()
             random_ohlc.resample_timeframes()
-            # random_ohlc.drop_dates()
+
             half_dataframes = create_half_dataframes(random_ohlc.resampled_data)
             dataframes = random_ohlc.resampled_data
             answers[i] = f"Fake"
 
-        for df in half_dataframes.values():
-            fig = create_figure(df)
-            fig.write_html(f"html/HABC-USD_{i}.html")
+        for timeframe, df in half_dataframes.items():
+            fig = create_figure(df, timeframe)
+            fig.write_html(f"html/HABC-USD_{timeframe}_{i}.html", config=get_config())
             fig.show(config=get_config())
             app.layout = app_update_layout(fig)
 
@@ -267,9 +263,15 @@ def main() -> None:
         #     fig.write_html(f"html/FABC-USD_{i}.html")
         ####################################################################
 
-    pprint(answers)
-    app.run_server(debug=True)
+    # pprint(answers)
+
+    # any change made to this file will cause the server to recompile
+    # app.run_server(debug=True)
 
 
 if __name__ == "__main__":
     main()
+
+
+# to create drop down menu for timeframes
+# https://www.youtube.com/watch?v=RwlqlGUDLkg

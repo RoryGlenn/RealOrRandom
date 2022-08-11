@@ -1,3 +1,4 @@
+from pprint import pprint
 from time import perf_counter
 
 import random
@@ -31,12 +32,13 @@ class RandomOHLC:
 
         self.__df = None
         self.__resampled_data = {
-            "1min": None,
-            "5min": None,
-            "15Min": None,
-            "30Min": None,
-            "1H": None,
-            "2H": None,
+            # Put these back in when testing is over!
+            # "1min": None,
+            # "5min": None,
+            # "15Min": None,
+            # "30Min": None,
+            # "1H": None,
+            # "2H": None,
             "4H": None,
             "1D": None,
             "3D": None,
@@ -64,7 +66,7 @@ class RandomOHLC:
         B = np.concatenate((B0, np.cumsum(dB, axis=0)), axis=0)
         return B
 
-    def __brownian_motion_distribution(self, rows: int = 2880) -> list[float]:
+    def __brownian_motion_distribution(self, rows: int) -> list[float]:
         """Returns a dataframe with a brownian motion distribution"""
         bm_array = self.__brownian_motion(rows)
         bm_array = [i[0] for i in bm_array]
@@ -127,7 +129,7 @@ class RandomOHLC:
         days: int,
         start_price: float,
         volatility: int,
-    ) -> None:
+    ) -> pd.DataFrame:
         """
         Generates a random dataframe.
 
@@ -137,18 +139,22 @@ class RandomOHLC:
 
         """
 
-        periods = days * SECONDS_IN_1DAY
+        total_periods = days * SECONDS_IN_1DAY
 
         # randomly pick a distribution function
         dist_func = self.__distribution_functions.get(
             random.randint(1, len(self.__distribution_functions))
         )
 
-        # if dist_func != brownian:
-        steps = dist_func(loc=0, scale=volatility, size=periods)
+        steps = dist_func(scale=volatility, size=total_periods)  # , loc=0)
         steps[0] = 0
-        price = start_price + np.cumsum(steps)
-        price = [round(abs(p), 6) for p in price]
+        prices = start_price + np.cumsum(steps)
+
+        # Create (SECONDS_IN_1DAY * days) number of prices
+        prices = [round(abs(p), 6) for p in tqdm(prices)]
+
+        # need to make certain periods of time more volatile than others
+        # prices = self.__create_whale_prices(prices)
 
         # start date is arbitrary
         start_date = "2000-01-01"
@@ -156,14 +162,96 @@ class RandomOHLC:
         # the smallest unit of measurement used is 1 second
         smallest_freq = "1S"
 
-        return pd.DataFrame(
+        df = pd.DataFrame(
             {
                 "date": np.tile(
-                    pd.date_range(start_date, periods=periods, freq=smallest_freq), 1
+                    pd.date_range(
+                        start_date, periods=total_periods, freq=smallest_freq
+                    ),
+                    1,
                 ),
-                "price": (price),
+                "price": (prices),
             }
         )
+
+        df.index = pd.to_datetime(df.date)
+        return df.price.resample("1min").ohlc(_method="ohlc")
+
+    def __create_whale_prices(self, prices: np.ndarray) -> np.ndarray:
+        """Whale prices will move in either up or down"""
+        print("Creating whale prices...")
+
+        for i, p in enumerate(tqdm(prices)):
+            if random.randint(1, 1000) == 1:
+                # max volatility should last for 1-3 days
+                period_size = random.randint(SECONDS_IN_1DAY, SECONDS_IN_1DAY * 3)
+
+                dist_func = self.__distribution_functions.get(
+                    random.randint(1, len(self.__distribution_functions))
+                )
+
+                steps = dist_func(scale=self.volatility, size=period_size)  # loc=prices[i])
+                steps[0] = 0
+                new_prices = p + np.cumsum(steps)
+
+                for j, pp in enumerate(new_prices):
+                    pp = round(abs(pp), 6)
+                    prices.itemset(i + j, pp)
+        return prices
+
+    def __create_volatile_periods(self) -> None:
+        print("Creating volatile periods...")
+
+        for i in tqdm(range(len(self.__df))):
+            if random.randint(1, 100) == 1:
+                # max volatility should be 1-3 days
+                period_size = random.randint(SECONDS_IN_1DAY, SECONDS_IN_1DAY * 3)
+
+                dist_func = self.__distribution_functions.get(
+                    random.randint(1, len(self.__distribution_functions))
+                )
+
+                # create a new distribution with higher volatility than usual
+                # center the mean around the last close price
+                steps = dist_func(
+                    loc=self.__df.iloc[i]["close"],
+                    scale=self.volatility,
+                    size=period_size,
+                )
+                steps[0] = 0
+                prices = self.__df.iloc[i]["close"] + np.cumsum(steps)
+
+                # create a new 1 second df
+                df_new = pd.DataFrame(
+                    {
+                        "date": np.tile(
+                            pd.date_range(
+                                start="2000-01-01", periods=period_size, freq="1S"
+                            ),
+                            1,
+                        ),
+                        "price": (prices),
+                    }
+                )
+
+                # resample it to 1 minute
+                df_new.index = pd.to_datetime(df_new.date)
+                df_new = df_new.price.resample("1min").ohlc(_method="ohlc")
+
+                # print()
+                # print(df_new)
+                # print()
+
+                #  replace the values in self.__df
+                for j in range(len(df_new)):
+
+                    print("self.__df: ", self.__df.iloc[i + j]["open"])
+                    print("df_new: ", df_new.iloc[j]["open"])
+
+                    self.__df.at[i + j, "open"] = df_new.iloc[j]["open"]
+                    self.__df.at[i + j, "high"] = df_new.iloc[j]["high"]
+                    self.__df.at[i + j, "low"] = df_new.iloc[j]["low"]
+                    self.__df.at[i + j, "close"] = df_new.iloc[j]["close"]
 
     def __create_whale_candles(self) -> None:
         """Returns a modified self.df containing whale values.
@@ -181,8 +269,8 @@ class RandomOHLC:
         """
         print("Creating whale candles...")
 
-        # probability for creating a whale candle will be from 1-20%
-        random_chance = random.randint(1, 20)
+        # probability for creating a whale candle will be from 1%-100%
+        random_chance = random.randint(1, 100)
 
         for i in tqdm(range(len(self.__df))):
             if random.randint(1, 100) <= random_chance:
@@ -210,7 +298,6 @@ class RandomOHLC:
 
             self.__df.at[i, "high"] = new_h
             self.__df.at[i, "low"] = new_l
-
 
     def __extend_wicks_randomly(self) -> None:
         """Returns a dataframe with the highs, lows multiplied by a random float
@@ -281,27 +368,26 @@ class RandomOHLC:
     def create_realistic_ohlc(self) -> None:
         """Process for creating slightly more realistic candles"""
         self.__df.reset_index(inplace=True)
-        self.__create_whale_candles()
-        self.__extend_all_wicks_randomly()
-        self.__extend_wicks_randomly()
+        self.__create_volatile_periods()
+        # self.__create_whale_candles()
+        # self.__extend_all_wicks_randomly()
+        # self.__extend_wicks_randomly()
         self.__connect_open_close_candles()
         self.__df.set_index("date", inplace=True)
 
     def create_df(self) -> None:
         """Creates a dataframe for random data"""
 
-        print("Creating random dataframe...")
-        start_time = perf_counter()
+        print("Creating dataframe...")
 
-        df = self.__generate_random_df(
+        self.__df = self.__generate_random_df(
             self.num_days_range,
             self.start_price,
             self.volatility,
         )
 
-        df.index = pd.to_datetime(df.date)
-        self.__df = df.price.resample("1min").ohlc(_method="ohlc")
-        print(f"Finished creating df in {self.get_time_elapsed(start_time)}")
+
+
 
         # 25% to use a brownian motion distribution instead
         # if random.randint(1, 4) == 4:

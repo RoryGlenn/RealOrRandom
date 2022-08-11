@@ -395,8 +395,8 @@ def create_figure(
     fig.update_layout(
         template="plotly_dark",
         title=answer,
-        xaxis_title="Time",
-        yaxis_title="Value",
+        xaxis_title="Date",
+        yaxis_title="Price",
         dragmode="zoom",
         newshape_line_color="white",
         font=dict(family="Courier New, monospace", size=18, color="RebeccaPurple"),
