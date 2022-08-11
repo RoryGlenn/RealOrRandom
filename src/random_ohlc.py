@@ -38,12 +38,12 @@ class RandomOHLC:
         self.__df = None
         self.__resampled_data = {
             # Put these back in when testing is over!
-            # "1min": None,
-            # "5min": None,
-            # "15Min": None,
-            # "30Min": None,
-            # "1H": None,
-            # "2H": None,
+            "1min": None,
+            "5min": None,
+            "15Min": None,
+            "30Min": None,
+            "1H": None,
+            "2H": None,
             "4H": None,
             "1D": None,
             "3D": None,
@@ -135,7 +135,6 @@ class RandomOHLC:
         self.__df["low"] = round(norm_low * random_multiplier, 4)
         self.__df["close"] = round(norm_close * random_multiplier, 4)
 
-        print(self.__df)
 
     def __normalize_ohlc_list(self, data: list) -> list:
         """Normalize OHLC data with random multiplier
@@ -194,7 +193,6 @@ class RandomOHLC:
 
         df.index = pd.to_datetime(df.date)
         self.__df = df.price.resample("1min").ohlc(_method="ohlc")
-        print(self.__df)
 
     def __generate_random_df(
         self,
@@ -233,15 +231,17 @@ class RandomOHLC:
     def __create_volatile_periods(self) -> None:
         print("Creating volatile periods...")
 
-        for i in range(tqdm(len(self.__df))):
-            if random.randint(1, 1_000) == 1:
-                num_bars = random.randint(1, MINUTES_IN_1DAY)
+        random_chance = random.randint(1, 100)
+
+        for i in tqdm(range(len(self.__df))):
+            if random.randint(1, 10_000) < random_chance:
+                num_bars = random.randint(1000, MINUTES_IN_1DAY)
                 if num_bars < len(self.__df) - i:
                     df_new = self.__generate_random_df(
                         num_bars=num_bars,
                         frequency="1Min",
                         start_price=self.__df.iloc[i]["close"],
-                        volatility=self.volatility * 1.01,
+                        volatility=self.volatility * random.uniform(1, 1.005)
                     )
 
                     for j in range(len(df_new)):
@@ -249,12 +249,6 @@ class RandomOHLC:
                         self.__df.at[i + j, "high"] = df_new.iloc[j]["high"]
                         self.__df.at[i + j, "low"] = df_new.iloc[j]["low"]
                         self.__df.at[i + j, "close"] = df_new.iloc[j]["close"]
-
-                        if i+j >= len(self.__df):
-                            print(i+j, len(self.__df))
-                            print("shits busted")
-                            exit(1)
-        print(self.__df)
 
     def __create_whale_candles(self) -> None:
         """Returns a modified self.df containing whale values.
@@ -330,8 +324,7 @@ class RandomOHLC:
                 # extend both
                 self.__df.at[i, "high"] = self.__df.iloc[i]["high"] * h_mult
                 self.__df.at[i, "low"] = self.__df.iloc[i]["low"] - (
-                    self.__df.iloc[i]["low"] * (l_mult - 1)
-                )
+                    self.__df.iloc[i]["low"] * (l_mult - 1))
 
     def __connect_open_close_candles(self) -> None:
         """Returns a dataframe where every candles close is the next candles open.
@@ -367,7 +360,6 @@ class RandomOHLC:
                 self.__df.at[i, "high"] = self.__df.iloc[i]["high"] + abs(
                     max_value - self.__df.iloc[i]["high"]
                 )
-        print(self.__df)
 
     def create_realistic_ohlc(self) -> None:
         """Process for creating slightly more realistic candles"""

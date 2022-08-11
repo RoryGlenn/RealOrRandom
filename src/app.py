@@ -186,7 +186,7 @@ def create_figure(df: pd.DataFrame, graph_title: str) -> go.Figure:
     fig.update_layout(
         template="plotly_dark",
         title=graph_title,
-        xaxis_title="Dates",
+        xaxis_title="Date",
         yaxis_title="Price",
         dragmode="zoom",
         newshape_line_color="white",
@@ -249,7 +249,6 @@ def main() -> None:
             random_ohlc.create_realistic_ohlc()
             random_ohlc.normalize_ohlc_data()
             random_ohlc.resample_timeframes()
-            random_ohlc.print_resampled_data()
 
             half_dataframes = create_half_dataframes(random_ohlc.resampled_data)
             dataframes = random_ohlc.resampled_data
@@ -259,7 +258,7 @@ def main() -> None:
             fig = create_figure(df, timeframe)
             fig.write_html(f"html/HABC-USD_{timeframe}_{i}.html", config=get_config())
             fig.show(config=get_config())
-            app.layout = app_update_layout(fig)
+            # app.layout = app_update_layout(fig)
 
         # This is the full graph that only the admin should be able to see!
         ####################################################################
@@ -276,7 +275,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     from os import system
-
     system("cls")
     main()
 
