@@ -233,7 +233,7 @@ class RandomOHLC:
     def __create_volatile_periods(self) -> None:
         print("Creating volatile periods...")
 
-        for i in range(len(tqdm(self.__df))):
+        for i in range(tqdm(len(self.__df))):
             if random.randint(1, 1_000) == 1:
                 num_bars = random.randint(1, MINUTES_IN_1DAY)
                 if num_bars < len(self.__df) - i:
@@ -241,7 +241,7 @@ class RandomOHLC:
                         num_bars=num_bars,
                         frequency="1Min",
                         start_price=self.__df.iloc[i]["close"],
-                        volatility=self.volatility * 1.1,
+                        volatility=self.volatility * 1.01,
                     )
 
                     for j in range(len(df_new)):
