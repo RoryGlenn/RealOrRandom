@@ -7,6 +7,7 @@ import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 from dash import Dash, dcc, html
+from faker import Faker
 
 from constants.constants import *
 from random_ohlc import RandomOHLC
@@ -184,7 +185,7 @@ def create_figure(df: pd.DataFrame, graph_title: str) -> go.Figure:
 
     fig.update_layout(
         template="plotly_dark",
-        title="",
+        title=graph_title,
         xaxis_title="Dates",
         yaxis_title="Price",
         dragmode="zoom",
@@ -210,13 +211,11 @@ def create_half_dataframes(
 
 
 def main() -> None:
-    start_price = 100_000
-    asset_name = "Unknown"
+    Faker.seed(0)
+    fake = Faker()
     total_graphs = 1
-    num_days_range = 120  # 120 will be the standard
-    volatility = random.uniform(1, 2)
+    total_days = 30  # 120 will be the standard
     answers = {}
-    days = 91
     app = Dash()
 
     for i in range(total_graphs):
@@ -226,10 +225,12 @@ def main() -> None:
 
         # if random.randint(0, 1):
         if False:
+            days = 91
+
             adj_start_date_limit, end_date_limit = get_date_limits(days, data_choice)
 
             start_date, end_date = create_dates(
-                num_days_range, adj_start_date_limit, end_date_limit
+                total_days, adj_start_date_limit, end_date_limit
             )
 
             real_ohlc = RealOHLC(data_choice)
@@ -239,12 +240,16 @@ def main() -> None:
             answers[i] = f"Real: {start_date} to {end_date} {data_choice}"
         else:
             random_ohlc = RandomOHLC(
-                num_days_range, start_price, asset_name, volatility
+                total_days=30,
+                start_price=100_000,
+                name=fake.name(),
+                volatility=random.uniform(1, 2),
             )
-            random_ohlc.create_df()
+            random_ohlc.create_initial_df()
             random_ohlc.create_realistic_ohlc()
             random_ohlc.normalize_ohlc_data()
             random_ohlc.resample_timeframes()
+            random_ohlc.print_resampled_data()
 
             half_dataframes = create_half_dataframes(random_ohlc.resampled_data)
             dataframes = random_ohlc.resampled_data
@@ -270,6 +275,9 @@ def main() -> None:
 
 
 if __name__ == "__main__":
+    from os import system
+
+    system("cls")
     main()
 
 

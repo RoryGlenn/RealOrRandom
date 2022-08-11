@@ -1,25 +1,30 @@
 from pprint import pprint
 from time import perf_counter
+from datetime import timedelta, date
+
 
 import random
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
+from faker import Faker
 
 # from brownian import brownian
 from constants.constants import *
+
+pd.options.display.float_format = "{:.4f}".format
 
 
 class RandomOHLC:
     def __init__(
         self,
-        num_days_range: int,
+        total_days: int,
         start_price: float,
         name: str,
         volatility: int,
     ) -> None:
 
-        self.num_days_range = num_days_range
+        self.total_days = total_days
         self.start_price = start_price
         self.name = name
         self.volatility = volatility
@@ -46,12 +51,32 @@ class RandomOHLC:
             "1M": None,
         }
 
+        self.__timeframe_table = {
+            "1S": SECONDS_IN_1DAY,
+            "1min": MINUTES_IN_1DAY,
+            "5min": MINUTES_IN_1DAY // 5,
+            "15Min": MINUTES_IN_1DAY // 15,
+            "30Min": MINUTES_IN_1DAY // 30,
+            "1H": HOURS_IN_1DAY,
+            "2H": HOURS_IN_1DAY // 2,
+            "4H": HOURS_IN_1DAY // 4,
+            "1D": DAYS_IN_1DAY,
+            "3D": DAYS_IN_1DAY * 3,
+            "1W": DAYS_IN_1DAY * 7,
+            "1M": DAYS_IN_1DAY * 30,
+        }
+
     @property
     def resampled_data(self) -> dict:
         return self.__resampled_data
 
     def get_time_elapsed(self, start_time: float) -> float:
         return round(perf_counter() - start_time, 2)
+
+    def generate_random_date(self) -> str:
+        return Faker().date_between(
+            start_date=date(year=1990, month=1, day=1), end_date="+1y"
+        )
 
     def __brownian_motion(self, rows: int) -> np.ndarray:
         """Creates a brownian motion ndarray"""
@@ -78,7 +103,6 @@ class RandomOHLC:
         normalization formula: (data - min) / (max - min)
         """
 
-        start_time = perf_counter()
         print("Normalizing OHLC data..")
 
         _max = np.max(
@@ -110,7 +134,8 @@ class RandomOHLC:
         self.__df["high"] = round(norm_high * random_multiplier, 4)
         self.__df["low"] = round(norm_low * random_multiplier, 4)
         self.__df["close"] = round(norm_close * random_multiplier, 4)
-        print(f"Finished normalize_ohlc_data: {self.get_time_elapsed(start_time)}")
+
+        print(self.__df)
 
     def __normalize_ohlc_list(self, data: list) -> list:
         """Normalize OHLC data with random multiplier
@@ -124,12 +149,7 @@ class RandomOHLC:
         norm_data: np.ndarray = ((data - _min) / (_max - _min)).tolist()
         return [round(i * random_multiplier, 4) for i in norm_data]
 
-    def __generate_random_df(
-        self,
-        days: int,
-        start_price: float,
-        volatility: int,
-    ) -> pd.DataFrame:
+    def create_initial_df(self) -> pd.DataFrame:
         """
         Generates a random dataframe.
 
@@ -139,34 +159,32 @@ class RandomOHLC:
 
         """
 
-        total_periods = days * SECONDS_IN_1DAY
+        print("Creating initial dataframe...")
+
+        # No matter what time frame is given, everything will be converted to seconds!
+        # in the future, lets make this more dynamic so that any time period with any frequency can be given!
+
+        period_size = self.total_days * SECONDS_IN_1DAY
 
         # randomly pick a distribution function
         dist_func = self.__distribution_functions.get(
             random.randint(1, len(self.__distribution_functions))
         )
 
-        steps = dist_func(scale=volatility, size=total_periods)  # , loc=0)
+        steps = dist_func(scale=self.volatility, size=period_size)
         steps[0] = 0
-        prices = start_price + np.cumsum(steps)
+        prices = self.start_price + np.cumsum(steps)
 
-        # Create (SECONDS_IN_1DAY * days) number of prices
-        prices = [round(abs(p), 6) for p in tqdm(prices)]
-
-        # need to make certain periods of time more volatile than others
-        # prices = self.__create_whale_prices(prices)
-
-        # start date is arbitrary
-        start_date = "2000-01-01"
-
-        # the smallest unit of measurement used is 1 second
-        smallest_freq = "1S"
+        # Create (SECONDS_IN_1DAY * num_periods) number of prices
+        prices = [np.round(p, decimals=6) for p in tqdm(prices)]
 
         df = pd.DataFrame(
             {
                 "date": np.tile(
                     pd.date_range(
-                        start_date, periods=total_periods, freq=smallest_freq
+                        start=self.generate_random_date(),
+                        periods=period_size,
+                        freq="1S",
                     ),
                     1,
                 ),
@@ -175,83 +193,68 @@ class RandomOHLC:
         )
 
         df.index = pd.to_datetime(df.date)
-        return df.price.resample("1min").ohlc(_method="ohlc")
+        self.__df = df.price.resample("1min").ohlc(_method="ohlc")
+        print(self.__df)
 
-    def __create_whale_prices(self, prices: np.ndarray) -> np.ndarray:
-        """Whale prices will move in either up or down"""
-        print("Creating whale prices...")
+    def __generate_random_df(
+        self,
+        num_bars: int,
+        frequency: str,
+        start_price: float,
+        volatility: int,
+    ) -> pd.DataFrame:
 
-        for i, p in enumerate(tqdm(prices)):
-            if random.randint(1, 1000) == 1:
-                # max volatility should last for 1-3 days
-                period_size = random.randint(SECONDS_IN_1DAY, SECONDS_IN_1DAY * 3)
+        dist_func = self.__distribution_functions.get(
+            random.randint(1, len(self.__distribution_functions))
+        )
 
-                dist_func = self.__distribution_functions.get(
-                    random.randint(1, len(self.__distribution_functions))
-                )
+        steps = dist_func(scale=volatility, size=num_bars)
+        steps[0] = 0
+        prices = start_price + np.cumsum(steps)
+        prices = [np.round(p, decimals=6) for p in prices]
 
-                steps = dist_func(scale=self.volatility, size=period_size)  # loc=prices[i])
-                steps[0] = 0
-                new_prices = p + np.cumsum(steps)
-
-                for j, pp in enumerate(new_prices):
-                    pp = round(abs(pp), 6)
-                    prices.itemset(i + j, pp)
-        return prices
+        df = pd.DataFrame(
+            {
+                "date": np.tile(
+                    pd.date_range(
+                        start=self.generate_random_date(),
+                        periods=num_bars,
+                        freq=frequency,
+                    ),
+                    1,
+                ),
+                "price": (prices),
+            }
+        )
+        df.index = pd.to_datetime(df.date)
+        df = df.price.resample("1min").ohlc(_method="ohlc")
+        return df
 
     def __create_volatile_periods(self) -> None:
         print("Creating volatile periods...")
 
-        for i in tqdm(range(len(self.__df))):
-            if random.randint(1, 100) == 1:
-                # max volatility should be 1-3 days
-                period_size = random.randint(SECONDS_IN_1DAY, SECONDS_IN_1DAY * 3)
+        for i in range(len(tqdm(self.__df))):
+            if random.randint(1, 1_000) == 1:
+                num_bars = random.randint(1, MINUTES_IN_1DAY)
+                if num_bars < len(self.__df) - i:
+                    df_new = self.__generate_random_df(
+                        num_bars=num_bars,
+                        frequency="1Min",
+                        start_price=self.__df.iloc[i]["close"],
+                        volatility=self.volatility * 1.1,
+                    )
 
-                dist_func = self.__distribution_functions.get(
-                    random.randint(1, len(self.__distribution_functions))
-                )
+                    for j in range(len(df_new)):
+                        self.__df.at[i + j, "open"] = df_new.iloc[j]["open"]
+                        self.__df.at[i + j, "high"] = df_new.iloc[j]["high"]
+                        self.__df.at[i + j, "low"] = df_new.iloc[j]["low"]
+                        self.__df.at[i + j, "close"] = df_new.iloc[j]["close"]
 
-                # create a new distribution with higher volatility than usual
-                # center the mean around the last close price
-                steps = dist_func(
-                    loc=self.__df.iloc[i]["close"],
-                    scale=self.volatility,
-                    size=period_size,
-                )
-                steps[0] = 0
-                prices = self.__df.iloc[i]["close"] + np.cumsum(steps)
-
-                # create a new 1 second df
-                df_new = pd.DataFrame(
-                    {
-                        "date": np.tile(
-                            pd.date_range(
-                                start="2000-01-01", periods=period_size, freq="1S"
-                            ),
-                            1,
-                        ),
-                        "price": (prices),
-                    }
-                )
-
-                # resample it to 1 minute
-                df_new.index = pd.to_datetime(df_new.date)
-                df_new = df_new.price.resample("1min").ohlc(_method="ohlc")
-
-                # print()
-                # print(df_new)
-                # print()
-
-                #  replace the values in self.__df
-                for j in range(len(df_new)):
-
-                    print("self.__df: ", self.__df.iloc[i + j]["open"])
-                    print("df_new: ", df_new.iloc[j]["open"])
-
-                    self.__df.at[i + j, "open"] = df_new.iloc[j]["open"]
-                    self.__df.at[i + j, "high"] = df_new.iloc[j]["high"]
-                    self.__df.at[i + j, "low"] = df_new.iloc[j]["low"]
-                    self.__df.at[i + j, "close"] = df_new.iloc[j]["close"]
+                        if i+j >= len(self.__df):
+                            print(i+j, len(self.__df))
+                            print("shits busted")
+                            exit(1)
+        print(self.__df)
 
     def __create_whale_candles(self) -> None:
         """Returns a modified self.df containing whale values.
@@ -364,6 +367,7 @@ class RandomOHLC:
                 self.__df.at[i, "high"] = self.__df.iloc[i]["high"] + abs(
                     max_value - self.__df.iloc[i]["high"]
                 )
+        print(self.__df)
 
     def create_realistic_ohlc(self) -> None:
         """Process for creating slightly more realistic candles"""
@@ -374,24 +378,6 @@ class RandomOHLC:
         # self.__extend_wicks_randomly()
         self.__connect_open_close_candles()
         self.__df.set_index("date", inplace=True)
-
-    def create_df(self) -> None:
-        """Creates a dataframe for random data"""
-
-        print("Creating dataframe...")
-
-        self.__df = self.__generate_random_df(
-            self.num_days_range,
-            self.start_price,
-            self.volatility,
-        )
-
-
-
-
-        # 25% to use a brownian motion distribution instead
-        # if random.randint(1, 4) == 4:
-        #     self.__df["price"] = self.__brownian_motion_distribution()
 
     def __downsample_ohlc_data(self, timeframe: str, df: pd.DataFrame) -> None:
         """
@@ -421,8 +407,6 @@ class RandomOHLC:
                 self.__resampled_data[timeframe] = self.__df
                 continue
 
-            print(f"Resampling dataframe for {timeframe}")
-
             # resample the same df each time
             self.__resampled_data[timeframe] = self.__downsample_ohlc_data(
                 timeframe, self.__df
@@ -435,3 +419,6 @@ class RandomOHLC:
         for timeframe, df in self.__resampled_data.items():
             self.__resampled_data[timeframe].reset_index(inplace=True)
             self.__resampled_data[timeframe].drop(columns=["date"], inplace=True)
+
+    def print_resampled_data(self) -> None:
+        {print(tf + "\n", df) for tf, df in self.resampled_data.items()}
