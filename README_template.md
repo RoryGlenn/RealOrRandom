@@ -34,7 +34,19 @@
 
 ## 🧐 About <a name = "about"></a>
 
-Write about 1-2 paragraphs describing the purpose of your project.
+To test a hypothesis in support/resistance lines, breakout flags and trend lines.
+
+Too often people will draw breakout flags, trend lines and support/resistance lines to make a prediction on future prices in cryptocurrency. 
+This software attempts to test these methods by assessing the accuracy of the users price prediction.
+If the users drawing methods are sound then they will be able to predict, within a specific percentage, future prices for each graph.
+
+During the test, a user will be given a mixture of real candle bar graphs and randomly generated candle bar graphs. The randomly generated graphs will be considered our placebo, just like the standard Double-blind, Placebo-controlled Study.
+The candle bar graph given to the user will contain only half of the visible data.
+While the full graph will be revealed at the end of the test showing the accuracy of the users predictions.
+
+No two tests will be exactly the same as it is impossible for anyone to know which symbols and time periods will be chosen by the software.
+
+
 
 ## 🏁 Getting Started <a name = "getting_started"></a>
 
@@ -96,16 +108,25 @@ Add additional notes about how to deploy this on a live system.
 
 ## ⛏️ Built Using <a name = "built_using"></a>
 
-- [MongoDB](https://www.mongodb.com/) - Database
+<!-- - [MongoDB](https://www.mongodb.com/) - Database
 - [Express](https://expressjs.com/) - Server Framework
 - [VueJs](https://vuejs.org/) - Web Framework
-- [NodeJs](https://nodejs.org/en/) - Server Environment
+- [NodeJs](https://nodejs.org/en/) - Server Environment -->
+
+[Dash](https://plotly.com/dash/) - Web Framework
+[Faker](https://faker.readthedocs.io/en/master/) - Generating Graph Names
+[Numpy](https://numpy.org/) - Generating Random Data
+[Pandas](https://pandas.pydata.org/) - Processing Real and Random Data
+[Plotly](https://plotly.com/) - Graphing
+[Ccipy](https://scipy.org/) - Brownian Motion
+[TQDM](https://github.com/tqdm/tqdm) - Loading Bar
+
 
 ## ✍️ Authors <a name = "authors"></a>
 
-- [@kylelobo](https://github.com/kylelobo) - Idea & Initial work
+- [@RoryGlenn](https://github.com/RoryGlenn) - Idea & Initial work
 
-See also the list of [contributors](https://github.com/kylelobo/The-Documentation-Compendium/contributors) who participated in this project.
+<!-- See also the list of [contributors](https://github.com/kylelobo/The-Documentation-Compendium/contributors) who participated in this project. -->
 
 ## 🎉 Acknowledgements <a name = "acknowledgement"></a>
 

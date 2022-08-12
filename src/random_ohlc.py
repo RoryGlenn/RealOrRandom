@@ -1,7 +1,5 @@
-from pprint import pprint
 from time import perf_counter
-from datetime import timedelta, date
-
+from datetime import date
 
 import random
 import numpy as np
@@ -9,7 +7,6 @@ import pandas as pd
 from tqdm import tqdm
 from faker import Faker
 
-# from brownian import brownian
 from constants.constants import *
 
 pd.options.display.float_format = "{:.4f}".format
@@ -51,25 +48,12 @@ class RandomOHLC:
             "1M": None,
         }
 
-        self.__timeframe_table = {
-            "1S": SECONDS_IN_1DAY,
-            "1min": MINUTES_IN_1DAY,
-            "5min": MINUTES_IN_1DAY // 5,
-            "15Min": MINUTES_IN_1DAY // 15,
-            "30Min": MINUTES_IN_1DAY // 30,
-            "1H": HOURS_IN_1DAY,
-            "2H": HOURS_IN_1DAY // 2,
-            "4H": HOURS_IN_1DAY // 4,
-            "1D": DAYS_IN_1DAY,
-            "3D": DAYS_IN_1DAY * 3,
-            "1W": DAYS_IN_1DAY * 7,
-            "1M": DAYS_IN_1DAY * 30,
-        }
 
     @property
     def resampled_data(self) -> dict:
         return self.__resampled_data
 
+    @staticmethod
     def get_time_elapsed(self, start_time: float) -> float:
         return round(perf_counter() - start_time, 2)
 
@@ -134,7 +118,6 @@ class RandomOHLC:
         self.__df["high"] = round(norm_high * random_multiplier, 4)
         self.__df["low"] = round(norm_low * random_multiplier, 4)
         self.__df["close"] = round(norm_close * random_multiplier, 4)
-
 
     def __normalize_ohlc_list(self, data: list) -> list:
         """Normalize OHLC data with random multiplier
@@ -241,7 +224,7 @@ class RandomOHLC:
                         num_bars=num_bars,
                         frequency="1Min",
                         start_price=self.__df.iloc[i]["close"],
-                        volatility=self.volatility * random.uniform(1, 1.005)
+                        volatility=self.volatility * random.uniform(1, 1.01),
                     )
 
                     for j in range(len(df_new)):
@@ -249,82 +232,6 @@ class RandomOHLC:
                         self.__df.at[i + j, "high"] = df_new.iloc[j]["high"]
                         self.__df.at[i + j, "low"] = df_new.iloc[j]["low"]
                         self.__df.at[i + j, "close"] = df_new.iloc[j]["close"]
-
-    def __create_whale_candles(self) -> None:
-        """Returns a modified self.df containing whale values.
-        Iterates over the dataframe and extends all values
-        of the candle given a random chance.
-
-        A single graph will have a random chance until a new graph is created.
-        If the random number chosen is less than or equal to random_chance, create a whale candle.
-
-        whale_mult:
-            assigns a random floating point multiplier between the range of [WHALE_LOWER_MULT, WHALE_UPPER_MULT].
-            By doing this, every time a whale candle is created, the probability
-            of it being stretched with the same ratio as the
-            previous whale candle or even the next whale candle is essentially 0%
-        """
-        print("Creating whale candles...")
-
-        # probability for creating a whale candle will be from 1%-100%
-        random_chance = random.randint(1, 100)
-
-        for i in tqdm(range(len(self.__df))):
-            if random.randint(1, 100) <= random_chance:
-                # assigns a random floating point multiplier between the range of [WHALE_LOWER_MULT, WHALE_UPPER_MULT].
-                # By doing this, every time a whale candle is created, the probability
-                # of it being stretched with the same ratio as the
-                # previous whale candle or even the next whale candle is essentially 0%
-                whale_mult = random.uniform(WHALE_LOWER_MULT, WHALE_UPPER_MULT)
-
-                self.__df.at[i, "open"] = self.__df.iloc[i]["open"] * whale_mult
-                self.__df.at[i, "high"] = self.__df.iloc[i]["high"] * whale_mult
-                self.__df.at[i, "low"] = self.__df.iloc[i]["low"] / whale_mult
-                self.__df.at[i, "close"] = self.__df.iloc[i]["close"] / whale_mult
-
-    def __extend_all_wicks_randomly(self) -> None:
-        """Returns a dataframe with the highs and lows multiplied by a random float"""
-        print("Extending all wicks randomly...")
-
-        for i in tqdm(range(len(self.__df))):
-            h_mult = random.uniform(RANDOM_LOWER_LIMIT, RANDOM_UPPER_LIMIT)
-            l_mult = random.uniform(RANDOM_LOWER_LIMIT, RANDOM_UPPER_LIMIT)
-
-            new_h = self.__df.iloc[i]["high"] * h_mult
-            new_l = self.__df.iloc[i]["low"] - (self.__df.iloc[i]["low"] * (l_mult - 1))
-
-            self.__df.at[i, "high"] = new_h
-            self.__df.at[i, "low"] = new_l
-
-    def __extend_wicks_randomly(self) -> None:
-        """Returns a dataframe with the highs, lows multiplied by a random float
-
-        3 possibilities:
-            extend only the high
-            extend only the low
-            extend both
-        """
-        print("Extend wicks randomly...")
-
-        for i in tqdm(range(len(self.__df))):
-            h_mult = random.uniform(RANDOM_LOWER_LIMIT, RANDOM_UPPER_LIMIT)
-            l_mult = random.uniform(RANDOM_LOWER_LIMIT, RANDOM_UPPER_LIMIT)
-
-            random_choice = random.randint(1, 3)
-
-            if random_choice == 1:
-                # extend only the high
-                self.__df.at[i, "high"] = self.__df.iloc[i]["high"] * h_mult
-            elif random_choice == 2:
-                # extend only the low
-                self.__df.at[i, "low"] = self.__df.iloc[i]["low"] - (
-                    self.__df.iloc[i]["low"] * (l_mult - 1)
-                )
-            else:
-                # extend both
-                self.__df.at[i, "high"] = self.__df.iloc[i]["high"] * h_mult
-                self.__df.at[i, "low"] = self.__df.iloc[i]["low"] - (
-                    self.__df.iloc[i]["low"] * (l_mult - 1))
 
     def __connect_open_close_candles(self) -> None:
         """Returns a dataframe where every candles close is the next candles open.
@@ -365,9 +272,6 @@ class RandomOHLC:
         """Process for creating slightly more realistic candles"""
         self.__df.reset_index(inplace=True)
         self.__create_volatile_periods()
-        # self.__create_whale_candles()
-        # self.__extend_all_wicks_randomly()
-        # self.__extend_wicks_randomly()
         self.__connect_open_close_candles()
         self.__df.set_index("date", inplace=True)
 

@@ -1,6 +1,7 @@
 import random
 import datetime
 from pprint import pprint
+from time import perf_counter
 from typing import Tuple
 
 import numpy as np
@@ -211,12 +212,15 @@ def create_half_dataframes(
 
 
 def main() -> None:
+    start_time = perf_counter()
     Faker.seed(0)
     fake = Faker()
     total_graphs = 1
-    total_days = 30  # 120 will be the standard
+    total_days = 120  # 120 will be the standard
     answers = {}
     app = Dash()
+
+    print("Starting test...")
 
     for i in range(total_graphs):
         dataframes = None
@@ -240,7 +244,7 @@ def main() -> None:
             answers[i] = f"Real: {start_date} to {end_date} {data_choice}"
         else:
             random_ohlc = RandomOHLC(
-                total_days=30,
+                total_days=total_days,
                 start_price=100_000,
                 name=fake.name(),
                 volatility=random.uniform(1, 2),
@@ -271,6 +275,10 @@ def main() -> None:
 
     # any change made to this file will cause the server to recompile
     # app.run_server(debug=True)
+
+    time_elapsed = RandomOHLC.get_time_elapsed(perf_counter())
+    print(f"Total time elapsed: {time_elapsed}")
+
 
 
 if __name__ == "__main__":
