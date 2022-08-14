@@ -1,5 +1,6 @@
-from time import perf_counter
 from datetime import date
+from statistics import stdev
+from time import perf_counter
 
 import random
 import numpy as np
@@ -48,14 +49,23 @@ class RandomOHLC:
             "1M": None,
         }
 
+        self.sd = {'open':0, 'high':0, 'low':0, 'close':0}
 
     @property
     def resampled_data(self) -> dict:
         return self.__resampled_data
 
     @staticmethod
-    def get_time_elapsed(self, start_time: float) -> float:
+    def get_time_elapsed(start_time: float) -> float:
         return round(perf_counter() - start_time, 2)
+
+    def __set_sd_ohlc(self) -> list:
+        """Sets the standard deviation of the ohlc data"""
+        self.sd['open'] = stdev(self.__df['open'])
+        self.sd['high'] = stdev(self.__df['high'])
+        self.sd['low'] = stdev(self.__df['low'])
+        self.sd['close'] = stdev(self.__df['close'])
+
 
     def generate_random_date(self) -> str:
         return Faker().date_between(
@@ -155,10 +165,50 @@ class RandomOHLC:
 
         steps = dist_func(scale=self.volatility, size=period_size)
         steps[0] = 0
-        prices = self.start_price + np.cumsum(steps)
+        prices: np.ndarray = self.start_price + np.cumsum(steps)
 
         # Create (SECONDS_IN_1DAY * num_periods) number of prices
-        prices = [np.round(p, decimals=6) for p in tqdm(prices)]
+        prices = np.abs(prices.round(decimals=6))
+
+        """
+        # Syntax for np.where
+
+        np.where(
+            conditional statement -> bool array,
+            series/array/function() / scalar if True,
+            series/array/function() / scalar if False,
+        )
+
+
+        For example
+
+        np.where(
+            df['status_at_time_of_lead'] == 'None',
+            df['current_status'],
+            df['status_at_time_of_lead']
+        )
+
+        df['status'] = np.where(^^^)
+        
+
+        # You can also use .values to expose just the np array in the series obj
+        np.where(
+            df['status_at_time_of_lead'].values == 'None',
+            df['current_status'].values,
+            df['status_at_time_of_lead'].values
+        )
+
+        df['status'] = np.where(^^^)
+
+
+        # How to vectorize more than 1 conditional statement
+
+        np.select
+        
+
+
+        """
+
 
         df = pd.DataFrame(
             {
@@ -177,6 +227,10 @@ class RandomOHLC:
         df.index = pd.to_datetime(df.date)
         self.__df = df.price.resample("1min").ohlc(_method="ohlc")
 
+        # print(type(self.__df.iloc[0]['close']))
+        # print(dir(self.__df.iloc[0]['close']))
+
+
     def __generate_random_df(
         self,
         num_bars: int,
@@ -192,7 +246,7 @@ class RandomOHLC:
         steps = dist_func(scale=volatility, size=num_bars)
         steps[0] = 0
         prices = start_price + np.cumsum(steps)
-        prices = [np.round(p, decimals=6) for p in prices]
+        prices = np.abs(prices.round(decimals=6))
 
         df = pd.DataFrame(
             {
@@ -212,19 +266,21 @@ class RandomOHLC:
         return df
 
     def __create_volatile_periods(self) -> None:
+        """Create more volatile periods and replace the normal ones with them"""
         print("Creating volatile periods...")
 
         random_chance = random.randint(1, 100)
 
         for i in tqdm(range(len(self.__df))):
-            if random.randint(1, 10_000) < random_chance:
-                num_bars = random.randint(1000, MINUTES_IN_1DAY)
-                if num_bars < len(self.__df) - i:
+            if random.randint(1, VOLATILE_PROB) < random_chance:
+                vol_period_num_bars = random.randint(VOLATILE_PERIOD_MIN, VOLATILE_PERIOD_MAX)
+
+                if vol_period_num_bars < len(self.__df) - i:
                     df_new = self.__generate_random_df(
-                        num_bars=num_bars,
+                        num_bars=vol_period_num_bars,
                         frequency="1Min",
                         start_price=self.__df.iloc[i]["close"],
-                        volatility=self.volatility * random.uniform(1, 1.01),
+                        volatility=self.volatility * random.uniform(1.01, 1.02),
                     )
 
                     for j in range(len(df_new)):
@@ -233,6 +289,32 @@ class RandomOHLC:
                         self.__df.at[i + j, "low"] = df_new.iloc[j]["low"]
                         self.__df.at[i + j, "close"] = df_new.iloc[j]["close"]
 
+    def __create_volatile_periods_vectorized(self) -> None:
+        """"""
+        print("Creating volatile periods...")
+
+        random_chance = random.randint(1, 100)
+
+        prev_close = self.__df['close'].shift(1).fillna(0).astype(float)
+        prev_date = self.__df['date'].shift(1).fillna(pd.Timestamp('1900'))
+        choice_list = [self.__generate_random_df, ]
+
+        for j in range(len(df_new)):
+            self.__df.at[i + j, "open"] = df_new.iloc[j]["open"]
+            self.__df.at[i + j, "high"] = df_new.iloc[j]["high"]
+            self.__df.at[i + j, "low"] = df_new.iloc[j]["low"]
+            self.__df.at[i + j, "close"] = df_new.iloc[j]["close"]
+
+        conditions = [
+            (random.randint(1, 10_000) < random_chance) & (random.randint(500, MINUTES_IN_1DAY) < len(self.__df))  # - i)
+            () & ()
+        ]
+
+        np.select(condlist=conditions, choicelist=[])
+
+
+
+
     def __connect_open_close_candles(self) -> None:
         """Returns a dataframe where every candles close is the next candles open.
         This is needed because cryptocurrencies run 24/7.
@@ -240,6 +322,10 @@ class RandomOHLC:
         """
         print("Connecting open and closing candles...")
 
+        self.__df : pd.DataFrame
+        self.__df.to_numpy()
+
+        # vectorize this!!!
         for i in tqdm(range(1, len(self.__df))):
             self.__df.at[i, "open"] = self.__df.iloc[i - 1]["close"]
 
@@ -272,7 +358,8 @@ class RandomOHLC:
         """Process for creating slightly more realistic candles"""
         self.__df.reset_index(inplace=True)
         self.__create_volatile_periods()
-        self.__connect_open_close_candles()
+        self.__set_sd_ohlc()
+        self.__connect_open_close_candles() # this is the problem!!!
         self.__df.set_index("date", inplace=True)
 
     def __downsample_ohlc_data(self, timeframe: str, df: pd.DataFrame) -> None:

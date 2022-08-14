@@ -276,16 +276,36 @@ def main() -> None:
     # any change made to this file will cause the server to recompile
     # app.run_server(debug=True)
 
-    time_elapsed = RandomOHLC.get_time_elapsed(perf_counter())
+    time_elapsed = RandomOHLC.get_time_elapsed(start_time)
     print(f"Total time elapsed: {time_elapsed}")
-
 
 
 if __name__ == "__main__":
     from os import system
+
     system("cls")
     main()
 
 
 # to create drop down menu for timeframes
 # https://www.youtube.com/watch?v=RwlqlGUDLkg
+
+
+"""
+120 Days Total
+
+1 second candle sticks: 60 * 60 * 24 = 86400
+1 minute candle sticks: 60 * 24 = 1440
+5 minute candle sticks: 
+15 minute candle sticks: 
+30 minute candle sticks: 
+1 hour candle sticks: 
+2 hour
+4 hour
+1 day 
+3 day
+1 week
+1 month
+
+
+"""
