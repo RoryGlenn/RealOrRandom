@@ -2,9 +2,6 @@ from datetime import date
 from statistics import stdev
 from time import perf_counter
 
-import random
-from timeit import timeit
-from typing import Tuple
 import numpy as np
 import pandas as pd
 from tqdm import tqdm
@@ -28,6 +25,8 @@ class RandomOHLC:
         self.start_price = start_price
         self.name = name
         self.volatility = volatility
+
+        # Use Statistical functions (scipy.stats) instead of these!
         self.__distribution_functions = {
             1: np.random.normal,
             2: np.random.laplace,
@@ -50,7 +49,12 @@ class RandomOHLC:
             "1W": None,
             "1M": None,
         }
-
+        self.agg_dict = {
+            "open": "first",
+            "high": "max",
+            "low": "min",
+            "close": "last",
+        }
 
     @property
     def resampled_data(self) -> dict:
@@ -171,7 +175,7 @@ class RandomOHLC:
             self.__prices_raw = prices
 
         df = self.__create_dataframe(num_bars, frequency, prices)
-        df.index = pd.to_datetime(df.date) # is this necessary?
+        df.index = pd.to_datetime(df.date)  # is this necessary?
         return df.price.resample("1min").ohlc(_method="ohlc")
 
     def __create_volatile_periods(self) -> None:
@@ -180,9 +184,6 @@ class RandomOHLC:
 
         random_chance = np.random.randint(1, 100)
         indices = {}
-        # total_1 = 0
-        # total_2 = 0
-        # start_1 = perf_counter()
 
         for i in range(len(self.__df_1min)):
             if np.random.randint(1, VOLATILE_PROB) < random_chance:
@@ -194,23 +195,16 @@ class RandomOHLC:
                     indices[i] = i + vol_period_num_bars
 
         for starti, endi in tqdm(indices.items()):
-            # start_1 = perf_counter()
-
             new_df = self.__generate_random_df(
                 num_bars=endi - starti + 1,
                 frequency="1min",
                 start_price=self.__df_1min.iloc[starti]["close"],
                 volatility=self.volatility * np.random.uniform(1.01, 1.02),
             )
-            # total_1 += perf_counter() - start_1
-
-            # start_2 = perf_counter()
             self.__df_1min.loc[starti:endi, "open"] = new_df["open"].values
             self.__df_1min.loc[starti:endi, "high"] = new_df["high"].values
             self.__df_1min.loc[starti:endi, "low"] = new_df["low"].values
             self.__df_1min.loc[starti:endi, "close"] = new_df["close"].values
-            # total_2 += perf_counter() - start_2
-        # print(total_1, total_2)
 
     def __connect_open_close_candles(self) -> None:
         """Returns a dataframe where every candles close is the next candles open.
@@ -268,8 +262,6 @@ class RandomOHLC:
             self.__df_1min["high"],
         )
 
-        ##########################################################################
-
     def create_realistic_ohlc(self) -> None:
         """Process for creating slightly more realistic candles"""
         self.__df_1min.reset_index(inplace=True)
@@ -284,24 +276,20 @@ class RandomOHLC:
         For example:
             converts 1min candle sticks into 5min candle sticks.
         """
-        return df.resample(timeframe).aggregate(
-            {
-                "open": lambda s: s[0],
-                "high": lambda df: df.max(),
-                "low": lambda df: df.min(),
-                "close": lambda df: df[-1],
-            }
-        )
 
+        # return df.resample(timeframe, closed="right").aggregate(
+        #     {
+        #         "open": lambda s: s[0],
+        #         "high": lambda df: df.max(),
+        #         "low": lambda df: df.min(),
+        #         "close": lambda df: df[-1],
+        #     }
+        # )
+        return df.resample(timeframe, closed="right").aggregate(self.agg_dict)
 
-    def resample_timeframes(self) -> None:
-        """Iterates over all the timeframe keys in resampled_data and creates a
-        resampled dataframe corresponding to that timeframe"""
-
-        print("Resampling timeframes...")
-        total_time = perf_counter()
-        # missing: 15min, 30min
-        bars_table = {
+    def __create_bars_table(self) -> dict:
+        return {
+            # "1min": self.total_days * MINUTES_IN_1DAY,
             "5min": self.total_days * MINUTES_IN_1DAY // 5,
             "15min": self.total_days * MINUTES_IN_1DAY // 15,
             "30min": self.total_days * MINUTES_IN_1DAY // 30,
@@ -312,15 +300,18 @@ class RandomOHLC:
             "3D": self.total_days // 3,
             "1W": self.total_days // 7,
             "1M": self.total_days // 30,
-        }
+        }        
 
-        prev_timeframe = '1min'
-        self.__resampled_data['1min'] = self.__df_1min
+    def resample_timeframes(self) -> None:
+        """Iterates over all the timeframe keys in resampled_data and creates a
+        resampled dataframe corresponding to that timeframe"""
 
-        # won't work because it bypasses the realistic process we set up
-        # df = self.__create_dataframe(self.total_days * SECONDS_IN_1DAY, '1S', self.__prices_raw)
-        # df.set_index('date', inplace=True)
-        # self.__resampled_data = {timeframe: df.price.resample(timeframe).ohlc(_method="ohlc") for timeframe in bars_table}
+        print("Resampling timeframes...")
+        total_time = perf_counter()
+
+        prev_timeframe = "1min"
+        self.__resampled_data["1min"] = self.__df_1min
+        bars_table = self.__create_bars_table()
 
         for timeframe in tqdm(bars_table):
             self.__resampled_data[timeframe] = self.__downsample_ohlc_data(
@@ -328,9 +319,8 @@ class RandomOHLC:
             )
             prev_timeframe = timeframe
 
-        print(
-            "Finished resampling in: ", perf_counter() - total_time
-        )  # 50 seconds ish when using self.__df, 39 using resampled_data dictionary
+
+        print("Finished resampling in: ", perf_counter() - total_time)
 
     def print_resampled_data(self) -> None:
         {print(tf + "\n", df) for tf, df in self.resampled_data.items()}
