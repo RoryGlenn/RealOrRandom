@@ -206,7 +206,7 @@ def create_half_dataframes(
 ) -> dict[str, pd.DataFrame]:
     """Creates a new dict that contains only the first half the data in the dataframes"""
     return {
-        timeframe: dataframes[timeframe].iloc[: len(dataframes[timeframe]) // 2]
+        timeframe: dataframes[timeframe].iloc[:len(dataframes[timeframe])//2]
         for timeframe in dataframes
     }
 
@@ -259,6 +259,10 @@ def main() -> None:
             random_ohlc.create_realistic_ohlc()
             random_ohlc.normalize_ohlc_data()
             random_ohlc.resample_timeframes()
+            # random_ohlc.print_resampled_data()
+            # missing: 15min, 30min
+            for key, value in random_ohlc.resampled_data.items():
+                print(key, value)
 
             half_dataframes = create_half_dataframes(random_ohlc.resampled_data)
             dataframes = random_ohlc.resampled_data
@@ -267,7 +271,7 @@ def main() -> None:
         for timeframe, df in half_dataframes.items():
             fig = create_figure(df, timeframe)
             fig.write_html(f"html/HABC-USD_{timeframe}_{i}.html", config=get_config())
-            fig.show(config=get_config())
+            # fig.show(config=get_config()) # put me back in!
             # app.layout = app_update_layout(fig)
 
         # This is the full graph that only the admin should be able to see!
