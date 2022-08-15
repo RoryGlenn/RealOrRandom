@@ -249,7 +249,13 @@ def main() -> None:
                 name=fake.name(),
                 volatility=random.uniform(1, 2),
             )
-            random_ohlc.create_initial_df()
+
+            random_ohlc.generate_random_df(
+                random_ohlc.total_days * SECONDS_IN_1DAY,
+                "1S",
+                random_ohlc.start_price,
+                random_ohlc.volatility,
+            )
             random_ohlc.create_realistic_ohlc()
             random_ohlc.normalize_ohlc_data()
             random_ohlc.resample_timeframes()
