@@ -7,9 +7,59 @@ import pandas as pd
 from tqdm import tqdm
 from faker import Faker
 
+import plotly.graph_objects as go
+
 from constants.constants import *
 
 pd.options.display.float_format = "{:.4f}".format
+
+
+def get_config() -> dict:
+    return (
+        {
+            "doubleClickDelay": 1000,
+            "scrollZoom": True,
+            "displayModeBar": True,
+            "showTips": True,
+            "displaylogo": True,
+            "fillFrame": False,
+            "autosizable": True,
+            "modeBarButtonsToAdd": [
+                "drawline",
+                "drawopenpath",
+                "drawclosedpath",
+                "eraseshape",
+            ],
+        },
+    )
+
+
+def create_figure(df: pd.DataFrame, graph_title: str) -> go.Figure:
+    fig = go.Figure(
+        data=go.Candlestick(
+            x=df.index,
+            open=df.open,
+            high=df.high,
+            low=df.low,
+            close=df.close,
+        )
+    )
+
+    fig.update_layout(
+        template="plotly_dark",
+        title=graph_title,
+        xaxis_title="Date",
+        yaxis_title="Price",
+        dragmode="zoom",
+        newshape_line_color="white",
+        font=dict(family="Courier New, monospace", size=18, color="RebeccaPurple"),
+        # hides the xaxis range slider
+        xaxis=dict(rangeslider=dict(visible=True)),
+    )
+
+    # fig.update_yaxes(showticklabels=True)
+    # fig.update_xaxes(showticklabels=True)
+    return fig
 
 
 class RandomOHLC:
@@ -35,7 +85,6 @@ class RandomOHLC:
         }
 
         self.__df_1min: pd.DataFrame = None
-        self.__prices_raw: np.ndarray = None
         self.__resampled_data = {
             "1min": None,
             "5min": None,
@@ -171,9 +220,6 @@ class RandomOHLC:
         prices = start_price + np.cumsum(steps)
         prices = np.abs(prices.round(decimals=6))
 
-        if self.__prices_raw is None:
-            self.__prices_raw = prices
-
         df = self.__create_dataframe(num_bars, frequency, prices)
         df.index = pd.to_datetime(df.date)  # is this necessary?
         return df.price.resample("1min").ohlc(_method="ohlc")
@@ -182,34 +228,90 @@ class RandomOHLC:
         """Create more volatile periods and replace the normal ones with them"""
         print("Creating volatile periods...")
 
+        length = len(self.__df_1min)
         random_chance = np.random.randint(1, 100)
-        indices = {}
+        start_indices = np.arange(length)
 
-        for i in range(len(self.__df_1min)):
-            if np.random.randint(1, VOLATILE_PROB) < random_chance:
-                vol_period_num_bars = np.random.randint(
-                    VOLATILE_PERIOD_MIN, VOLATILE_PERIOD_MAX
-                )
+        # Instead of a conditional statement, create a mask
+        mask = np.random.randint(1, high=VOLATILE_PROB, size=length) < random_chance
 
-                if vol_period_num_bars + i < len(self.__df_1min):
-                    indices[i] = i + vol_period_num_bars
+        # make vol_period_num_bars an array
+        array_masked = mask * np.random.randint(
+            VOLATILE_PERIOD_MIN, high=VOLATILE_PERIOD_MAX, size=length
+        )
 
-        for starti, endi in tqdm(indices.items()):
+        # Instead of the second "if" statement, exclude more values from the mask
+        mask *= (start_indices + array_masked) < length
+        start_indices = mask * (start_indices + array_masked)
+
+        # For each index in indices that is not equal to 0 (aka start index), generate another index (aka end index)
+        # such that it is larger than the current index but lower than 2*VOLATILE_PERIOD_MAX.
+        # Attach this index as a key:value relationship in indices.
+        end_indices = start_indices + (mask * np.random.randint(
+            VOLATILE_PERIOD_MIN, high=VOLATILE_PERIOD_MAX, size=length)
+        )
+
+        # drop all values that are 0
+        start_indices = start_indices[start_indices > 0]
+        end_indices = end_indices[end_indices > 0]
+
+        # fixes any out of bounds issues with the end index
+        end_indices = np.where(
+            end_indices > len(self.__df_1min)-1,
+            len(self.__df_1min)-1,
+            end_indices
+        )
+
+        # For the second loop, you need to rewrite generate_random_df() to take an array as an argument.
+        # Then you can get rid of the loop.
+        for starti, endi in zip(tqdm(start_indices), end_indices):
             new_df = self.__generate_random_df(
                 num_bars=endi - starti + 1,
                 frequency="1min",
-                start_price=self.__df_1min.iloc[starti]["close"],
+                start_price=self.start_price,
                 volatility=self.volatility * np.random.uniform(1.01, 1.02),
             )
+
             self.__df_1min.loc[starti:endi, "open"] = new_df["open"].values
             self.__df_1min.loc[starti:endi, "high"] = new_df["high"].values
             self.__df_1min.loc[starti:endi, "low"] = new_df["low"].values
             self.__df_1min.loc[starti:endi, "close"] = new_df["close"].values
 
+
+    def __correct_lowcolumn_error(self, df: pd.DataFrame) -> np.ndarray:
+        """get all the rows where the 'low' cell is not the lowest value"""
+        return np.where(
+            (
+                (df["low"] > df["open"])
+                | (df["low"] > df["high"])
+                | (df["low"] > df["close"])
+            ),
+            # assign the minimum value
+            np.min(df["open"], df["high"], df["close"]),
+            # assign the original value if no error occurred at the current index
+            df["low"],
+        )
+
+    def __correct_highcolumn_error(self, df: pd.DataFrame) -> np.ndarray:
+        """Get all the rows where the 'high' cell is not the highest value"""
+
+        return np.where(
+            (
+                (df["high"] < df["open"])
+                | (df["high"] < df["low"])
+                | (df["high"] < df["close"])
+            ),
+            # assign the maximum value
+            np.max(df["open"], df["low"], df["close"]),
+            # assign the original value if no error occurred at the current index
+            df["high"],
+        )
+
     def __connect_open_close_candles(self) -> None:
         """Returns a dataframe where every candles close is the next candles open.
         This is needed because cryptocurrencies run 24/7.
         There are no breaks or pauses so each candle is connected to the next candle.
+
         """
 
         print("Connecting open and closing candles...")
@@ -218,55 +320,49 @@ class RandomOHLC:
         self.__df_1min["open"] = prev_close
         self.__df_1min.at[0, "open"] = self.start_price
 
-        # LOW ERROR
-        # get all the rows where the 'low' cell is not the lowest value
-        self.__df_1min["low"] = np.where(
-            (
-                (self.__df_1min["low"] > self.__df_1min["open"])
-                | (self.__df_1min["low"] > self.__df_1min["high"])
-                | (self.__df_1min["low"] > self.__df_1min["close"])
-            ),
-            # fix the low error by assigning this formula
-            self.__df_1min["low"]
-            - abs(
-                min(
-                    np.min(self.__df_1min["open"]),
-                    np.min(self.__df_1min["high"]),
-                    np.min(self.__df_1min["close"]),
-                )
-                - self.__df_1min["low"]
-            ),
-            # assign the original value if no error occurred at the current index
-            self.__df_1min["low"],
-        )
+        # graph before the connect function
+        self.__df_1min.set_index("date", inplace=True)
+        df_days = self.__downsample_ohlc_data("1D", self.__df_1min)
+        create_figure(df_days, "1D").show(config=get_config())
 
-        # HIGH ERROR
-        # get all the rows where the 'high' cell is not the highest value
-        self.__df_1min["high"] = np.where(
-            (
-                (self.__df_1min["high"] < self.__df_1min["open"])
-                | (self.__df_1min["high"] < self.__df_1min["low"])
-                | (self.__df_1min["high"] < self.__df_1min["close"])
-            ),
-            # fix the low error by assigning this formula
-            self.__df_1min["high"]
-            + abs(
-                max(
-                    np.min(self.__df_1min["open"]),
-                    np.min(self.__df_1min["low"]),
-                    np.min(self.__df_1min["close"]),
-                )
-                - self.__df_1min["high"]
-            ),
-            # assign the original value if no error occurred at the current index
-            self.__df_1min["high"],
-        )
+        self.__df_1min.low = self.__correct_lowcolumn_error(self.__df_1min)
+        self.__df_1min.high = self.__correct_highcolumn_error(self.__df_1min)
+
+        old_low = self.__df_1min.low
+        old_high = self.__df_1min.high
+
+        # check to unsure the highs and lows are correct
+        new_low = self.__correct_lowcolumn_error(self.__df_1min)
+        new_high = self.__correct_highcolumn_error(self.__df_1min)
+
+        if np.array_equal(np.array(old_low), np.array(new_low)):
+            print("lows are the same")
+
+        if np.array_equal(np.array(old_high), np.array(new_high)):
+            print("highs are the same")
+
+        # graph AFTER the connect function
+        df_days = self.__downsample_ohlc_data("1D", self.__df_1min)
+        create_figure(df_days, "1D").show(config=get_config())
 
     def create_realistic_ohlc(self) -> None:
         """Process for creating slightly more realistic candles"""
+
         self.__df_1min.reset_index(inplace=True)
         self.__create_volatile_periods()
+
+        # FOR TESTING ONLY!!!!!!
+        # self.__df_1min.set_index("date", inplace=True)
+        # df_days = self.__downsample_ohlc_data('1D', self.__df_1min)
+        # create_figure(df_days, '1D').show(config=get_config())
+
+        # This is making weird graphs!!!!!!!!!!!!!!!!!!!!!!!!!!!
         self.__connect_open_close_candles()
+
+        # # FOR TESTING ONLY!!!!!!
+        df_days = self.__downsample_ohlc_data("1D", self.__df_1min)
+        create_figure(df_days, "1D").show(config=get_config())
+
         self.__df_1min.set_index("date", inplace=True)
 
     def __downsample_ohlc_data(self, timeframe: str, df: pd.DataFrame) -> None:
@@ -275,17 +371,14 @@ class RandomOHLC:
 
         For example:
             converts 1min candle sticks into 5min candle sticks.
-        """
 
-        # return df.resample(timeframe, closed="right").aggregate(
-        #     {
-        #         "open": lambda s: s[0],
-        #         "high": lambda df: df.max(),
-        #         "low": lambda df: df.min(),
-        #         "close": lambda df: df[-1],
-        #     }
-        # )
-        return df.resample(timeframe, closed="right").aggregate(self.agg_dict)
+        The closed parameter controls which end of the interval is inclusive
+        while the label parameter controls which end of the interval appears on the resulting index.
+        right and left refer to end and the start of the interval, respectively.
+        """
+        return df.resample(timeframe, label="right", closed="right").aggregate(
+            self.agg_dict
+        )
 
     def __create_bars_table(self) -> dict:
         return {
@@ -300,7 +393,7 @@ class RandomOHLC:
             "3D": self.total_days // 3,
             "1W": self.total_days // 7,
             "1M": self.total_days // 30,
-        }        
+        }
 
     def resample_timeframes(self) -> None:
         """Iterates over all the timeframe keys in resampled_data and creates a
@@ -318,7 +411,6 @@ class RandomOHLC:
                 timeframe, self.__resampled_data[prev_timeframe]
             )
             prev_timeframe = timeframe
-
 
         print("Finished resampling in: ", perf_counter() - total_time)
 

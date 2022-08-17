@@ -1,18 +1,17 @@
 import random
 import datetime
-from pprint import pprint
 from time import perf_counter
 from typing import Tuple
 
 import numpy as np
 import pandas as pd
-import plotly.graph_objects as go
-from dash import Dash, dcc, html
 from faker import Faker
+from dash import Dash, dcc, html
+import plotly.graph_objects as go
 
+from real_ohlc import RealOHLC
 from constants.constants import *
 from random_ohlc import RandomOHLC
-from real_ohlc import RealOHLC
 
 
 def get_data_date_ranges() -> dict:
@@ -195,7 +194,6 @@ def create_figure(df: pd.DataFrame, graph_title: str) -> go.Figure:
         # hides the xaxis range slider
         xaxis=dict(rangeslider=dict(visible=True)),
     )
-
     # fig.update_yaxes(showticklabels=True)
     # fig.update_xaxes(showticklabels=True)
     return fig
@@ -243,6 +241,7 @@ def main() -> None:
             dataframes = normalize_ohlc_data(dataframes)
             answers[i] = f"Real: {start_date} to {end_date} {data_choice}"
         else:
+            start_rohlc = perf_counter()
             random_ohlc = RandomOHLC(
                 total_days=total_days,
                 start_price=100_000,
@@ -259,16 +258,20 @@ def main() -> None:
             random_ohlc.create_realistic_ohlc()
             random_ohlc.normalize_ohlc_data()
             random_ohlc.resample_timeframes()
-            # random_ohlc.print_resampled_data()
 
             half_dataframes = create_half_dataframes(random_ohlc.resampled_data)
             dataframes = random_ohlc.resampled_data
             answers[i] = f"Fake"
 
+        print("Random OHLC elapsed: ", RandomOHLC.get_time_elapsed(start_rohlc))
+
+        # loop bottle necks!!!
         for timeframe, df in half_dataframes.items():
+            if timeframe in ["1min", "5min", "15min", "30min"]:
+                continue
             fig = create_figure(df, timeframe)
             fig.write_html(f"html/HABC-USD_{timeframe}_{i}.html", config=get_config())
-            # fig.show(config=get_config())  # put me back in!
+            fig.show(config=get_config())  # put me back in!
             # app.layout = app_update_layout(fig)
 
         # This is the full graph that only the admin should be able to see!
