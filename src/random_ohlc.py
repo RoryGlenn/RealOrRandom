@@ -167,10 +167,10 @@ class RandomOHLC:
         norm_close = (self.__df_1min.close - _min) / (_max - _min)
 
         random_multiplier = np.random.randint(9, 999)
-        self.__df_1min["open"] = round(norm_open * random_multiplier, 4)
-        self.__df_1min["high"] = round(norm_high * random_multiplier, 4)
-        self.__df_1min["low"] = round(norm_low * random_multiplier, 4)
-        self.__df_1min["close"] = round(norm_close * random_multiplier, 4)
+        self.__df_1min.open = round(norm_open * random_multiplier, 4)
+        self.__df_1min.high = round(norm_high * random_multiplier, 4)
+        self.__df_1min.low = round(norm_low * random_multiplier, 4)
+        self.__df_1min.close = round(norm_close * random_multiplier, 4)
 
     def __create_dataframe(
         self,
@@ -212,6 +212,7 @@ class RandomOHLC:
         volatility: int,
     ) -> pd.DataFrame:
 
+        # start1 = perf_counter()
         dist_func = self.__distribution_functions.get(
             np.random.randint(1, len(self.__distribution_functions))
         )
@@ -219,10 +220,14 @@ class RandomOHLC:
         steps[0] = 0
         prices = start_price + np.cumsum(steps)
         prices = np.abs(prices.round(decimals=6))
+        # print("start1", perf_counter() - start1)
 
+        # start2 = perf_counter()
         df = self.__create_dataframe(num_bars, frequency, prices)
         df.index = pd.to_datetime(df.date)  # is this necessary?
-        return df.price.resample("1min").ohlc(_method="ohlc")
+        df = df.price.resample("1min").ohlc(_method="ohlc")
+        # print("start2", perf_counter() - start2)
+        return df
 
     def __create_volatile_periods(self) -> None:
         """Create more volatile periods and replace the normal ones with them"""
@@ -247,19 +252,20 @@ class RandomOHLC:
         # For each index in indices that is not equal to 0 (aka start index), generate another index (aka end index)
         # such that it is larger than the current index but lower than 2*VOLATILE_PERIOD_MAX.
         # Attach this index as a key:value relationship in indices.
-        end_indices = start_indices + (mask * np.random.randint(
-            VOLATILE_PERIOD_MIN, high=VOLATILE_PERIOD_MAX, size=length)
+        end_indices = start_indices + (
+            mask
+            * np.random.randint(
+                VOLATILE_PERIOD_MIN, high=VOLATILE_PERIOD_MAX, size=length
+            )
         )
 
         # drop all values that are 0
         start_indices = start_indices[start_indices > 0]
         end_indices = end_indices[end_indices > 0]
 
-        # fixes any out of bounds issues with the end index
+        # fixes any out of bounds issues with the end index being greater than the length of the df
         end_indices = np.where(
-            end_indices > len(self.__df_1min)-1,
-            len(self.__df_1min)-1,
-            end_indices
+            end_indices > len(self.__df_1min) - 1, len(self.__df_1min) - 1, end_indices
         )
 
         # For the second loop, you need to rewrite generate_random_df() to take an array as an argument.
@@ -268,7 +274,7 @@ class RandomOHLC:
             new_df = self.__generate_random_df(
                 num_bars=endi - starti + 1,
                 frequency="1min",
-                start_price=self.start_price,
+                start_price=self.__df_1min.iloc[starti]["close"],
                 volatility=self.volatility * np.random.uniform(1.01, 1.02),
             )
 
@@ -277,9 +283,23 @@ class RandomOHLC:
             self.__df_1min.loc[starti:endi, "low"] = new_df["low"].values
             self.__df_1min.loc[starti:endi, "close"] = new_df["close"].values
 
+        # # # graph before the connect function
+        # self.__df_1min.set_index("date", inplace=True)
+        # df_days = self.__downsample_ohlc_data("1D", self.__df_1min)
+        # create_figure(df_days, "1D").show(config=get_config())
 
     def __correct_lowcolumn_error(self, df: pd.DataFrame) -> np.ndarray:
         """get all the rows where the 'low' cell is not the lowest value"""
+
+        conditions = [
+            # figure out which value is the lowest value and assign it to the low column
+            (df["open"] < df["high"]) & (df["open"] < df["close"]),
+            (df["high"] < df["open"]) & (df["high"] < df["close"]),
+            (df["close"] < df["high"]) & (df["close"] < df["open"]),
+        ]
+
+        choices = [df["open"], df["high"], df["close"]]
+
         return np.where(
             (
                 (df["low"] > df["open"])
@@ -287,13 +307,22 @@ class RandomOHLC:
                 | (df["low"] > df["close"])
             ),
             # assign the minimum value
-            np.min(df["open"], df["high"], df["close"]),
+            np.select(conditions, choices),
             # assign the original value if no error occurred at the current index
             df["low"],
         )
 
     def __correct_highcolumn_error(self, df: pd.DataFrame) -> np.ndarray:
         """Get all the rows where the 'high' cell is not the highest value"""
+
+        conditions = [
+            # figure out which value is the highest value and assign it to the high column
+            (df["open"] > df["low"]) & (df["open"] > df["close"]),
+            (df["low"] > df["open"]) & (df["low"] > df["close"]),
+            (df["close"] > df["open"]) & (df["close"] > df["low"]),
+        ]
+
+        choices = [df["open"], df["low"], df["close"]]
 
         return np.where(
             (
@@ -302,7 +331,7 @@ class RandomOHLC:
                 | (df["high"] < df["close"])
             ),
             # assign the maximum value
-            np.max(df["open"], df["low"], df["close"]),
+            np.select(conditions, choices),
             # assign the original value if no error occurred at the current index
             df["high"],
         )
@@ -320,49 +349,14 @@ class RandomOHLC:
         self.__df_1min["open"] = prev_close
         self.__df_1min.at[0, "open"] = self.start_price
 
-        # graph before the connect function
-        self.__df_1min.set_index("date", inplace=True)
-        df_days = self.__downsample_ohlc_data("1D", self.__df_1min)
-        create_figure(df_days, "1D").show(config=get_config())
-
         self.__df_1min.low = self.__correct_lowcolumn_error(self.__df_1min)
         self.__df_1min.high = self.__correct_highcolumn_error(self.__df_1min)
 
-        old_low = self.__df_1min.low
-        old_high = self.__df_1min.high
-
-        # check to unsure the highs and lows are correct
-        new_low = self.__correct_lowcolumn_error(self.__df_1min)
-        new_high = self.__correct_highcolumn_error(self.__df_1min)
-
-        if np.array_equal(np.array(old_low), np.array(new_low)):
-            print("lows are the same")
-
-        if np.array_equal(np.array(old_high), np.array(new_high)):
-            print("highs are the same")
-
-        # graph AFTER the connect function
-        df_days = self.__downsample_ohlc_data("1D", self.__df_1min)
-        create_figure(df_days, "1D").show(config=get_config())
-
     def create_realistic_ohlc(self) -> None:
         """Process for creating slightly more realistic candles"""
-
         self.__df_1min.reset_index(inplace=True)
         self.__create_volatile_periods()
-
-        # FOR TESTING ONLY!!!!!!
-        # self.__df_1min.set_index("date", inplace=True)
-        # df_days = self.__downsample_ohlc_data('1D', self.__df_1min)
-        # create_figure(df_days, '1D').show(config=get_config())
-
-        # This is making weird graphs!!!!!!!!!!!!!!!!!!!!!!!!!!!
         self.__connect_open_close_candles()
-
-        # # FOR TESTING ONLY!!!!!!
-        df_days = self.__downsample_ohlc_data("1D", self.__df_1min)
-        create_figure(df_days, "1D").show(config=get_config())
-
         self.__df_1min.set_index("date", inplace=True)
 
     def __downsample_ohlc_data(self, timeframe: str, df: pd.DataFrame) -> None:
