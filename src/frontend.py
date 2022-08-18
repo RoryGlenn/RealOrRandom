@@ -1,25 +1,23 @@
-from dash import Dash, dcc, html
 import dash_bootstrap_components as dbc
-from dash import Input, Output, State
+from dash import Input, Output, State, Dash, dcc, html
+
 import plotly.graph_objects as go
 import pandas as pd
+from dates import Dates
 
 
 class FrontEnd:
     timeframes: list[str] = [
-    "1 Minute",
-    "5 Minute",
-    "15 Minute",
-    "30 Minute",
-    "1 Hour",
-    "2 Hour",
-    "4 Hour",
-    "1 Day",
-    "1 Week",
-]
-    # def __init__(self) -> None:
-        # self.app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
-
+        "1 Minute",
+        "5 Minute",
+        "15 Minute",
+        "30 Minute",
+        "1 Hour",
+        "2 Hour",
+        "4 Hour",
+        "1 Day",
+        "1 Week",
+    ]
 
     @staticmethod
     def get_config() -> dict:
