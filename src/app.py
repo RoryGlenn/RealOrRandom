@@ -1,5 +1,7 @@
 import random
 import datetime
+from datetime import timedelta
+
 from time import perf_counter
 from typing import Tuple
 
@@ -97,28 +99,6 @@ def get_config() -> dict:
     )
 
 
-def normalize_ohlc_data(df: pd.DataFrame) -> pd.DataFrame:
-    """Normalize OHLC data with random multiplier
-    normalization formula: (data - min) / (max - min)
-    """
-
-    _max = np.max([np.max(df.open), np.max(df.high), np.max(df.low), np.max(df.close)])
-    _min = np.min([np.min(df.open), np.min(df.high), np.min(df.low), np.min(df.close)])
-
-    norm_open = (df.open - _min) / (_max - _min)
-    norm_high = (df.high - _min) / (_max - _min)
-    norm_low = (df.low - _min) / (_max - _min)
-    norm_close = (df.close - _min) / (_max - _min)
-
-    random_multiplier = random.randint(9, 999)
-
-    df["open"] = round(norm_open * random_multiplier, 4)
-    df["high"] = round(norm_high * random_multiplier, 4)
-    df["low"] = round(norm_low * random_multiplier, 4)
-    df["close"] = round(norm_close * random_multiplier, 4)
-    return df
-
-
 def get_date_limits(days: int, data_choice: int) -> Tuple[str, str]:
     """Returns the absolute start and end date for a specific data file"""
     d_range = get_data_date_ranges().get(data_choice)
@@ -214,7 +194,7 @@ def main() -> None:
     Faker.seed(0)
     fake = Faker()
     total_graphs = 1
-    total_days = 120  # 120 will be the standard
+    num_days = 120  # 120 will be the standard
     answers = {}
     app = Dash()
 
@@ -222,28 +202,36 @@ def main() -> None:
 
     for i in range(total_graphs):
         dataframes = None
-        half_dataframes = None
-        data_choice = random.choice(list(get_data_date_ranges().keys()))
+        half_dataframes = {}
 
         # if random.randint(0, 1):
-        if False:
+        if True:
             days = 91
+            data_choice = random.choice(list(get_data_date_ranges().keys()))
 
             adj_start_date_limit, end_date_limit = get_date_limits(days, data_choice)
 
-            start_date, end_date = create_dates(
-                total_days, adj_start_date_limit, end_date_limit
+            start_date_str, end_date_str = create_dates(
+                num_days, adj_start_date_limit, end_date_limit
             )
 
-            real_ohlc = RealOHLC(data_choice)
-            dataframes = real_ohlc.create_df()
-            dataframes = real_ohlc.real_case(dataframes, start_date, end_date)
-            dataframes = normalize_ohlc_data(dataframes)
-            answers[i] = f"Real: {start_date} to {end_date} {data_choice}"
+            start_date_dt = datetime.datetime.strptime(start_date_str, '%Y-%m-%d')
+            end_date_dt = datetime.datetime.strptime(end_date_str, '%Y-%m-%d')
+            num_days = end_date_dt - start_date_dt
+
+            real_ohlc = RealOHLC(data_choice, num_days.days)
+            real_ohlc.create_df(start_date_str, end_date_str)
+            real_ohlc.normalize_ohlc_data()
+            real_ohlc.resample_timeframes()
+
+            answers[i] = f"Real: {start_date_str} to {end_date_str} {data_choice}"
+
+            half_dataframes = create_half_dataframes(real_ohlc.resampled_data)
+            dataframes = real_ohlc.resampled_data
         else:
             start_rohlc = perf_counter()
             random_ohlc = RandomOHLC(
-                total_days=total_days,
+                total_days=num_days,
                 start_price=100_000,
                 name=fake.name(),
                 volatility=random.uniform(1, 2),
@@ -263,12 +251,13 @@ def main() -> None:
             dataframes = random_ohlc.resampled_data
             answers[i] = f"Fake"
 
-        print("Random OHLC elapsed: ", RandomOHLC.get_time_elapsed(start_rohlc))
+            print("Random OHLC elapsed: ", RandomOHLC.get_time_elapsed(start_rohlc))
 
         # loop bottle necks!!!
         for timeframe, df in half_dataframes.items():
             if timeframe in ["1min", "5min", "15min", "30min"]:
                 continue
+
             fig = create_figure(df, timeframe)
             fig.write_html(f"html/HABC-USD_{timeframe}_{i}.html", config=get_config())
             fig.show(config=get_config())  # put me back in!
@@ -299,23 +288,3 @@ if __name__ == "__main__":
 
 # to create drop down menu for timeframes
 # https://www.youtube.com/watch?v=RwlqlGUDLkg
-
-
-"""
-120 Days Total
-
-1 second candle sticks: 60 * 60 * 24 = 86400
-1 minute candle sticks: 60 * 24 = 1440
-5 minute candle sticks: 
-15 minute candle sticks: 
-30 minute candle sticks: 
-1 hour candle sticks: 
-2 hour
-4 hour
-1 day 
-3 day
-1 week
-1 month
-
-
-"""

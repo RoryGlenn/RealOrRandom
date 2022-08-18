@@ -76,6 +76,13 @@ class RandomOHLC:
         self.name = name
         self.volatility = volatility
 
+        self.timecounter1 = 0
+        self.timecounter2 = 0
+
+        self.gen_df_count1 = 0
+        self.gen_df_count2 = 0
+        self.gen_df_count3 = 0
+
         # Use Statistical functions (scipy.stats) instead of these!
         self.__distribution_functions = {
             1: np.random.normal,
@@ -211,7 +218,6 @@ class RandomOHLC:
         start_price: float,
         volatility: int,
     ) -> pd.DataFrame:
-
         # start1 = perf_counter()
         dist_func = self.__distribution_functions.get(
             np.random.randint(1, len(self.__distribution_functions))
@@ -221,12 +227,25 @@ class RandomOHLC:
         prices = start_price + np.cumsum(steps)
         prices = np.abs(prices.round(decimals=6))
         # print("start1", perf_counter() - start1)
+        # self.timecounter1 += perf_counter() - start1
 
         # start2 = perf_counter()
+        gen_df_count1 = perf_counter()
         df = self.__create_dataframe(num_bars, frequency, prices)
-        df.index = pd.to_datetime(df.date)  # is this necessary?
-        df = df.price.resample("1min").ohlc(_method="ohlc")
-        # print("start2", perf_counter() - start2)
+        self.gen_df_count1 += perf_counter() - gen_df_count1
+
+        gen_df_count2 = perf_counter()
+        df.set_index("date", inplace=True)
+        self.gen_df_count2 += perf_counter() - gen_df_count2
+
+        gen_df_count3 = perf_counter()
+        # THE BIGGEST BOTTLE NECK IS HERE!!!
+        ##################################
+        df = df["price"].resample("1min", label="right", closed="right").ohlc()
+        # df = df["price"].resample("1min", label="left", closed="left").ohlc()
+        ##################################
+        self.gen_df_count3 += perf_counter() - gen_df_count3
+        # self.timecounter2 += perf_counter() - start2
         return df
 
     def __create_volatile_periods(self) -> None:
@@ -283,10 +302,13 @@ class RandomOHLC:
             self.__df_1min.loc[starti:endi, "low"] = new_df["low"].values
             self.__df_1min.loc[starti:endi, "close"] = new_df["close"].values
 
-        # # # graph before the connect function
-        # self.__df_1min.set_index("date", inplace=True)
-        # df_days = self.__downsample_ohlc_data("1D", self.__df_1min)
-        # create_figure(df_days, "1D").show(config=get_config())
+        # print('time count 1', self.timecounter1)
+        # print('time count 2', self.timecounter2)
+
+        # print('gen df count 1', self.gen_df_count1)
+        # print('gen df count 2', self.gen_df_count2)
+        # print('gen df count 3', self.gen_df_count3)
+        # return
 
     def __correct_lowcolumn_error(self, df: pd.DataFrame) -> np.ndarray:
         """get all the rows where the 'low' cell is not the lowest value"""
@@ -297,9 +319,7 @@ class RandomOHLC:
             (df["high"] < df["open"]) & (df["high"] < df["close"]),
             (df["close"] < df["high"]) & (df["close"] < df["open"]),
         ]
-
         choices = [df["open"], df["high"], df["close"]]
-
         return np.where(
             (
                 (df["low"] > df["open"])
@@ -355,7 +375,7 @@ class RandomOHLC:
     def create_realistic_ohlc(self) -> None:
         """Process for creating slightly more realistic candles"""
         self.__df_1min.reset_index(inplace=True)
-        self.__create_volatile_periods()
+        # self.__create_volatile_periods()
         self.__connect_open_close_candles()
         self.__df_1min.set_index("date", inplace=True)
 
@@ -394,19 +414,19 @@ class RandomOHLC:
         resampled dataframe corresponding to that timeframe"""
 
         print("Resampling timeframes...")
-        total_time = perf_counter()
+        # total_time = perf_counter()
 
         prev_timeframe = "1min"
         self.__resampled_data["1min"] = self.__df_1min
         bars_table = self.__create_bars_table()
 
-        for timeframe in tqdm(bars_table):
+        for timeframe in bars_table:
             self.__resampled_data[timeframe] = self.__downsample_ohlc_data(
                 timeframe, self.__resampled_data[prev_timeframe]
             )
             prev_timeframe = timeframe
 
-        print("Finished resampling in: ", perf_counter() - total_time)
+        # print("Finished resampling in: ", perf_counter() - total_time)
 
     def print_resampled_data(self) -> None:
         {print(tf + "\n", df) for tf, df in self.resampled_data.items()}
