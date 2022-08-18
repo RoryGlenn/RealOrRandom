@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 from constants.constants import *
 
+
 class RealOHLC:
     def __init__(self, data_choice: str, num_days: int) -> None:
         self.total_days = num_days
@@ -37,10 +38,20 @@ class RealOHLC:
         """
 
         _max = np.max(
-            [np.max(self.df.open), np.max(self.df.high), np.max(self.df.low), np.max(self.df.close)]
+            [
+                np.max(self.df.open),
+                np.max(self.df.high),
+                np.max(self.df.low),
+                np.max(self.df.close),
+            ]
         )
         _min = np.min(
-            [np.min(self.df.open), np.min(self.df.high), np.min(self.df.low), np.min(self.df.close)]
+            [
+                np.min(self.df.open),
+                np.min(self.df.high),
+                np.min(self.df.low),
+                np.min(self.df.close),
+            ]
         )
 
         norm_open = (self.df.open - _min) / (_max - _min)
@@ -68,7 +79,7 @@ class RealOHLC:
                 timeframe, self.resampled_data[prev_timeframe]
             )
             prev_timeframe = timeframe
-    
+
     def __downsample_ohlc_data(self, timeframe: str, df: pd.DataFrame) -> None:
         """
         Converts a higher resolution dataframe into a lower one.
@@ -84,7 +95,6 @@ class RealOHLC:
             self.agg_dict
         )
 
-
     def __create_bars_table(self) -> dict:
         return {
             # "1min": self.total_days * MINUTES_IN_1DAY,
@@ -94,7 +104,7 @@ class RealOHLC:
             # "1H": self.total_days * HOURS_IN_1DAY,
             # "2H": self.total_days * HOURS_IN_1DAY // 2,
             # "4H": self.total_days * HOURS_IN_1DAY // 4,
-            # "1D": self.total_days,
+            "1D": self.total_days,
             "3D": self.total_days // 3,
             "1W": self.total_days // 7,
             "1M": self.total_days // 30,
