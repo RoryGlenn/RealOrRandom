@@ -31,8 +31,8 @@ app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 current_graph = None
 
 timeframe_map = {
-    "1_Minute": "1min",
-    "5_Minute": "5min",
+    # "1_Minute": "1min",
+    # "5_Minute": "5min",
     "15_Minute": "15min",
     "30_Minute": "30min",
     "1_Hour": "1H",
@@ -115,7 +115,7 @@ def get_graph_layout(fig: go.Figure) -> html.Div:
                         "eraseshape",
                     ],
                 },
-                style={'width': '170vh', 'height': '90vh'}
+                style={'width': '165vh', 'height': '90vh'}
 
             )
         ]
@@ -284,8 +284,8 @@ app.layout = html.Div(
         dbc.Row(),
         html.Hr(),
         html.Div(id="page-content"),
-        # dcc.Graph(id='my-graph',style={'width': '90vh', 'height': '90vh'}) 
 
+        
     ],
     style={"margin-left": "5%", "margin-right": "5%", "margin-top": "20px"},
 )
