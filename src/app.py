@@ -1,3 +1,4 @@
+from http.client import HTTPResponse
 from typing import Tuple
 from time import perf_counter
 from datetime import datetime
@@ -17,25 +18,10 @@ from real_ohlc import RealOHLC
 from random_ohlc import RandomOHLC
 from constants.constants import *
 
+
 # creates the Dash App
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-
-# creates the layout of the App
-app.layout = html.Div(
-    [
-        html.H1("Real Time Charts"),
-        dbc.Row(
-            [
-                dbc.Col(),
-            ]
-        ),
-        html.Hr(),
-        dcc.Interval(id="update", interval=5000),
-        html.Div(id="page-content"),
-    ],
-    style={"margin-left": "5%", "margin-right": "5%", "margin-top": "20px"},
-)
 
 current_graph = None
 
@@ -53,18 +39,101 @@ timeframe_map = {
 }
 
 
+dataframes = {}
+half_dataframes = {}
+figures = {t: None for t, _ in timeframe_map.items()}
+
+
+def create_figure(df: pd.DataFrame, graph_title: str) -> go.Figure:
+    """Create the figure with the dataframe passed in"""
+    fig = go.Figure(
+        data=go.Candlestick(
+            x=df.index,
+            open=df.open,
+            high=df.high,
+            low=df.low,
+            close=df.close,
+        )
+    )
+
+    fig.update_layout(
+        template="plotly_dark",
+        title=graph_title,
+        xaxis_title="Date",
+        yaxis_title="Price",
+        dragmode="zoom",
+        newshape_line_color="white",
+        font=dict(family="Courier New, monospace", size=18, color="RebeccaPurple"),
+        # hides the xaxis range slider
+        xaxis=dict(rangeslider=dict(visible=True)),
+    )
+    # fig.update_yaxes(showticklabels=True)
+    # fig.update_xaxes(showticklabels=True)
+    return fig
+
+
+def get_timeframe_dropdown(timeframes: list[str]) -> html.Div:
+    return html.Div(
+        [
+            html.P("Timeframe"),
+            dcc.Dropdown(
+                id="timeframe-dropdown",
+                options=[
+                    {"label": timeframe, "value": timeframe} for timeframe in timeframes
+                ],
+                value="1_Day",
+            ),
+        ]
+    )
+
+
+def get_config() -> dict:
+    """Returns the basic config options at the top right of the graph"""
+    return {
+        "doubleClickDelay": 1000,
+        "scrollZoom": True,
+        "displayModeBar": True,
+        "showTips": True,
+        "displaylogo": True,
+        "fillFrame": False,
+        "autosizable": True,
+        "modeBarButtonsToAdd": [
+            "drawline",
+            "drawopenpath",
+            "drawclosedpath",
+            "eraseshape",
+        ],
+    }
+
+
+def get_graph_layout(fig: go.Figure) -> html.Div:
+    """Updates the layout for the graph figure"""
+
+    return html.Div(
+        [
+            dcc.Graph(
+                figure=fig,
+                config=get_config(),
+            )
+        ]
+    )
+
+
 @app.callback(
-    Output("page-content", "figure"),
-    # Input("update", "n_intervals"),
+    Output("page-content", "children"),
+    Input("update", "n_intervals"),
     State("timeframe-dropdown", "value"),
 )
-def update_ohlc_chart(user_timeframe: str):
+def update_ohlc_chart(intervals: int, user_timeframe: str):
     """A callback function that updates the graph every
     time a new timeframe is selected by the user"""
     global current_graph
 
-    internal_timeframe = FrontEnd.timeframe_map[user_timeframe]
-    df = FrontEnd.half_dataframes[internal_timeframe]
+    if user_timeframe is None:
+        return
+
+    internal_timeframe = timeframe_map[user_timeframe]
+    df = half_dataframes[internal_timeframe]
 
     fig = go.Figure(
         data=go.Candlestick(
@@ -76,31 +145,37 @@ def update_ohlc_chart(user_timeframe: str):
         )
     )
 
-    return FrontEnd.get_graph_layout(current_graph)
+    # return get_graph_layout(current_graph)
     # app.layout = FrontEnd.get_graph_layout(fig)
+    return get_graph_layout(fig)
 
 
 def has_data(self) -> bool:
     return False
 
-def download_data() -> None:
+
+def download_and_unzip(url, extract_to):
+    from io import BytesIO
+    from zipfile import ZipFile
+    import wget
     import os
-    import requests
     import sys
 
-    data_url = 'https://github.com/RoryGlenn/RealOrRandom/tree/main/data'
-    data_repo = 'data'
-    
-    # if os.path.exists(data_repo):
-    #     # double check that we have all .csv files
-    #     return
-    
-    response = requests.get(data_url)
-    if response.ok:
-        print("downloading csv data")
-    else:
-        print("could not download csv data")
-        sys.exit(1)
+    # if not os.path.exists(extract_to):
+    #     os.mkdir(extract_to)
+
+    # response = wget.download(url, extract_to)
+    # if not os.path.exists(response):
+    #     print(f"Could not download from {url}")
+    #     sys.exit(1)
+
+    try:
+        b = BytesIO(b"data\\data.zip")
+        zipfile = ZipFile(b)
+
+        zipfile.extractall(path=extract_to)
+    except Exception as e:
+        print(e)
 
 
 def create_half_dataframes(
@@ -167,8 +242,12 @@ def main() -> None:
     start_time = perf_counter()
 
     global current_graph
+    global dataframes
+    global half_dataframes
 
-    download_data()
+    data_url = "https://github.com/RoryGlenn/RealOrRandom/blob/main/data.zip"
+    data_repo = "data"
+    # download_and_unzip(data_url, data_repo)
 
     Faker.seed(0)
     fake = Faker()
@@ -189,14 +268,32 @@ def main() -> None:
         for timeframe in half_dataframes:
             half_dataframes[timeframe].reset_index(inplace=True)
 
-        FrontEnd.dataframes = dataframes
-        FrontEnd.half_dataframes = half_dataframes
+        dataframes = dataframes
+        half_dataframes = half_dataframes
 
-        current_graph = FrontEnd.create_figure(FrontEnd.half_dataframes["1D"], "1_Day")
-        # app.layout = FrontEnd.app_create_layout(fig)
+        current_graph = create_figure(half_dataframes["1D"], "1_Day")
 
     print("Finished")
     app.run_server(debug=True)
+
+
+app.layout = html.Div(
+    [
+        html.H1("Real Time Charts"),
+        dbc.Row(
+            [
+                dbc.Col(get_timeframe_dropdown(list(timeframe_map.keys()))),
+            ]
+        ),
+        dbc.Row(),
+        html.Hr(),
+        # This needs to be changed to the correct input function!!!
+        dcc.Interval(id="update", interval=1000),
+        # the entire page content to be loaded, callback function needed for this!
+        html.Div(id="page-content"),
+    ],
+    style={"margin-left": "5%", "margin-right": "5%", "margin-top": "20px"},
+)
 
 
 if __name__ == "__main__":
