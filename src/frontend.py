@@ -1,46 +1,29 @@
-import dash_bootstrap_components as dbc
-from dash import Input, Output, State, Dash, dcc, html
-
-import plotly.graph_objects as go
 import pandas as pd
-from dates import Dates
+from dash import dcc, html
+import plotly.graph_objects as go
+import dash_bootstrap_components as dbc
 
 
 class FrontEnd:
-    timeframes: list[str] = [
-        "1 Minute",
-        "5 Minute",
-        "15 Minute",
-        "30 Minute",
-        "1 Hour",
-        "2 Hour",
-        "4 Hour",
-        "1 Day",
-        "1 Week",
-    ]
+    timeframe_map: dict[str, str] = {
+        "1_Minute": "1min",
+        "5_Minute": "5min",
+        "15_Minute": "15min",
+        "30_Minute": "30min",
+        "1_Hour": "1H",
+        "2_Hour": "2H",
+        "4_Hour": "4H",
+        "1_Day": "1D",
+        "1_Week": "1W",
+        "1_Month": "1M",
+    }
 
-    @staticmethod
-    def get_config() -> dict:
-        return (
-            {
-                "doubleClickDelay": 1000,
-                "scrollZoom": True,
-                "displayModeBar": True,
-                "showTips": True,
-                "displaylogo": True,
-                "fillFrame": False,
-                "autosizable": True,
-                "modeBarButtonsToAdd": [
-                    "drawline",
-                    "drawopenpath",
-                    "drawclosedpath",
-                    "eraseshape",
-                ],
-            },
-        )
+    dataframes = {}
+    half_dataframes = {}
 
     @staticmethod
     def create_figure(df: pd.DataFrame, graph_title: str) -> go.Figure:
+        """Create the figure with the dataframe passed in"""
         fig = go.Figure(
             data=go.Candlestick(
                 x=df.index,
@@ -66,127 +49,80 @@ class FrontEnd:
         # fig.update_xaxes(showticklabels=True)
         return fig
 
-    # @app.callback(
-    #     Output("page-content", "children"),
-    #     Input("update", "n_intervals"),
-    #     State("symbol-dropdown", "value"),
-    #     State("timeframe-dropdown", "value"),
-    #     State("num-bar-input", "value"),
-    # )
-    # def update_ohlc_chart(self, timeframe: str, timeframes: list[str], symbol: str, num_bars: str):
-    #     timeframe_str = timeframe
-    #     timeframe = timeframes
-    #     num_bars = int(num_bars)
-
-    #     print(symbol, timeframe, num_bars)
-
-    #     bars = mt5.copy_rates_from_pos(symbol, timeframe, 0, num_bars)
-    #     df = pd.DataFrame(bars)
-    #     df["time"] = pd.to_datetime(df["time"], unit="s")
-
-    #     fig = go.Figure(
-    #         data=go.Candlestick(
-    #             x=df["time"],
-    #             open=df["open"],
-    #             high=df["high"],
-    #             low=df["low"],
-    #             close=df["close"],
-    #         )
-    #     )
-
-    #     fig.update(layout_xaxis_rangeslider_visible=False)
-    #     fig.update_layout(yaxis={"side": "right"})
-    #     fig.layout.xaxis.fixedrange = True
-    #     fig.layout.yaxis.fixedrange = True
-
-    #     return [
-    #         html.H2(id="chart-details", children=f"{symbol} - {timeframe_str}"),
-    #         dcc.Graph(figure=fig, config={"displayModeBar": False}),
-    #     ]
-
     @staticmethod
     def get_timeframe_dropdown(timeframes: list[str]) -> html.Div:
         return html.Div(
             [
-                html.P("Timeframe:"),
+                html.P("Timeframe"),
                 dcc.Dropdown(
                     id="timeframe-dropdown",
                     options=[
                         {"label": timeframe, "value": timeframe}
                         for timeframe in timeframes
                     ],
-                    value="D1",
+                    value="1_Day",
                 ),
             ]
         )
 
     @staticmethod
-    def get_num_bars_input() -> html.Div:
-        return html.Div(
-            [
-                html.P("Number of Candles"),
-                dbc.Input(id="num-bar-input", type="number", value="20"),
-            ]
-        )
+    def get_config() -> dict:
+        """Returns the basic config options at the top right of the graph"""
+        return {
+            "doubleClickDelay": 1000,
+            "scrollZoom": True,
+            "displayModeBar": True,
+            "showTips": True,
+            "displaylogo": True,
+            "fillFrame": False,
+            "autosizable": True,
+            "modeBarButtonsToAdd": [
+                "drawline",
+                "drawopenpath",
+                "drawclosedpath",
+                "eraseshape",
+            ],
+        }
 
     @staticmethod
-    def app_update_layout(fig: go.Figure) -> html.Div:
+    def get_graph_layout(fig: go.Figure) -> html.Div:
         """Updates the layout for the graph figure"""
+
         return html.Div(
             [
                 dcc.Graph(
                     figure=fig,
-                    config={
-                        "doubleClickDelay": 1000,
-                        "scrollZoom": True,
-                        "displayModeBar": True,
-                        "showTips": True,
-                        "displaylogo": True,
-                        "fillFrame": False,
-                        "autosizable": True,
-                        "modeBarButtonsToAdd": [
-                            "drawline",
-                            "drawopenpath",
-                            "drawclosedpath",
-                            "eraseshape",
-                        ],
-                    },
+                    config=FrontEnd.get_config(),
                 )
             ]
         )
 
+
+    @staticmethod
+    def app_update_layout():
+        return
+
     @staticmethod
     def app_create_layout(
-        fig: go.Figure,
-        # timeframes: list[str] = [
-        #     "1 Minute",
-        #     "5 Minute",
-        #     "15 Minute",
-        #     "30 Minute",
-        #     "1 Hour",
-        #     "2 Hour",
-        #     "4 Hour",
-        #     "1 Day",
-        #     "1 Week",
-        # ],
     ) -> html.Div:
+        """Creates the layout for the entire page"""
 
-        # creates the layout of the App
-        layout = html.Div(
+        return html.Div(
             [
                 html.H1("Real Time Charts"),
                 dbc.Row(
                     [
-                        # dbc.Col(symbol_dropdown),
-                        dbc.Col(FrontEnd.get_timeframe_dropdown(FrontEnd.timeframes)),
-                        dbc.Col(FrontEnd.get_num_bars_input()),
+                        dbc.Col(
+                            FrontEnd.get_timeframe_dropdown(list(FrontEnd.timeframe_map.keys()))
+                        ),
                     ]
                 ),
-                dbc.Row(FrontEnd.app_update_layout(fig)),
+                dbc.Row(),
                 html.Hr(),
-                # dcc.Interval(id="update", interval=200),
+                # This needs to be changed to the correct input function!!!
+                dcc.Interval(id="update", interval=5000),
+                # the entire page content to be loaded, callback function needed for this!
                 html.Div(id="page-content"),
             ],
             style={"margin-left": "5%", "margin-right": "5%", "margin-top": "20px"},
         )
-        return layout

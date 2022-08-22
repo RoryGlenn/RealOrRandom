@@ -16,7 +16,7 @@
             "name": "App",
             "type": "python",
             "request": "launch",
-            "program": "src/app.py",
+            "program": "src/myapp.py",
             "console": "integratedTerminal",
             "justMyCode": true
         }

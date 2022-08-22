@@ -97,13 +97,13 @@ class RealOHLC:
 
     def __create_bars_table(self) -> dict:
         return {
-            # "1min": self.total_days * MINUTES_IN_1DAY,
-            # "5min": self.total_days * MINUTES_IN_1DAY // 5,
-            # "15min": self.total_days * MINUTES_IN_1DAY // 15,
-            # "30min": self.total_days * MINUTES_IN_1DAY // 30,
-            # "1H": self.total_days * HOURS_IN_1DAY,
-            # "2H": self.total_days * HOURS_IN_1DAY // 2,
-            # "4H": self.total_days * HOURS_IN_1DAY // 4,
+            "1min": self.total_days * MINUTES_IN_1DAY,
+            "5min": self.total_days * MINUTES_IN_1DAY // 5,
+            "15min": self.total_days * MINUTES_IN_1DAY // 15,
+            "30min": self.total_days * MINUTES_IN_1DAY // 30,
+            "1H": self.total_days * HOURS_IN_1DAY,
+            "2H": self.total_days * HOURS_IN_1DAY // 2,
+            "4H": self.total_days * HOURS_IN_1DAY // 4,
             "1D": self.total_days,
             "3D": self.total_days // 3,
             "1W": self.total_days // 7,

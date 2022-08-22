@@ -1,5 +1,4 @@
 from datetime import date
-from statistics import stdev
 from time import perf_counter
 
 import numpy as np
@@ -12,54 +11,6 @@ import plotly.graph_objects as go
 from constants.constants import *
 
 pd.options.display.float_format = "{:.4f}".format
-
-
-# def get_config() -> dict:
-#     return (
-#         {
-#             "doubleClickDelay": 1000,
-#             "scrollZoom": True,
-#             "displayModeBar": True,
-#             "showTips": True,
-#             "displaylogo": True,
-#             "fillFrame": False,
-#             "autosizable": True,
-#             "modeBarButtonsToAdd": [
-#                 "drawline",
-#                 "drawopenpath",
-#                 "drawclosedpath",
-#                 "eraseshape",
-#             ],
-#         },
-#     )
-
-
-# def create_figure(df: pd.DataFrame, graph_title: str) -> go.Figure:
-#     fig = go.Figure(
-#         data=go.Candlestick(
-#             x=df.index,
-#             open=df.open,
-#             high=df.high,
-#             low=df.low,
-#             close=df.close,
-#         )
-#     )
-
-#     fig.update_layout(
-#         template="plotly_dark",
-#         title=graph_title,
-#         xaxis_title="Date",
-#         yaxis_title="Price",
-#         dragmode="zoom",
-#         newshape_line_color="white",
-#         font=dict(family="Courier New, monospace", size=18, color="RebeccaPurple"),
-#         # hides the xaxis range slider
-#         xaxis=dict(rangeslider=dict(visible=True)),
-#     )
-
-#     # fig.update_yaxes(showticklabels=True)
-#     # fig.update_xaxes(showticklabels=True)
-#     return fig
 
 
 class RandomOHLC:
@@ -396,13 +347,13 @@ class RandomOHLC:
 
     def __create_bars_table(self) -> dict:
         return {
-            # "1min": self.total_days * MINUTES_IN_1DAY,
-            # "5min": self.total_days * MINUTES_IN_1DAY // 5,
-            # "15min": self.total_days * MINUTES_IN_1DAY // 15,
-            # "30min": self.total_days * MINUTES_IN_1DAY // 30,
-            # "1H": self.total_days * HOURS_IN_1DAY,
-            # "2H": self.total_days * HOURS_IN_1DAY // 2,
-            # "4H": self.total_days * HOURS_IN_1DAY // 4,
+            "1min": self.total_days * MINUTES_IN_1DAY,
+            "5min": self.total_days * MINUTES_IN_1DAY // 5,
+            "15min": self.total_days * MINUTES_IN_1DAY // 15,
+            "30min": self.total_days * MINUTES_IN_1DAY // 30,
+            "1H": self.total_days * HOURS_IN_1DAY,
+            "2H": self.total_days * HOURS_IN_1DAY // 2,
+            "4H": self.total_days * HOURS_IN_1DAY // 4,
             "1D": self.total_days,
             "3D": self.total_days // 3,
             "1W": self.total_days // 7,

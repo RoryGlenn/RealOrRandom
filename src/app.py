@@ -1,12 +1,14 @@
-from datetime import datetime
-from time import perf_counter
 from typing import Tuple
+from time import perf_counter
+from datetime import datetime
 
-import pandas as pd
 import numpy as np
+import pandas as pd
+from dash import Dash, html, dcc
 from faker import Faker
-from dash import Dash
+import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
+from dash.dependencies import Input, Output, State
 
 from dates import Dates
 from frontend import FrontEnd
@@ -16,6 +18,65 @@ from constants.constants import *
 
 # creates the Dash App
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+
+
+# creates the layout of the App
+app.layout = html.Div([
+    html.H1('Real Time Charts'),
+
+    dbc.Row([
+        dbc.Col(),
+    ]),
+
+    html.Hr(),
+
+    dcc.Interval(id='update', interval=200),
+
+    html.Div(id='page-content')
+
+], style={'margin-left': '5%', 'margin-right': '5%', 'margin-top': '20px'})
+
+current_graph = None
+
+timeframe_map  = {
+    "1_Minute": "1min",
+    "5_Minute": "5min",
+    "15_Minute": "15min",
+    "30_Minute": "30min",
+    "1_Hour": "1H",
+    "2_Hour": "2H",
+    "4_Hour": "4H",
+    "1_Day": "1D",
+    "1_Week": "1W",
+    "1_Month": "1M",
+}
+
+
+@app.callback(
+    Output("page-content", "figure"),
+    # Input("update", "n_intervals"),
+    State("timeframe-dropdown", "value"),
+)
+def update_ohlc_chart(user_timeframe: str):
+    """A callback function that updates the graph every
+    time a new timeframe is selected by the user"""
+    global current_graph
+
+    internal_timeframe = FrontEnd.timeframe_map[user_timeframe]
+    df = FrontEnd.half_dataframes[internal_timeframe]
+
+    fig = go.Figure(
+        data=go.Candlestick(
+            x=df["date"],
+            open=df["open"],
+            high=df["high"],
+            low=df["low"],
+            close=df["close"],
+        )
+    )
+
+    return FrontEnd.get_graph_layout(current_graph)
+    # app.layout = FrontEnd.get_graph_layout(fig)
 
 
 def create_half_dataframes(
@@ -29,7 +90,7 @@ def create_half_dataframes(
     }
 
 
-def real_case(exclusions: list[str]) -> Tuple[dict, dict, str]:
+def real_case(exclusions: list[str] = []) -> Tuple[dict, dict, str]:
     data_choice = np.random.choice(list(Dates.get_data_date_ranges().keys()))
 
     adj_start_date_limit, end_date_limit = Dates.get_date_limits(
@@ -55,7 +116,7 @@ def real_case(exclusions: list[str]) -> Tuple[dict, dict, str]:
 
 
 def random_case(
-    num_days: int, fake: Faker, exclusions: list[str]
+    num_days: int, fake: Faker, exclusions: list[str] = []
 ) -> Tuple[dict, dict, str]:
     random_ohlc = RandomOHLC(
         total_days=num_days,
@@ -74,60 +135,47 @@ def random_case(
     random_ohlc.normalize_ohlc_data()
     random_ohlc.resample_timeframes()
 
-    half_dataframes = create_half_dataframes(random_ohlc.resampled_data)
+    half_dataframes = create_half_dataframes(random_ohlc.resampled_data, exclusions)
     return random_ohlc.resampled_data, half_dataframes, "Fake"
 
 
 def main() -> None:
     start_time = perf_counter()
+    
+    global current_graph
 
     Faker.seed(0)
     fake = Faker()
-    total_graphs = 0
+    total_graphs = 1
     num_days = 120  # 120 will be the standard
     answers = {}
     exclusions = ["1min", "5min", "15min", "30min", "1H", "2H", "4H"]
-
+    
     print("Starting test...")
 
     for i in range(total_graphs):
-        dataframes = None
-        half_dataframes = {}
+        dataframes, half_dataframes, answers[i] = (
+            real_case()
+            if np.random.randint(0, 1)
+            else random_case(num_days, fake)
+        )
 
-        if np.random.randint(0, 1):
-            dataframes, half_dataframes, answers[i] = real_case(exclusions)
-        else:
-            dataframes, half_dataframes, answers[i] = random_case(
-                num_days, fake, exclusions
-            )
+        for timeframe in dataframes:
+            dataframes[timeframe].reset_index(inplace=True)
+        for timeframe in half_dataframes:
+            half_dataframes[timeframe].reset_index(inplace=True)
 
-        # loop bottle necks!!!
-        for timeframe, df in half_dataframes.items():
-            if timeframe in exclusions:
-                continue
+        FrontEnd.dataframes = dataframes
+        FrontEnd.half_dataframes = half_dataframes
 
-            fig = FrontEnd.create_figure(df, timeframe)
-            # fig.write_html(f"html/HABC-USD_{timeframe}_{i}.html", config=get_config())
-            app.layout = FrontEnd.app_create_layout(fig)
+        current_graph = FrontEnd.create_figure(FrontEnd.half_dataframes['1D'], '1 Day')
+        # app.layout = FrontEnd.app_create_layout(fig)
 
-        # This is the full graph that only the admin should be able to see!
-        ####################################################################
-        # for timeframe, df in dataframes.items():
-        #     fig = FrontEnd.create_figure(df)
-        #     fig.write_html(f"html/FABC-USD_{i}.html")
-        ####################################################################
-
-    print(answers)
-
-    # any change made to this file will cause the server to recompile
+    print("Finished")
     app.run_server(debug=True)
-
-    time_elapsed = RandomOHLC.get_time_elapsed(start_time)
-    print(f"Total time elapsed: {time_elapsed}")
 
 
 if __name__ == "__main__":
-    from os import system
-
-    system("cls")
+    # from os import system
+    # system("cls")
     main()
