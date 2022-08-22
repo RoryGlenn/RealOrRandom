@@ -97,14 +97,12 @@ class FrontEnd:
             ]
         )
 
-
     @staticmethod
     def app_update_layout():
         return
 
     @staticmethod
-    def app_create_layout(
-    ) -> html.Div:
+    def app_create_layout() -> html.Div:
         """Creates the layout for the entire page"""
 
         return html.Div(
@@ -113,7 +111,9 @@ class FrontEnd:
                 dbc.Row(
                     [
                         dbc.Col(
-                            FrontEnd.get_timeframe_dropdown(list(FrontEnd.timeframe_map.keys()))
+                            FrontEnd.get_timeframe_dropdown(
+                                list(FrontEnd.timeframe_map.keys())
+                            )
                         ),
                     ]
                 ),

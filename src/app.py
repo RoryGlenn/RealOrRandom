@@ -1,6 +1,7 @@
 from typing import Tuple
 from time import perf_counter
 from datetime import datetime
+from urllib import request
 
 import numpy as np
 import pandas as pd
@@ -21,24 +22,24 @@ app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 
 
 # creates the layout of the App
-app.layout = html.Div([
-    html.H1('Real Time Charts'),
-
-    dbc.Row([
-        dbc.Col(),
-    ]),
-
-    html.Hr(),
-
-    dcc.Interval(id='update', interval=200),
-
-    html.Div(id='page-content')
-
-], style={'margin-left': '5%', 'margin-right': '5%', 'margin-top': '20px'})
+app.layout = html.Div(
+    [
+        html.H1("Real Time Charts"),
+        dbc.Row(
+            [
+                dbc.Col(),
+            ]
+        ),
+        html.Hr(),
+        dcc.Interval(id="update", interval=5000),
+        html.Div(id="page-content"),
+    ],
+    style={"margin-left": "5%", "margin-right": "5%", "margin-top": "20px"},
+)
 
 current_graph = None
 
-timeframe_map  = {
+timeframe_map = {
     "1_Minute": "1min",
     "5_Minute": "5min",
     "15_Minute": "15min",
@@ -77,6 +78,29 @@ def update_ohlc_chart(user_timeframe: str):
 
     return FrontEnd.get_graph_layout(current_graph)
     # app.layout = FrontEnd.get_graph_layout(fig)
+
+
+def has_data(self) -> bool:
+    return False
+
+def download_data() -> None:
+    import os
+    import requests
+    import sys
+
+    data_url = 'https://github.com/RoryGlenn/RealOrRandom/tree/main/data'
+    data_repo = 'data'
+    
+    # if os.path.exists(data_repo):
+    #     # double check that we have all .csv files
+    #     return
+    
+    response = requests.get(data_url)
+    if response.ok:
+        print("downloading csv data")
+    else:
+        print("could not download csv data")
+        sys.exit(1)
 
 
 def create_half_dataframes(
@@ -141,8 +165,10 @@ def random_case(
 
 def main() -> None:
     start_time = perf_counter()
-    
+
     global current_graph
+
+    download_data()
 
     Faker.seed(0)
     fake = Faker()
@@ -150,14 +176,12 @@ def main() -> None:
     num_days = 120  # 120 will be the standard
     answers = {}
     exclusions = ["1min", "5min", "15min", "30min", "1H", "2H", "4H"]
-    
+
     print("Starting test...")
 
     for i in range(total_graphs):
         dataframes, half_dataframes, answers[i] = (
-            real_case()
-            if np.random.randint(0, 1)
-            else random_case(num_days, fake)
+            real_case() if np.random.randint(0, 1) else random_case(num_days, fake)
         )
 
         for timeframe in dataframes:
@@ -168,7 +192,7 @@ def main() -> None:
         FrontEnd.dataframes = dataframes
         FrontEnd.half_dataframes = half_dataframes
 
-        current_graph = FrontEnd.create_figure(FrontEnd.half_dataframes['1D'], '1 Day')
+        current_graph = FrontEnd.create_figure(FrontEnd.half_dataframes["1D"], "1_Day")
         # app.layout = FrontEnd.app_create_layout(fig)
 
     print("Finished")
