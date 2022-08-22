@@ -1,4 +1,9 @@
-from http.client import HTTPResponse
+# import sys 
+# from pprint import pprint
+# sys.path.append(r'C:\Users\glenn\OneDrive\Desktop\RandomDataGenerator\venv\Scripts\python.exe')
+# pprint(sys.path)
+
+
 from typing import Tuple
 from time import perf_counter
 from datetime import datetime
@@ -87,33 +92,31 @@ def get_timeframe_dropdown(timeframes: list[str]) -> html.Div:
     )
 
 
-def get_config() -> dict:
-    """Returns the basic config options at the top right of the graph"""
-    return {
-        "doubleClickDelay": 1000,
-        "scrollZoom": True,
-        "displayModeBar": True,
-        "showTips": True,
-        "displaylogo": True,
-        "fillFrame": False,
-        "autosizable": True,
-        "modeBarButtonsToAdd": [
-            "drawline",
-            "drawopenpath",
-            "drawclosedpath",
-            "eraseshape",
-        ],
-    }
-
-
 def get_graph_layout(fig: go.Figure) -> html.Div:
     """Updates the layout for the graph figure"""
 
     return html.Div(
         [
             dcc.Graph(
+                id='graph-main',
                 figure=fig,
-                config=get_config(),
+                config={
+                    "doubleClickDelay": 1000,
+                    "scrollZoom": True,
+                    "displayModeBar": True,
+                    "showTips": True,
+                    "displaylogo": True,
+                    "fillFrame": False,
+                    "autosizable": True,
+                    "modeBarButtonsToAdd": [
+                        "drawline",
+                        "drawopenpath",
+                        "drawclosedpath",
+                        "eraseshape",
+                    ],
+                },
+                style={'width': '170vh', 'height': '90vh'}
+
             )
         ]
     )
@@ -121,7 +124,7 @@ def get_graph_layout(fig: go.Figure) -> html.Div:
 
 @app.callback(
     Output("page-content", "children"),
-    Input("update", "n_intervals"),
+    Input("timeframe-dropdown", "value"),
     State("timeframe-dropdown", "value"),
 )
 def update_ohlc_chart(intervals: int, user_timeframe: str):
@@ -130,10 +133,9 @@ def update_ohlc_chart(intervals: int, user_timeframe: str):
     global current_graph
 
     if user_timeframe is None:
-        return
+        user_timeframe = "1_Day"
 
-    internal_timeframe = timeframe_map[user_timeframe]
-    df = half_dataframes[internal_timeframe]
+    df = half_dataframes[timeframe_map[user_timeframe]]
 
     fig = go.Figure(
         data=go.Candlestick(
@@ -145,13 +147,7 @@ def update_ohlc_chart(intervals: int, user_timeframe: str):
         )
     )
 
-    # return get_graph_layout(current_graph)
-    # app.layout = FrontEnd.get_graph_layout(fig)
     return get_graph_layout(fig)
-
-
-def has_data(self) -> bool:
-    return False
 
 
 def download_and_unzip(url, extract_to):
@@ -161,16 +157,16 @@ def download_and_unzip(url, extract_to):
     import os
     import sys
 
-    # if not os.path.exists(extract_to):
-    #     os.mkdir(extract_to)
+    if not os.path.exists(extract_to):
+        os.mkdir(extract_to)
 
-    # response = wget.download(url, extract_to)
-    # if not os.path.exists(response):
-    #     print(f"Could not download from {url}")
-    #     sys.exit(1)
+    response = wget.download(url, extract_to)
+    if not os.path.exists(response):
+        print(f"Could not download from {url}")
+        sys.exit(1)
 
     try:
-        b = BytesIO(b"data\\data.zip")
+        b = BytesIO(response)
         zipfile = ZipFile(b)
 
         zipfile.extractall(path=extract_to)
@@ -239,14 +235,14 @@ def random_case(
 
 
 def main() -> None:
-    start_time = perf_counter()
-
     global current_graph
     global dataframes
     global half_dataframes
+    global app
 
-    data_url = "https://github.com/RoryGlenn/RealOrRandom/blob/main/data.zip"
-    data_repo = "data"
+    start_time = perf_counter()
+    # data_url = "https://github.com/RoryGlenn/RealOrRandom/blob/main/data.zip"
+    # data_repo = "data"
     # download_and_unzip(data_url, data_repo)
 
     Faker.seed(0)
@@ -274,12 +270,12 @@ def main() -> None:
         current_graph = create_figure(half_dataframes["1D"], "1_Day")
 
     print("Finished")
-    app.run_server(debug=True)
+    app.run_server()
 
 
 app.layout = html.Div(
     [
-        html.H1("Real Time Charts"),
+        html.H1("Chart"),
         dbc.Row(
             [
                 dbc.Col(get_timeframe_dropdown(list(timeframe_map.keys()))),
@@ -287,16 +283,13 @@ app.layout = html.Div(
         ),
         dbc.Row(),
         html.Hr(),
-        # This needs to be changed to the correct input function!!!
-        dcc.Interval(id="update", interval=1000),
-        # the entire page content to be loaded, callback function needed for this!
         html.Div(id="page-content"),
+        # dcc.Graph(id='my-graph',style={'width': '90vh', 'height': '90vh'}) 
+
     ],
     style={"margin-left": "5%", "margin-right": "5%", "margin-top": "20px"},
 )
 
 
 if __name__ == "__main__":
-    # from os import system
-    # system("cls")
     main()
