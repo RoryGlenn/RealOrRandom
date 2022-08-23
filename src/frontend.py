@@ -5,9 +5,11 @@ import dash_bootstrap_components as dbc
 
 
 class FrontEnd:
-    timeframe_map: dict[str, str] = {
-        "1_Minute": "1min",
-        "5_Minute": "5min",
+    dataframes = {}
+    half_dataframes = {}
+    timeframe_map = {
+        # "1_Minute": "1min",
+        # "5_Minute": "5min",
         "15_Minute": "15min",
         "30_Minute": "30min",
         "1_Hour": "1H",
@@ -17,9 +19,6 @@ class FrontEnd:
         "1_Week": "1W",
         "1_Month": "1M",
     }
-
-    dataframes = {}
-    half_dataframes = {}
 
     @staticmethod
     def create_figure(df: pd.DataFrame, graph_title: str) -> go.Figure:
@@ -66,62 +65,61 @@ class FrontEnd:
         )
 
     @staticmethod
-    def get_config() -> dict:
-        """Returns the basic config options at the top right of the graph"""
-        return {
-            "doubleClickDelay": 1000,
-            "scrollZoom": True,
-            "displayModeBar": True,
-            "showTips": True,
-            "displaylogo": True,
-            "fillFrame": False,
-            "autosizable": True,
-            "modeBarButtonsToAdd": [
-                "drawline",
-                "drawopenpath",
-                "drawclosedpath",
-                "eraseshape",
-            ],
-        }
-
-    @staticmethod
     def get_graph_layout(fig: go.Figure) -> html.Div:
         """Updates the layout for the graph figure"""
 
         return html.Div(
             [
                 dcc.Graph(
+                    id="graph-main",
                     figure=fig,
-                    config=FrontEnd.get_config(),
+                    config={
+                        "doubleClickDelay": 1000,
+                        "scrollZoom": True,
+                        "displayModeBar": True,
+                        "showTips": True,
+                        "displaylogo": True,
+                        "fillFrame": False,
+                        "autosizable": True,
+                        "modeBarButtonsToAdd": [
+                            "drawline",
+                            "drawopenpath",
+                            "drawclosedpath",
+                            "eraseshape",
+                        ],
+                    },
+                    style={"width": "155vh", "height": "90vh"},
                 )
             ]
         )
 
     @staticmethod
-    def app_update_layout():
-        return
-
-    @staticmethod
-    def app_create_layout() -> html.Div:
-        """Creates the layout for the entire page"""
-
+    def get_app_layout() -> html.Div:
         return html.Div(
             [
-                html.H1("Real Time Charts"),
+                html.H1("Chart"),
                 dbc.Row(
                     [
+                        # timeframe dropdown
                         dbc.Col(
-                            FrontEnd.get_timeframe_dropdown(
-                                list(FrontEnd.timeframe_map.keys())
+                            html.Div(
+                                [
+                                    html.P("Timeframe"),
+                                    dcc.Dropdown(
+                                        id="timeframe-dropdown",
+                                        options=[
+                                            {"label": timeframe, "value": timeframe}
+                                            for timeframe in FrontEnd.timeframe_map
+                                        ],
+                                        value="1_Day",
+                                    ),
+                                ]
                             )
-                        ),
+                        )
                     ]
                 ),
                 dbc.Row(),
                 html.Hr(),
-                # This needs to be changed to the correct input function!!!
-                dcc.Interval(id="update", interval=5000),
-                # the entire page content to be loaded, callback function needed for this!
                 html.Div(id="page-content"),
             ],
             style={"margin-left": "5%", "margin-right": "5%", "margin-top": "20px"},

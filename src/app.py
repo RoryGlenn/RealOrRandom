@@ -4,131 +4,38 @@ from datetime import datetime
 
 import numpy as np
 import pandas as pd
-from dash import Dash, html, dcc
 from faker import Faker
+from dash import Dash, html, dcc
 import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 
 from dates import Dates
+from frontend import FrontEnd
 from real_ohlc import RealOHLC
 from random_ohlc import RandomOHLC
-from constants.constants import *
+from constants.constants import SECONDS_IN_1DAY
 
 
 # creates the Dash App
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
-
-current_graph = None
-
-timeframe_map = {
-    # "1_Minute": "1min",
-    # "5_Minute": "5min",
-    "15_Minute": "15min",
-    "30_Minute": "30min",
-    "1_Hour": "1H",
-    "2_Hour": "2H",
-    "4_Hour": "4H",
-    "1_Day": "1D",
-    "1_Week": "1W",
-    "1_Month": "1M",
-}
-
-
-dataframes = {}
-half_dataframes = {}
-figures = {t: None for t, _ in timeframe_map.items()}
-
-
-def create_figure(df: pd.DataFrame, graph_title: str) -> go.Figure:
-    """Create the figure with the dataframe passed in"""
-    fig = go.Figure(
-        data=go.Candlestick(
-            x=df.index,
-            open=df.open,
-            high=df.high,
-            low=df.low,
-            close=df.close,
-        )
-    )
-
-    fig.update_layout(
-        template="plotly_dark",
-        title=graph_title,
-        xaxis_title="Date",
-        yaxis_title="Price",
-        dragmode="zoom",
-        newshape_line_color="white",
-        font=dict(family="Courier New, monospace", size=18, color="RebeccaPurple"),
-        # hides the xaxis range slider
-        xaxis=dict(rangeslider=dict(visible=True)),
-    )
-    # fig.update_yaxes(showticklabels=True)
-    # fig.update_xaxes(showticklabels=True)
-    return fig
-
-
-def get_timeframe_dropdown(timeframes: list[str]) -> html.Div:
-    return html.Div(
-        [
-            html.P("Timeframe"),
-            dcc.Dropdown(
-                id="timeframe-dropdown",
-                options=[
-                    {"label": timeframe, "value": timeframe} for timeframe in timeframes
-                ],
-                value="1_Day",
-            ),
-        ]
-    )
-
-
-def get_graph_layout(fig: go.Figure) -> html.Div:
-    """Updates the layout for the graph figure"""
-
-    return html.Div(
-        [
-            dcc.Graph(
-                id="graph-main",
-                figure=fig,
-                config={
-                    "doubleClickDelay": 1000,
-                    "scrollZoom": True,
-                    "displayModeBar": True,
-                    "showTips": True,
-                    "displaylogo": True,
-                    "fillFrame": False,
-                    "autosizable": True,
-                    "modeBarButtonsToAdd": [
-                        "drawline",
-                        "drawopenpath",
-                        "drawclosedpath",
-                        "eraseshape",
-                    ],
-                },
-                style={"width": "155vh", "height": "90vh"},
-            )
-        ]
-    )
+app.layout = FrontEnd.get_app_layout()
 
 
 @app.callback(
     Output("page-content", "children"),
     Input("timeframe-dropdown", "value"),
-    # State("timeframe-dropdown", "value"),
 )
-def update_ohlc_chart( user_timeframe: str):
+def update_ohlc_chart(user_timeframe: str):
     """A callback function that updates the graph every
     time a new timeframe is selected by the user"""
-    # global current_graph
 
-    # print('intervals', intervals)
-    print('user_timeframe', user_timeframe)
+    print("user_timeframe", user_timeframe)
 
     if user_timeframe is None:
         user_timeframe = "1_Day"
 
-    df = half_dataframes[timeframe_map[user_timeframe]]
+    df = half_dataframes[FrontEnd.timeframe_map[user_timeframe]]
 
     fig = go.Figure(
         data=go.Candlestick(
@@ -140,7 +47,7 @@ def update_ohlc_chart( user_timeframe: str):
         )
     )
 
-    return get_graph_layout(fig)
+    return FrontEnd.get_graph_layout(fig)
 
 
 def download_and_unzip(url, extract_to):
@@ -257,45 +164,15 @@ def main() -> None:
         for timeframe in half_dataframes:
             half_dataframes[timeframe].reset_index(inplace=True)
 
-        dataframes = dataframes
-        half_dataframes = half_dataframes
+        # dataframes = dataframes
+        # half_dataframes = half_dataframes
+        FrontEnd.dataframes = dataframes
+        FrontEnd.half_dataframes
 
-        current_graph = create_figure(half_dataframes["1D"], "1_Day")
+        # current_graph = FrontEnd.create_figure(half_dataframes["1D"], "1_Day")
 
     print("Finished")
     app.run_server()
-
-
-app.layout = html.Div(
-    [
-        html.H1("Chart"),
-        dbc.Row(
-            [
-                # dbc.Col(get_timeframe_dropdown(list(timeframe_map.keys()))),
-                # timeframe dropdown
-                dbc.Col(
-                    html.Div(
-                        [
-                            html.P("Timeframe"),
-                            dcc.Dropdown(
-                                id="timeframe-dropdown",
-                                options=[
-                                    {"label": timeframe, "value": timeframe}
-                                    for timeframe in timeframe_map
-                                ],
-                                value="1_Day",
-                            ),
-                        ]
-                    )
-                )
-            ]
-        ),
-        dbc.Row(),
-        html.Hr(),
-        html.Div(id="page-content"),
-    ],
-    style={"margin-left": "5%", "margin-right": "5%", "margin-top": "20px"},
-)
 
 
 if __name__ == "__main__":
