@@ -1,13 +1,6 @@
-# import sys 
-# from pprint import pprint
-# sys.path.append(r'C:\Users\glenn\OneDrive\Desktop\RandomDataGenerator\venv\Scripts\python.exe')
-# pprint(sys.path)
-
-
 from typing import Tuple
 from time import perf_counter
 from datetime import datetime
-from urllib import request
 
 import numpy as np
 import pandas as pd
@@ -18,7 +11,6 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output, State
 
 from dates import Dates
-from frontend import FrontEnd
 from real_ohlc import RealOHLC
 from random_ohlc import RandomOHLC
 from constants.constants import *
@@ -26,7 +18,6 @@ from constants.constants import *
 
 # creates the Dash App
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
-
 
 current_graph = None
 
@@ -98,7 +89,7 @@ def get_graph_layout(fig: go.Figure) -> html.Div:
     return html.Div(
         [
             dcc.Graph(
-                id='graph-main',
+                id="graph-main",
                 figure=fig,
                 config={
                     "doubleClickDelay": 1000,
@@ -115,8 +106,7 @@ def get_graph_layout(fig: go.Figure) -> html.Div:
                         "eraseshape",
                     ],
                 },
-                style={'width': '165vh', 'height': '90vh'}
-
+                style={"width": "155vh", "height": "90vh"},
             )
         ]
     )
@@ -125,12 +115,15 @@ def get_graph_layout(fig: go.Figure) -> html.Div:
 @app.callback(
     Output("page-content", "children"),
     Input("timeframe-dropdown", "value"),
-    State("timeframe-dropdown", "value"),
+    # State("timeframe-dropdown", "value"),
 )
-def update_ohlc_chart(intervals: int, user_timeframe: str):
+def update_ohlc_chart( user_timeframe: str):
     """A callback function that updates the graph every
     time a new timeframe is selected by the user"""
-    global current_graph
+    # global current_graph
+
+    # print('intervals', intervals)
+    print('user_timeframe', user_timeframe)
 
     if user_timeframe is None:
         user_timeframe = "1_Day"
@@ -278,14 +271,28 @@ app.layout = html.Div(
         html.H1("Chart"),
         dbc.Row(
             [
-                dbc.Col(get_timeframe_dropdown(list(timeframe_map.keys()))),
+                # dbc.Col(get_timeframe_dropdown(list(timeframe_map.keys()))),
+                # timeframe dropdown
+                dbc.Col(
+                    html.Div(
+                        [
+                            html.P("Timeframe"),
+                            dcc.Dropdown(
+                                id="timeframe-dropdown",
+                                options=[
+                                    {"label": timeframe, "value": timeframe}
+                                    for timeframe in timeframe_map
+                                ],
+                                value="1_Day",
+                            ),
+                        ]
+                    )
+                )
             ]
         ),
         dbc.Row(),
         html.Hr(),
         html.Div(id="page-content"),
-
-        
     ],
     style={"margin-left": "5%", "margin-right": "5%", "margin-top": "20px"},
 )
