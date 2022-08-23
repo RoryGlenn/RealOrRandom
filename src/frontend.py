@@ -1,3 +1,4 @@
+import numpy as np
 import pandas as pd
 from dash import dcc, html
 import plotly.graph_objects as go
@@ -19,6 +20,11 @@ class FrontEnd:
         "1_Week": "1W",
         "1_Month": "1M",
     }
+
+    # What are the upper bounds and what are the lower bounds for your
+    #  price prediction 1, 5, 10, 30, 60 bars from the last candle bar?
+    upper_bounds = np.round(np.linspace(0.1, 100, 1000), 1)
+    lower_bounds = np.round(np.linspace(-0.1, -100, 1000), 1)
 
     @staticmethod
     def create_figure(df: pd.DataFrame, graph_title: str) -> go.Figure:
@@ -47,22 +53,6 @@ class FrontEnd:
         # fig.update_yaxes(showticklabels=True)
         # fig.update_xaxes(showticklabels=True)
         return fig
-
-    @staticmethod
-    def get_timeframe_dropdown(timeframes: list[str]) -> html.Div:
-        return html.Div(
-            [
-                html.P("Timeframe"),
-                dcc.Dropdown(
-                    id="timeframe-dropdown",
-                    options=[
-                        {"label": timeframe, "value": timeframe}
-                        for timeframe in timeframes
-                    ],
-                    value="1_Day",
-                ),
-            ]
-        )
 
     @staticmethod
     def get_graph_layout(fig: go.Figure) -> html.Div:
@@ -121,6 +111,57 @@ class FrontEnd:
                 dbc.Row(),
                 html.Hr(),
                 html.Div(id="page-content"),
+
+                # Bounds dropdown
+                # 1 day
+                FrontEnd.get_bounds("What will the upper bounds be 1 day after the last candle bar?", '1dayupperbounds-dropdown', True),
+                FrontEnd.get_bounds("What will the lower bounds be 1 day after the last candle bar?", '1daylowerbounds-dropdown', False),
+
+                # 5 days
+                FrontEnd.get_bounds("What will the upper bounds be 5 days after the last candle bar?", '5dayupperbounds-dropdown', True),
+                FrontEnd.get_bounds("What will the lower bounds be 5 days after the last candle bar?", '5daylowerbounds-dropdown', False),
+
+                # 10 days
+                FrontEnd.get_bounds("What will the upper bounds be 10 days after the last candle bar?", '10dayupperbounds-dropdown', True),
+                FrontEnd.get_bounds("What will the lower bounds be 10 days after the last candle bar?", '10daylowerbounds-dropdown', False),
+
+                # 30 days
+                FrontEnd.get_bounds("What will the upper bounds be 30 days after the last candle bar?", '30dayupperbounds-dropdown', True),
+                FrontEnd.get_bounds("What will the lower bounds be 30 days after the last candle bar?", '30daylowerbounds-dropdown', False),
+
+
+                # 60 days
+                FrontEnd.get_bounds("What will the upper bounds be 60 days after the last candle bar?", '60dayupperbounds-dropdown', True),
+                FrontEnd.get_bounds("What will the lower bounds be 60 days after the last candle bar?", '60daylowerbounds-dropdown', False),
+
+
             ],
             style={"margin-left": "5%", "margin-right": "5%", "margin-top": "20px"},
         )
+
+
+
+    @staticmethod
+    def get_bounds(text: str, id: str, upper: bool) -> html.Div:
+        # What are the upper bounds and what are the lower bounds for your price
+        #  prediction 1, 5, 10, 30, 60 bars from the last candle bar?
+
+        op1 = [{"label": i, "value": i} for i in FrontEnd.upper_bounds]
+        op2 = [{"label": i, "value": i} for i in FrontEnd.lower_bounds]
+
+        return html.Div(
+            [
+                html.P(text),
+                dcc.Dropdown(
+                    id=id,
+                    options=op1 if upper else op2,
+                    value=0.1 if upper else -0.1,
+                ),
+            ]
+        )
+
+
+    #     * Do you see a recognizable pattern in the graph? If so, what pattern is it?
+    #     * Is this graph real or random?
+    #     * How confident are you overall in your answers?
+    #         (confidence slider: 10% increments)

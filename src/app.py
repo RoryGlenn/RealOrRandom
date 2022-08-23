@@ -1,14 +1,14 @@
 from typing import Tuple
-from time import perf_counter
 from datetime import datetime
+from time import perf_counter
 
 import numpy as np
 import pandas as pd
+from dash import Dash
 from faker import Faker
-from dash import Dash, html, dcc
 import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
-from dash.dependencies import Input, Output, State
+from dash.dependencies import Input, Output
 
 from dates import Dates
 from frontend import FrontEnd
@@ -17,7 +17,6 @@ from random_ohlc import RandomOHLC
 from constants.constants import SECONDS_IN_1DAY
 
 
-# creates the Dash App
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = FrontEnd.get_app_layout()
 
@@ -30,12 +29,12 @@ def update_ohlc_chart(user_timeframe: str):
     """A callback function that updates the graph every
     time a new timeframe is selected by the user"""
 
-    print("user_timeframe", user_timeframe)
+    print("user timeframe:", user_timeframe)
 
     if user_timeframe is None:
         user_timeframe = "1_Day"
 
-    df = half_dataframes[FrontEnd.timeframe_map[user_timeframe]]
+    df = FrontEnd.half_dataframes[FrontEnd.timeframe_map[user_timeframe]]
 
     fig = go.Figure(
         data=go.Candlestick(
@@ -135,16 +134,10 @@ def random_case(
 
 
 def main() -> None:
-    global current_graph
-    global dataframes
-    global half_dataframes
-    global app
-
     start_time = perf_counter()
     # data_url = "https://github.com/RoryGlenn/RealOrRandom/blob/main/data.zip"
     # data_repo = "data"
     # download_and_unzip(data_url, data_repo)
-
     Faker.seed(0)
     fake = Faker()
     total_graphs = 1
@@ -164,15 +157,11 @@ def main() -> None:
         for timeframe in half_dataframes:
             half_dataframes[timeframe].reset_index(inplace=True)
 
-        # dataframes = dataframes
-        # half_dataframes = half_dataframes
         FrontEnd.dataframes = dataframes
-        FrontEnd.half_dataframes
-
-        # current_graph = FrontEnd.create_figure(half_dataframes["1D"], "1_Day")
+        FrontEnd.half_dataframes = half_dataframes
 
     print("Finished")
-    app.run_server()
+    app.run_server(debug=True)
 
 
 if __name__ == "__main__":
