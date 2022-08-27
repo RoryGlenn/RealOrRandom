@@ -1,8 +1,9 @@
+from pprint import pprint
 from typing import Tuple
 from datetime import datetime, timedelta
 
 import numpy as np
-
+import pandas as pd
 from constants.constants import *
 
 
@@ -12,49 +13,83 @@ class Dates:
         """Returns a dictionary will the earliest start date and latest end date we can use for each real data file"""
         return {
             # spot
-            BINANCE_BTCUSDT_DAY: {"start_date": "2019-09-08", "end_date": "2022-06-16"},
-            BINANCE_AAVEUSDT_DAY: {
-                "start_date": "2020-10-16",
-                "end_date": "2022-06-16",
-            },
-            BINANCE_ADAUSDT_DAY: {"start_date": "2018-04-17", "end_date": "2022-07-30"},
-            BINANCE_CELRUSDT_DAY: {
-                "start_date": "2019-03-25",
-                "end_date": "2022-07-30",
-            },
-            BINANCE_DASHUSDT_DAY: {
-                "start_date": "2019-03-28",
-                "end_date": "2022-07-30",
-            },
-            BINANCE_DOGEUSDT_DAY: {
-                "start_date": "2020-07-10",
-                "end_date": "2022-07-30",
-            },
-            BINANCE_DOTUSDT_DAY: {"start_date": "2020-08-18", "end_date": "2022-07-30"},
-            BINANCE_ETCUSDT_DAY: {"start_date": "2018-06-12", "end_date": "2022-07-30"},
-            BINANCE_ETHUSDT_DAY: {"start_date": "2017-08-17", "end_date": "2022-07-30"},
-            # spot
-            BINANCE_ETHUSDT_FUTURES_DAY: {
-                "start_date": "2019-11-27",
-                "end_date": "2022-03-15",
-            },
-            BINANCE_LTCUSDT_FUTURES_DAY: {
-                "start_date": "2020-01-09",
-                "end_date": "2022-03-15",
-            },
-            BINANCE_ADAUSDT_FUTURES_DAY: {
-                "start_date": "2020-01-31",
-                "end_date": "2022-07-30",
-            },
-            BINANCE_BTCUSDT_FUTURES_DAY: {
-                "start_date": "2019-09-08",
-                "end_date": "2022-03-15",
-            },
-            BINANCE_XMRUSDT_FUTURES_DAY: {
-                "start_date": "2020-02-03",
-                "end_date": "2022-07-30",
-            },
+            # BINANCE_BTCUSDT_DAY: {"start_date": "2019-09-08", "end_date": "2022-06-16"},
+            # BINANCE_AAVEUSDT_DAY: {
+            #     "start_date": "2020-10-16",
+            #     "end_date": "2022-06-16",
+            # },
+            # BINANCE_ADAUSDT_DAY: {"start_date": "2018-04-17", "end_date": "2022-07-30"},
+            # BINANCE_CELRUSDT_DAY: {
+            #     "start_date": "2019-03-25",
+            #     "end_date": "2022-07-30",
+            # },
+            # BINANCE_DASHUSDT_DAY: {
+            #     "start_date": "2019-03-28",
+            #     "end_date": "2022-07-30",
+            # },
+            # BINANCE_DOGEUSDT_DAY: {
+            #     "start_date": "2020-07-10",
+            #     "end_date": "2022-07-30",
+            # },
+            # BINANCE_DOTUSDT_DAY: {"start_date": "2020-08-18", "end_date": "2022-07-30"},
+            # BINANCE_ETCUSDT_DAY: {"start_date": "2018-06-12", "end_date": "2022-07-30"},
+            # BINANCE_ETHUSDT_DAY: {"start_date": "2017-08-17", "end_date": "2022-07-30"},
+            # # spot
+            # BINANCE_ETHUSDT_FUTURES_DAY: {
+            #     "start_date": "2019-11-27",
+            #     "end_date": "2022-03-15",
+            # },
+            # BINANCE_LTCUSDT_FUTURES_DAY: {
+            #     "start_date": "2020-01-09",
+            #     "end_date": "2022-03-15",
+            # },
+            # BINANCE_ADAUSDT_FUTURES_DAY: {
+            #     "start_date": "2020-01-31",
+            #     "end_date": "2022-07-30",
+            # },
+            # BINANCE_BTCUSDT_FUTURES_DAY: {
+            #     "start_date": "2019-09-08",
+            #     "end_date": "2022-03-15",
+            # },
+            # BINANCE_XMRUSDT_FUTURES_DAY: {
+            #     "start_date": "2020-02-03",
+            #     "end_date": "2022-07-30",
+            # },
+            "data/gemini_BTCUSD_ALL_1min.csv"
         }
+
+    def get_filenames(path: str) -> list[str]:
+        """open the folder containing all the .csv files and return a list containing all the files"""
+        from os import listdir
+        from os.path import isfile, join
+
+        return [
+            f
+            for f in listdir(path)
+            if isfile(join(path, f)) and join(path, f)[-4:] == ".csv"
+        ]
+
+    @staticmethod
+    def get_start_end_dates() -> dict[str, dict[str]]:
+        """Returns a dictionary containing all of the file names as the key
+        and start/end dates as the value.
+        The start date is also adjusted 90 days into the future
+        to avoid out of bounds issues when a random start date is picked.
+        """
+        filenames = Dates.get_filenames("data")
+        date_ranges = {}
+
+        for file in filenames:
+            df = pd.read_csv("data/" + file, skiprows=1)
+            date = "date" if "date" in df.columns else "Date"
+            dt = datetime.strptime(
+                df.loc[len(df) - 1, date], "%Y-%m-%d %H:%M:%S"
+            ) + timedelta(days=90)
+            date_ranges[file] = {
+                "start_date": dt.strftime("%Y-%m-%d %H:%M:%S"),
+                "end_date": df.loc[0, date],
+            }
+        return date_ranges
 
     @staticmethod
     def get_date_limits(days: int, data_choice: int) -> Tuple[str, str]:

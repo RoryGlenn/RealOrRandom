@@ -1,11 +1,12 @@
 import numpy as np
-import pandas as pd
 from dash import dcc, html
 import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
 
 
 class FrontEnd:
+    """Contains div elements and logic needed to create the front end"""
+
     dataframes = {}
     half_dataframes = {}
     timeframe_map = {
@@ -21,38 +22,8 @@ class FrontEnd:
         "1_Month": "1M",
     }
 
-    # What are the upper bounds and what are the lower bounds for your
-    #  price prediction 1, 5, 10, 30, 60 bars from the last candle bar?
     upper_bounds = np.round(np.linspace(0.1, 100, 1000), 1)
     lower_bounds = np.round(np.linspace(-0.1, -100, 1000), 1)
-
-    @staticmethod
-    def create_figure(df: pd.DataFrame, graph_title: str) -> go.Figure:
-        """Create the figure with the dataframe passed in"""
-        fig = go.Figure(
-            data=go.Candlestick(
-                x=df.index,
-                open=df.open,
-                high=df.high,
-                low=df.low,
-                close=df.close,
-            )
-        )
-
-        fig.update_layout(
-            template="plotly_dark",
-            title=graph_title,
-            xaxis_title="Date",
-            yaxis_title="Price",
-            dragmode="zoom",
-            newshape_line_color="white",
-            font=dict(family="Courier New, monospace", size=18, color="RebeccaPurple"),
-            # hides the xaxis range slider
-            xaxis=dict(rangeslider=dict(visible=True)),
-        )
-        # fig.update_yaxes(showticklabels=True)
-        # fig.update_xaxes(showticklabels=True)
-        return fig
 
     @staticmethod
     def get_graph_layout(fig: go.Figure) -> html.Div:
@@ -91,21 +62,7 @@ class FrontEnd:
                 dbc.Row(
                     [
                         # timeframe dropdown
-                        dbc.Col(
-                            html.Div(
-                                [
-                                    html.P("Timeframe"),
-                                    dcc.Dropdown(
-                                        id="timeframe-dropdown",
-                                        options=[
-                                            {"label": timeframe, "value": timeframe}
-                                            for timeframe in FrontEnd.timeframe_map
-                                        ],
-                                        value="1_Day",
-                                    ),
-                                ]
-                            )
-                        )
+                        dbc.Col(FrontEnd.get_timeframe_dropdown())
                     ]
                 ),
                 dbc.Row(),
@@ -169,6 +126,8 @@ class FrontEnd:
                 ),
                 # Real or Random
                 FrontEnd.get_real_or_random_dropdown(),
+                # pattern
+                FrontEnd.get_pattern_textbox(),
                 # confidence
                 FrontEnd.get_confidence_slider(),
             ],
@@ -176,10 +135,25 @@ class FrontEnd:
         )
 
     @staticmethod
-    def get_bounds_dropdown(text: str, id: str, upper: bool) -> html.Div:
-        # What are the upper bounds and what are the lower bounds for your price
-        #  prediction 1, 5, 10, 30, 60 bars from the last candle bar?
+    def get_timeframe_dropdown() -> html.Div:
+        return html.Div(
+            [
+                html.P("Timeframe"),
+                dcc.Dropdown(
+                    id="timeframe-dropdown",
+                    options=[
+                        {"label": timeframe, "value": timeframe}
+                        for timeframe in FrontEnd.timeframe_map
+                    ],
+                    value="1_Day",
+                ),
+            ]
+        )
 
+    @staticmethod
+    def get_bounds_dropdown(text: str, id: str, upper: bool) -> html.Div:
+        """What are the upper bounds and what are the lower bounds for your price
+        prediction 1, 5, 10, 30, 60 bars from the last candle bar?"""
         return html.Div(
             [
                 html.P(text),
@@ -209,13 +183,13 @@ class FrontEnd:
     @staticmethod
     def get_pattern_textbox() -> html.Div:
         # Do you see a recognizable pattern in the graph? If so, what pattern is it?
-
-        # create text box here!
         return html.Div(
             [
-                html.P("Is this graph real or random?"),
-                dcc.RangeSlider(
-                    id="realorrandom-dropdown", options=["Real", "Random"], value=""
+                html.P(
+                    "Do you see a recognizable pattern in the graph? If so, what pattern is it?"
+                ),
+                dcc.Textarea(
+                    id="pattern-textbox",
                 ),
             ]
         )
@@ -226,12 +200,6 @@ class FrontEnd:
         return html.Div(
             [
                 html.P("Rate your overall confidence in your answers"),
-                dcc.RangeSlider(
-                    id="confidence-slider",
-                    min=0,
-                    max=100,
-                    step=10
-                    
-                ),
+                dcc.RangeSlider(id="confidence-slider", min=0, max=100, step=10),
             ]
         )

@@ -29,23 +29,25 @@ def update_ohlc_chart(user_timeframe: str):
     """A callback function that updates the graph every
     time a new timeframe is selected by the user"""
 
-    print("user timeframe:", user_timeframe)
-
     if user_timeframe is None:
         user_timeframe = "1_Day"
 
     df = FrontEnd.half_dataframes[FrontEnd.timeframe_map[user_timeframe]]
+    date = "date" if "date" in df.columns else "Date"
+    open = "open" if "open" in df.columns else "Open"
+    high = "high" if "high" in df.columns else "High"
+    low = "low" if "low" in df.columns else "Low"
+    close = "close" if "close" in df.columns else "Close"
 
     fig = go.Figure(
         data=go.Candlestick(
-            x=df["date"],
-            open=df["open"],
-            high=df["high"],
-            low=df["low"],
-            close=df["close"],
+            x=df[date],
+            open=df[open],
+            high=df[high],
+            low=df[low],
+            close=df[close],
         )
     )
-
     return FrontEnd.get_graph_layout(fig)
 
 
@@ -67,7 +69,6 @@ def download_and_unzip(url, extract_to):
     try:
         b = BytesIO(response)
         zipfile = ZipFile(b)
-
         zipfile.extractall(path=extract_to)
     except Exception as e:
         print(e)
@@ -84,28 +85,54 @@ def create_half_dataframes(
     }
 
 
-def real_case(exclusions: list[str] = []) -> Tuple[dict, dict, str]:
-    data_choice = np.random.choice(list(Dates.get_data_date_ranges().keys()))
+def get_start_end_date_strs(date_ranges: dict, num_days: int) -> Tuple[str, str]:
+    from datetime import timedelta
 
-    adj_start_date_limit, end_date_limit = Dates.get_date_limits(
-        days=90 + 1, data_choice=data_choice
-    )
+    # get the total number of days we can use
+    start_date_dt = datetime.strptime(date_ranges["start_date"], "%Y-%m-%d %H:%M:%S")
+    end_date_dt = datetime.strptime(date_ranges["end_date"], "%Y-%m-%d %H:%M:%S")
 
-    start_date_str, end_date_str = Dates.create_dates(
-        num_days, adj_start_date_limit, end_date_limit
-    )
+    # get the number of days from the start date to the end date
+    diff_dt = end_date_dt - start_date_dt
 
-    start_date_dt = datetime.strptime(start_date_str, "%Y-%m-%d")
-    end_date_dt = datetime.strptime(end_date_str, "%Y-%m-%d")
-    num_days = end_date_dt - start_date_dt
+    # Create a list of all the dates within the given date bounds.
+    # Limit the total number of days we can use to diff_dt.days-num_days
+    # so the last 'num_days' will be off limits to the start date.
+    # By doing this, we protect ourselves from an out of bounds error
+    dt_list = [
+        start_date_dt + timedelta(days=x) for x in range(diff_dt.days - num_days)
+    ]
 
-    real_ohlc = RealOHLC(data_choice, num_days.days)
+    # randomly choose a start date, then go 'num_days' into the future to get the end date
+    start_date_dt = np.random.choice(dt_list)
+    end_date_dt = start_date_dt + timedelta(days=num_days)
+
+    # create the start and end date strings
+    start_date_str = start_date_dt.strftime("%Y-%m-%d %H:%M:%S")
+    end_date_str = end_date_dt.strftime("%Y-%m-%d %H:%M:%S")
+    return start_date_str, end_date_str
+
+
+def real_case(num_days: int, fake: Faker, exclusions: list[str] = []) -> Tuple[dict, dict, str]:
+    """Creates the real case scenario"""
+    # from datetime import timedelta
+
+    # get the files and randomly decide which data to use
+    files = Dates.get_filenames("data")
+    data_choice = np.random.choice(files)
+    date_ranges = Dates.get_start_end_dates()[data_choice]
+
+    start_date_str, end_date_str = get_start_end_date_strs(date_ranges, num_days)
+
+    real_ohlc = RealOHLC("data/" + data_choice, num_days)  # diff_dt.days)
     real_ohlc.create_df(start_date_str, end_date_str)
     real_ohlc.normalize_ohlc_data()
+
+    real_ohlc.abstract_dates()
     real_ohlc.resample_timeframes()
 
     half_dataframes = create_half_dataframes(real_ohlc.resampled_data, exclusions)
-    answer = f"Real: {start_date_str} to {end_date_str} {data_choice}"
+    answer = f"Real -> Name: {fake.name()}, Start Date: {start_date_str}, End Date: {end_date_str}, File: {data_choice}"
     return real_ohlc.resampled_data, half_dataframes, answer
 
 
@@ -118,7 +145,6 @@ def random_case(
         name=fake.name(),
         volatility=np.random.uniform(1, 2),
     )
-
     random_ohlc.generate_random_df(
         random_ohlc.total_days * SECONDS_IN_1DAY,
         "1S",
@@ -130,14 +156,15 @@ def random_case(
     random_ohlc.resample_timeframes()
 
     half_dataframes = create_half_dataframes(random_ohlc.resampled_data, exclusions)
-    return random_ohlc.resampled_data, half_dataframes, "Fake"
+    return random_ohlc.resampled_data, half_dataframes, f"Random: {fake.name()}, Start Date: None, End Date: None"
 
 
 def main() -> None:
     start_time = perf_counter()
-    # data_url = "https://github.com/RoryGlenn/RealOrRandom/blob/main/data.zip"
-    # data_repo = "data"
+    data_url = "https://github.com/RoryGlenn/RealOrRandom/blob/main/data.zip"
+    data_repo = "data"
     # download_and_unzip(data_url, data_repo)
+
     Faker.seed(0)
     fake = Faker()
     total_graphs = 1
@@ -149,7 +176,9 @@ def main() -> None:
 
     for i in range(total_graphs):
         dataframes, half_dataframes, answers[i] = (
-            real_case() if np.random.randint(0, 1) else random_case(num_days, fake)
+            real_case(num_days, fake)
+            if np.random.choice([True, False])
+            else random_case(num_days, fake)
         )
 
         for timeframe in dataframes:
@@ -161,7 +190,9 @@ def main() -> None:
         FrontEnd.half_dataframes = half_dataframes
 
     print("Finished")
-    app.run_server(debug=True)
+    print("answers:", answers)
+    print()
+    app.run_server()
 
 
 if __name__ == "__main__":

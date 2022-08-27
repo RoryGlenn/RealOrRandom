@@ -40,6 +40,7 @@ class RandomOHLC:
             2: np.random.laplace,
             3: np.random.logistic,
             # 4: brownian,
+            # np.random.random_sample()???
         }
 
         self.__df_1min: pd.DataFrame = None
@@ -100,8 +101,6 @@ class RandomOHLC:
         Normalize OHLC data with random multiplier.
         normalization formula: (data - min) / (max - min)
         """
-
-        # print("Normalizing OHLC data..")
 
         _max = np.max(
             [
