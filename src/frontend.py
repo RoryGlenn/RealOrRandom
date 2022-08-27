@@ -4,6 +4,8 @@ import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
 
 
+# https://dash.plotly.com/dash-core-components/store
+
 class FrontEnd:
     """Contains div elements and logic needed to create the front end"""
 
