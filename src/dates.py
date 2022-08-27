@@ -9,55 +9,6 @@ from constants.constants import *
 
 class Dates:
     @staticmethod
-    def get_data_date_ranges() -> dict:
-        """Returns a dictionary will the earliest start date and latest end date we can use for each real data file"""
-        return {
-            # spot
-            # BINANCE_BTCUSDT_DAY: {"start_date": "2019-09-08", "end_date": "2022-06-16"},
-            # BINANCE_AAVEUSDT_DAY: {
-            #     "start_date": "2020-10-16",
-            #     "end_date": "2022-06-16",
-            # },
-            # BINANCE_ADAUSDT_DAY: {"start_date": "2018-04-17", "end_date": "2022-07-30"},
-            # BINANCE_CELRUSDT_DAY: {
-            #     "start_date": "2019-03-25",
-            #     "end_date": "2022-07-30",
-            # },
-            # BINANCE_DASHUSDT_DAY: {
-            #     "start_date": "2019-03-28",
-            #     "end_date": "2022-07-30",
-            # },
-            # BINANCE_DOGEUSDT_DAY: {
-            #     "start_date": "2020-07-10",
-            #     "end_date": "2022-07-30",
-            # },
-            # BINANCE_DOTUSDT_DAY: {"start_date": "2020-08-18", "end_date": "2022-07-30"},
-            # BINANCE_ETCUSDT_DAY: {"start_date": "2018-06-12", "end_date": "2022-07-30"},
-            # BINANCE_ETHUSDT_DAY: {"start_date": "2017-08-17", "end_date": "2022-07-30"},
-            # # spot
-            # BINANCE_ETHUSDT_FUTURES_DAY: {
-            #     "start_date": "2019-11-27",
-            #     "end_date": "2022-03-15",
-            # },
-            # BINANCE_LTCUSDT_FUTURES_DAY: {
-            #     "start_date": "2020-01-09",
-            #     "end_date": "2022-03-15",
-            # },
-            # BINANCE_ADAUSDT_FUTURES_DAY: {
-            #     "start_date": "2020-01-31",
-            #     "end_date": "2022-07-30",
-            # },
-            # BINANCE_BTCUSDT_FUTURES_DAY: {
-            #     "start_date": "2019-09-08",
-            #     "end_date": "2022-03-15",
-            # },
-            # BINANCE_XMRUSDT_FUTURES_DAY: {
-            #     "start_date": "2020-02-03",
-            #     "end_date": "2022-07-30",
-            # },
-            "data/gemini_BTCUSD_ALL_1min.csv"
-        }
-
     def get_filenames(path: str) -> list[str]:
         """open the folder containing all the .csv files and return a list containing all the files"""
         from os import listdir
@@ -76,11 +27,11 @@ class Dates:
         The start date is also adjusted 90 days into the future
         to avoid out of bounds issues when a random start date is picked.
         """
-        filenames = Dates.get_filenames("data")
+        filenames = Dates.get_filenames(DATA_PATH)
         date_ranges = {}
 
         for file in filenames:
-            df = pd.read_csv("data/" + file, skiprows=1)
+            df = pd.read_csv(DATA_PATH + "/" + file, skiprows=1)
             date = "date" if "date" in df.columns else "Date"
             dt = datetime.strptime(
                 df.loc[len(df) - 1, date], "%Y-%m-%d %H:%M:%S"
@@ -92,21 +43,34 @@ class Dates:
         return date_ranges
 
     @staticmethod
-    def get_date_limits(days: int, data_choice: int) -> Tuple[str, str]:
-        """Returns the absolute start and end date for a specific data file"""
-        d_range = Dates.get_data_date_ranges().get(data_choice)
-        start_date__limit_l = [int(i) for i in d_range["start_date"].split("-")]
+    def get_start_end_date_strs(date_ranges: dict, num_days: int) -> Tuple[str, str]:
+        from datetime import timedelta
 
-        # adjust the start_date 91 days after the original start date
-        start_dt_limit = datetime(
-            year=start_date__limit_l[0],
-            month=start_date__limit_l[1],
-            day=start_date__limit_l[2],
+        # get the total number of days we can use
+        start_date_dt = datetime.strptime(
+            date_ranges["start_date"], "%Y-%m-%d %H:%M:%S"
         )
-        adjusted_start_dt = start_dt_limit + timedelta(days=days)
-        adj_start_date_limit = adjusted_start_dt.strftime("%Y-%m-%d")
-        end_date_limit = d_range["end_date"]
-        return adj_start_date_limit, end_date_limit
+        end_date_dt = datetime.strptime(date_ranges["end_date"], "%Y-%m-%d %H:%M:%S")
+
+        # get the number of days from the start date to the end date
+        diff_dt = end_date_dt - start_date_dt
+
+        # Create a list of all the dates within the given date bounds.
+        # Limit the total number of days we can use to diff_dt.days-num_days
+        # so the last 'num_days' will be off limits to the start date.
+        # By doing this, we protect ourselves from an out of bounds error
+        dt_list = [
+            start_date_dt + timedelta(days=x) for x in range(diff_dt.days - num_days)
+        ]
+
+        # randomly choose a start date, then go 'num_days' into the future to get the end date
+        start_date_dt = np.random.choice(dt_list)
+        end_date_dt = start_date_dt + timedelta(days=num_days)
+
+        # create the start and end date strings
+        start_date_str = start_date_dt.strftime("%Y-%m-%d %H:%M:%S")
+        end_date_str = end_date_dt.strftime("%Y-%m-%d %H:%M:%S")
+        return start_date_str, end_date_str
 
     @staticmethod
     def create_dates(

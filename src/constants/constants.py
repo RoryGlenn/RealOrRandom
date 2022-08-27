@@ -1,19 +1,3 @@
-BINANCE_AAVEUSDT_DAY = "data/Binance_AAVEUSDT_d.csv"
-BINANCE_BTCUSDT_DAY = "data/Binance_BTCUSDT_d.csv"
-BINANCE_ADAUSDT_DAY = "data/Binance_ADAUSDT_d.csv"
-BINANCE_CELRUSDT_DAY = "data/Binance_CELRUSDT_d.csv"
-BINANCE_DASHUSDT_DAY = "data/Binance_DASHUSDT_d.csv"
-BINANCE_DOGEUSDT_DAY = "data/Binance_DOGEUSDT_d.csv"
-BINANCE_DOTUSDT_DAY = "data/Binance_DOTUSDT_d.csv"
-BINANCE_ETCUSDT_DAY = "data/Binance_ETCUSDT_d.csv"
-BINANCE_ETHUSDT_DAY = "data/Binance_ETHUSDT_d.csv"
-
-BINANCE_BTCUSDT_FUTURES_DAY = "data/BTCUSDT_Binance_futures_data_day.csv"
-BINANCE_ETHUSDT_FUTURES_DAY = "data/ETHUSDT_Binance_futures_data_day.csv"
-BINANCE_LTCUSDT_FUTURES_DAY = "data/LTCUSDT_Binance_futures_data_day.csv"
-BINANCE_XMRUSDT_FUTURES_DAY = "data/XMRUSDT_Binance_futures_data_day.csv"
-BINANCE_ADAUSDT_FUTURES_DAY = "data/ADAUSDT_Binance_futures_data_day.csv"
-
 RANDOM_LOWER_LIMIT = 1
 RANDOM_UPPER_LIMIT = 1.001
 
@@ -43,3 +27,5 @@ DAYS_IN_1DAY = 1
 VOLATILE_PROB = 10_000
 VOLATILE_PERIOD_MIN = 100
 VOLATILE_PERIOD_MAX = 500
+
+DATA_PATH = "data"

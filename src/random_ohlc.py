@@ -6,8 +6,6 @@ import pandas as pd
 from tqdm import tqdm
 from faker import Faker
 
-import plotly.graph_objects as go
-
 from constants.constants import *
 
 pd.options.display.float_format = "{:.4f}".format
@@ -168,7 +166,6 @@ class RandomOHLC:
         start_price: float,
         volatility: int,
     ) -> pd.DataFrame:
-        # start1 = perf_counter()
         dist_func = self.__distribution_functions.get(
             np.random.randint(1, len(self.__distribution_functions))
         )
@@ -176,10 +173,7 @@ class RandomOHLC:
         steps[0] = 0
         prices = start_price + np.cumsum(steps)
         prices = np.abs(prices.round(decimals=6))
-        # print("start1", perf_counter() - start1)
-        # self.timecounter1 += perf_counter() - start1
 
-        # start2 = perf_counter()
         gen_df_count1 = perf_counter()
         df = self.__create_dataframe(num_bars, frequency, prices)
         self.gen_df_count1 += perf_counter() - gen_df_count1
@@ -252,14 +246,6 @@ class RandomOHLC:
             self.__df_1min.loc[starti:endi, "low"] = new_df["low"].values
             self.__df_1min.loc[starti:endi, "close"] = new_df["close"].values
 
-        # print('time count 1', self.timecounter1)
-        # print('time count 2', self.timecounter2)
-
-        # print('gen df count 1', self.gen_df_count1)
-        # print('gen df count 2', self.gen_df_count2)
-        # print('gen df count 3', self.gen_df_count3)
-        # return
-
     def __correct_lowcolumn_error(self, df: pd.DataFrame) -> np.ndarray:
         """get all the rows where the 'low' cell is not the lowest value"""
 
@@ -313,8 +299,6 @@ class RandomOHLC:
 
         """
 
-        # print("Connecting open and closing candles...")
-
         prev_close = self.__df_1min["close"].shift(1).fillna(0).astype(float)
         self.__df_1min["open"] = prev_close
         self.__df_1min.at[0, "open"] = self.start_price
@@ -363,9 +347,6 @@ class RandomOHLC:
         """Iterates over all the timeframe keys in resampled_data and creates a
         resampled dataframe corresponding to that timeframe"""
 
-        # print("Resampling timeframes...")
-        # total_time = perf_counter()
-
         prev_timeframe = "1min"
         self.__resampled_data["1min"] = self.__df_1min
         bars_table = self.__create_bars_table()
@@ -375,8 +356,6 @@ class RandomOHLC:
                 timeframe, self.__resampled_data[prev_timeframe]
             )
             prev_timeframe = timeframe
-
-        # print("Finished resampling in: ", perf_counter() - total_time)
 
     def print_resampled_data(self) -> None:
         {print(tf + "\n", df) for tf, df in self.resampled_data.items()}
