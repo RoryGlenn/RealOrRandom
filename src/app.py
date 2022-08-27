@@ -16,6 +16,8 @@ from real_ohlc import RealOHLC
 from random_ohlc import RandomOHLC
 from constants.constants import SECONDS_IN_1DAY
 
+# redownload every .csv minute file and append all info into one dataframe.
+
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = FrontEnd.get_app_layout()
