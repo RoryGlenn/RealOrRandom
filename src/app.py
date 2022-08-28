@@ -1,7 +1,5 @@
 from typing import Tuple
 
-# from datetime import datetime
-
 import numpy as np
 import pandas as pd
 from dash import Dash
@@ -171,7 +169,7 @@ def main() -> None:
     print("Finished")
     print("Answers:", answers)
     print()
-    app.run_server(debug=True)
+    app.run_server()
 
 
 if __name__ == "__main__":

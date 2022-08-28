@@ -118,10 +118,11 @@ class RealOHLC:
         self, start_date: str, end_date: str, merge_csvs: bool
     ) -> pd.DataFrame:
         """Create a dataframe for real data"""
-
+        df = None
+        
         if merge_csvs:
             symbol_pair = self.__data_choice.split("_")[1]
-            self.__df = self.merge_csv_files(symbol_pair)
+            df = self.merge_csv_files(symbol_pair)
         else:
             df = pd.read_csv(
                 self.__data_choice,
@@ -129,14 +130,12 @@ class RealOHLC:
                 skiprows=1,
             )[::-1]
 
-            df = df.drop(df[df["Date"] < start_date].index)
-            df = df.drop(df[df["Date"] > end_date].index)
+        df = df.drop(df[df["Date"] < start_date].index)
+        df = df.drop(df[df["Date"] > end_date].index)
 
-            df["Date"] = pd.to_datetime(df["Date"]).dt.tz_localize(None)
-            df.set_index("Date", inplace=True)
-            self.__df = df
-        print(self.__df)
-        return
+        df["Date"] = pd.to_datetime(df["Date"]).dt.tz_localize(None)
+        df.set_index("Date", inplace=True)
+        self.__df = df
 
     def normalize_ohlc_data(self) -> pd.DataFrame:
         """Normalize OHLC data with random multiplier
