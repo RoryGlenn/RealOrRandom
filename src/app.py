@@ -13,7 +13,7 @@ from frontend import FrontEnd
 from real_ohlc import RealOHLC
 from random_ohlc import RandomOHLC
 from constants.constants import DATA_PATH, SECONDS_IN_1DAY
-
+from download import Download
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = FrontEnd.get_app_layout()
@@ -48,28 +48,6 @@ def update_ohlc_chart(user_timeframe: str):
     )
     return FrontEnd.get_graph_layout(fig)
 
-def get_data_filenames(data_path: str) -> list[str]: 
-    with open(data_path, 'r') as file:
-        filenames = file.readlines()
-    return [f.replace('\n', '') for f in filenames]    
-
-def download_data(url: str, files_to_download: list[str], download_path: str) -> None:
-    from requests import get
-    from os import path, mkdir, listdir
-    
-    # create data directory if it doesn't exist
-    if not path.exists(download_path):
-        mkdir(download_path)
-        
-    for file in files_to_download:
-        # if file is not in data folder, download it
-        if file not in listdir(download_path):
-            response = get(url, stream=True)
-            with open(file, "wb") as fd:
-                for chunk in response.iter_content(chunk_size=256):
-                    fd.write(chunk)
-            print(f"File {file} downloaded succesfully")
-
 
 def create_half_dataframes(
     dataframes: dict[str, pd.DataFrame], exclusions=[]
@@ -92,7 +70,7 @@ def real_case(
     data_choice = np.random.choice(files)
 
     real_ohlc = RealOHLC(DATA_PATH + "/" + data_choice, num_days)
-    
+
     date_ranges = real_ohlc.get_start_end_dates()[data_choice]
     start_date_str, end_date_str = real_ohlc.get_start_end_date_strs(
         date_ranges, num_days
@@ -137,17 +115,19 @@ def random_case(
 
 
 def main() -> None:
+    Download.download_data(
+        url="https://raw.githubusercontent.com/RoryGlenn/RealOrRandom/main/data/",
+        files_to_download=Download.get_data_filenames("data_filenames.txt"),
+        download_path="data",
+    )
+
     timeframe_exclusions = ["1min", "5min", "15min", "30min", "1H", "2H", "4H"]
-    url = "https://github.com/RoryGlenn/RealOrRandom/raw/main/data/"
-    filenames = get_data_filenames('data_filenames.txt')
-    download_path = 'data'
-    download_data(url, filenames, download_path)
 
     Faker.seed(0)
     fake = Faker()
-    total_graphs = 1
-    num_days = 120  # 120 will be the standard
     answers = {}
+    num_days = 120  # 120 will be the standard
+    total_graphs = 1
 
     print("Starting test...")
 
