@@ -60,6 +60,11 @@ def create_half_dataframes(
     }
 
 
+def reset_indices(dataframes: dict[str, pd.DataFrame], half_dataframes: dict[str, pd.DataFrame]) -> None:
+    """Resets the index for every dataframe in dataframes and half_dataframes"""
+    {df.reset_index(inplace=True): hdf.reset_index(inplace=True) for df, hdf in zip(dataframes.values(), half_dataframes.values())}
+           
+
 def real_case(
     num_days: int, fake: Faker, exclusions: list[str] = []
 ) -> Tuple[dict, dict, str]:
@@ -83,6 +88,7 @@ def real_case(
     real_ohlc.resample_timeframes()
 
     half_dataframes = create_half_dataframes(real_ohlc.resampled_data, exclusions)
+
     answer = f"Real -> Name: {fake.name()}, Start Date: {start_date_str}, End Date: {end_date_str}, File: {data_choice}"
     return real_ohlc.resampled_data, half_dataframes, answer
 
@@ -107,6 +113,7 @@ def random_case(
     random_ohlc.resample_timeframes()
 
     half_dataframes = create_half_dataframes(random_ohlc.resampled_data, exclusions)
+
     return (
         random_ohlc.resampled_data,
         half_dataframes,
@@ -123,7 +130,7 @@ def main() -> None:
 
     timeframe_exclusions = ["1min", "5min", "15min", "30min", "1H", "2H", "4H"]
 
-    Faker.seed(0)
+    Faker.seed(np.random.randint(0, 1000))
     fake = Faker()
     answers = {}
     num_days = 120  # 120 will be the standard
@@ -138,10 +145,7 @@ def main() -> None:
             else random_case(num_days, fake)
         )
 
-        for timeframe in dataframes:
-            dataframes[timeframe].reset_index(inplace=True)
-        for timeframe in half_dataframes:
-            half_dataframes[timeframe].reset_index(inplace=True)
+        reset_indices(dataframes, half_dataframes)
 
         FrontEnd.dataframes = dataframes
         FrontEnd.half_dataframes = half_dataframes
