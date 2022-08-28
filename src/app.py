@@ -48,28 +48,27 @@ def update_ohlc_chart(user_timeframe: str):
     )
     return FrontEnd.get_graph_layout(fig)
 
+def get_data_filenames(data_path: str) -> list[str]: 
+    with open(data_path, 'r') as file:
+        filenames = file.readlines()
+    return [f.replace('\n', '') for f in filenames]    
 
-def download_and_unzip(url, extract_to):
-    from io import BytesIO
-    from zipfile import ZipFile
-    import wget
-    import os
-    import sys
-
-    if not os.path.exists(extract_to):
-        os.mkdir(extract_to)
-
-    response = wget.download(url, extract_to)
-    if not os.path.exists(response):
-        print(f"Could not download from {url}")
-        sys.exit(1)
-
-    try:
-        b = BytesIO(response)
-        zipfile = ZipFile(b)
-        zipfile.extractall(path=extract_to)
-    except Exception as e:
-        print(e)
+def download_data(url: str, files_to_download: list[str], download_path: str) -> None:
+    from requests import get
+    from os import path, mkdir, listdir
+    
+    # create data directory if it doesn't exist
+    if not path.exists(download_path):
+        mkdir(download_path)
+        
+    for file in files_to_download:
+        # if file is not in data folder, download it
+        if file not in listdir(download_path):
+            response = get(url, stream=True)
+            with open(file, "wb") as fd:
+                for chunk in response.iter_content(chunk_size=256):
+                    fd.write(chunk)
+            print(f"File {file} downloaded succesfully")
 
 
 def create_half_dataframes(
@@ -93,6 +92,7 @@ def real_case(
     data_choice = np.random.choice(files)
 
     real_ohlc = RealOHLC(DATA_PATH + "/" + data_choice, num_days)
+    
     date_ranges = real_ohlc.get_start_end_dates()[data_choice]
     start_date_str, end_date_str = real_ohlc.get_start_end_date_strs(
         date_ranges, num_days
@@ -137,11 +137,11 @@ def random_case(
 
 
 def main() -> None:
-    # start_time = perf_counter()
-    # data_url = "https://github.com/RoryGlenn/RealOrRandom/blob/main/data.zip"
-    # data_repo = "data"
-    # download_and_unzip(data_url, data_repo)
-    # exclusions = ["1min", "5min", "15min", "30min", "1H", "2H", "4H"]
+    timeframe_exclusions = ["1min", "5min", "15min", "30min", "1H", "2H", "4H"]
+    url = "https://github.com/RoryGlenn/RealOrRandom/raw/main/data/"
+    filenames = get_data_filenames('data_filenames.txt')
+    download_path = 'data'
+    download_data(url, filenames, download_path)
 
     Faker.seed(0)
     fake = Faker()

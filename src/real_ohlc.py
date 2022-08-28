@@ -119,7 +119,7 @@ class RealOHLC:
     ) -> pd.DataFrame:
         """Create a dataframe for real data"""
         df = None
-        
+
         if merge_csvs:
             symbol_pair = self.__data_choice.split("_")[1]
             df = self.merge_csv_files(symbol_pair)
@@ -217,7 +217,6 @@ class RealOHLC:
 
     def abstract_dates(self) -> None:
         """Remove the real dates and replace them with fake dates"""
-
         self.__df.reset_index(inplace=True)
         date = "date" if "date" in self.__df.columns else "Date"
 
