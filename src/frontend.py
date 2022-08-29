@@ -25,9 +25,7 @@ class FrontEnd:
         "1_Month": "1M",
     }
 
-    # upper_bounds = np.round(np.linspace(0.1, 100, 1000), 1)
-    # lower_bounds = np.round(np.linspace(-0.1, -100, 1000), 1)
-    bounds = np.round(np.linspace(-99.9, 99.9, 2000), 1)
+    bounds = np.round(np.linspace(-100, 100, 2001), 1)
 
     @staticmethod
     def get_graph_layout(fig: go.Figure) -> html.Div:
@@ -74,59 +72,81 @@ class FrontEnd:
                 html.Div(id="page-content"),
                 # Bounds dropdown
                 # 1 day
-                FrontEnd.get_bounds_dropdown(
-                    text="What will the upper bounds be 1 day after the last candle bar?",
-                    id="1dayupperbounds-dropdown",
-                    upper=True,
+                html.Div(
+                    dbc.Row(
+                        [
+                            FrontEnd.get_bounds_dropdown(
+                                text="What will the upper bounds be 1 day after the last candle bar?",
+                                id="1dayupperbounds-dropdown",
+                            ),
+                            FrontEnd.get_bounds_dropdown(
+                                text="What will the lower bounds be 1 day after the last candle bar?",
+                                id="1daylowerbounds-dropdown",
+                            ),
+                        ]
+                    ),
+                    id="1d",
                 ),
-                FrontEnd.get_bounds_dropdown(
-                    text="What will the lower bounds be 1 day after the last candle bar?",
-                    id="1daylowerbounds-dropdown",
-                    upper=False,
+                html.Div(
+                    dbc.Row(
+                        [
+                            # 5 days
+                            FrontEnd.get_bounds_dropdown(
+                                text="What will the upper bounds be 5 days after the last candle bar?",
+                                id="5dayupperbounds-dropdown",
+                            ),
+                            FrontEnd.get_bounds_dropdown(
+                                text="What will the lower bounds be 5 days after the last candle bar?",
+                                id="5daylowerbounds-dropdown",
+                            ),
+                        ]
+                    ),
+                    id="5d",
                 ),
-                # 5 days
-                FrontEnd.get_bounds_dropdown(
-                    text="What will the upper bounds be 5 days after the last candle bar?",
-                    id="5dayupperbounds-dropdown",
-                    upper=True,
+                html.Div(
+                    dbc.Row(
+                        [
+                            # 10 days
+                            FrontEnd.get_bounds_dropdown(
+                                text="What will the upper bounds be 10 days after the last candle bar?",
+                                id="10dayupperbounds-dropdown",
+                            ),
+                            FrontEnd.get_bounds_dropdown(
+                                text="What will the lower bounds be 10 days after the last candle bar?",
+                                id="10daylowerbounds-dropdown",
+                            ),
+                        ]
+                    ),
                 ),
-                FrontEnd.get_bounds_dropdown(
-                    text="What will the lower bounds be 5 days after the last candle bar?",
-                    id="5daylowerbounds-dropdown",
-                    upper=False,
+                html.Div(
+                    dbc.Row(
+                        [
+                            # 30 days
+                            FrontEnd.get_bounds_dropdown(
+                                text="What will the upper bounds be 30 days after the last candle bar?",
+                                id="30dayupperbounds-dropdown",
+                            ),
+                            FrontEnd.get_bounds_dropdown(
+                                text="What will the lower bounds be 30 days after the last candle bar?",
+                                id="30daylowerbounds-dropdown",
+                            ),
+                        ]
+                    ),
                 ),
-                # 10 days
-                FrontEnd.get_bounds_dropdown(
-                    text="What will the upper bounds be 10 days after the last candle bar?",
-                    id="10dayupperbounds-dropdown",
-                    upper=True,
-                ),
-                FrontEnd.get_bounds_dropdown(
-                    text="What will the lower bounds be 10 days after the last candle bar?",
-                    id="10daylowerbounds-dropdown",
-                    upper=False,
-                ),
-                # 30 days
-                FrontEnd.get_bounds_dropdown(
-                    text="What will the upper bounds be 30 days after the last candle bar?",
-                    id="30dayupperbounds-dropdown",
-                    upper=True,
-                ),
-                FrontEnd.get_bounds_dropdown(
-                    text="What will the lower bounds be 30 days after the last candle bar?",
-                    id="30daylowerbounds-dropdown",
-                    upper=False,
-                ),
-                # 60 days
-                FrontEnd.get_bounds_dropdown(
-                    text="What will the upper bounds be 60 days after the last candle bar?",
-                    id="60dayupperbounds-dropdown",
-                    upper=True,
-                ),
-                FrontEnd.get_bounds_dropdown(
-                    text="What will the lower bounds be 60 days after the last candle bar?",
-                    id="60daylowerbounds-dropdown",
-                    upper=False,
+                html.Div(
+                    dbc.Row(
+                        [
+                            # 60 days
+                            FrontEnd.get_bounds_dropdown(
+                                text="What will the upper bounds be 60 days after the last candle bar?",
+                                id="60dayupperbounds-dropdown",
+                            ),
+                            FrontEnd.get_bounds_dropdown(
+                                text="What will the lower bounds be 60 days after the last candle bar?",
+                                id="60daylowerbounds-dropdown",
+                            ),
+                        ],
+                    ),
                 ),
                 # Real or Random
                 FrontEnd.get_real_or_random_dropdown(),
@@ -161,7 +181,7 @@ class FrontEnd:
         )
 
     @staticmethod
-    def get_bounds_dropdown(text: str, id: str, upper: bool) -> html.Div:
+    def get_bounds_dropdown(text: str, id: str) -> html.Div:
         """What are the upper bounds and what are the lower bounds for your price
         prediction 1, 5, 10, 30, 60 bars from the last candle bar?"""
         return html.Div(
@@ -169,14 +189,13 @@ class FrontEnd:
                 html.P(text),
                 dcc.Dropdown(
                     id=id,
-                    options=[{"label": i, "value": i} for i in FrontEnd.bounds]
-                    if upper
-                    else [{"label": i, "value": i} for i in FrontEnd.bounds],
-                    # value=0.1 if upper else -0.1,
-                    value="",
+                    options=[
+                        {"label": str(i) + " %", "value": i} for i in FrontEnd.bounds
+                    ],
+                    value=0,
                 ),
             ],
-            style={"width": "25%", "margin-bottom": "50px"},
+            style={"width": "25%", "margin-bottom": "30px"},
         )
 
     @staticmethod
