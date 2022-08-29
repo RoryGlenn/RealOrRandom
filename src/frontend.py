@@ -30,7 +30,6 @@ class FrontEnd:
     @staticmethod
     def get_graph_layout(fig: go.Figure) -> html.Div:
         """Updates the layout for the graph figure"""
-
         return html.Div(
             [
                 dcc.Graph(
@@ -59,12 +58,17 @@ class FrontEnd:
     @staticmethod
     def get_app_layout() -> html.Div:
         return html.Div(
-            [
+            children=[
                 html.H1("Chart"),
                 dbc.Row(
                     [
                         # timeframe dropdown
-                        dbc.Col(FrontEnd.get_timeframe_dropdown())
+                        dbc.Col(FrontEnd.get_timeframe_dropdown()),
+                        # loading bar
+                        # dbc.Spinner(
+                        #     children=[dcc.Graph(id="graph-main")],
+                        #     fullscreen=True,
+                        # ),
                     ]
                 ),
                 dbc.Row(),
@@ -154,6 +158,7 @@ class FrontEnd:
                 FrontEnd.get_pattern_textbox(),
                 # confidence
                 FrontEnd.get_confidence_slider(),
+                FrontEnd.save_and_continue(),
             ],
             style={
                 "margin-left": "5%",
@@ -179,6 +184,10 @@ class FrontEnd:
             ],
             style={"width": "25%"},
         )
+
+    @staticmethod
+    def get_single_bounds_dropdown():
+        return
 
     @staticmethod
     def get_bounds_dropdown(text: str, id: str) -> html.Div:
@@ -223,7 +232,7 @@ class FrontEnd:
                     id="pattern-textbox",
                 ),
             ],
-            style={"width": "25%"},
+            style={"width": "25%", "margin-bottom": "30px"},
         )
 
     @staticmethod
@@ -234,5 +243,21 @@ class FrontEnd:
                 html.P("Rate your overall confidence in your answers"),
                 dcc.RangeSlider(id="confidence-slider", min=0, max=100, step=10),
             ],
-            style={"width": "25%"},
+            style={"width": "25%", "margin-bottom": "30px"},
+        )
+
+    @staticmethod
+    def save_and_continue() -> html.Div:
+        return html.Div(
+            [
+                dcc.ConfirmDialogProvider(
+                    children=html.Button(
+                        "Save and Continue",
+                    ),
+                    id="save_and_continue-provider",
+                    message="You will not be able to go back once you press ok.\nAre you sure you want to continue?",
+                ),
+                html.Div(id="output-provider"),
+            ],
+            style={"width": "25%", "margin-bottom": "30px"},
         )

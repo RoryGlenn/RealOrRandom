@@ -50,6 +50,13 @@ def update_ohlc_chart(user_timeframe: str):
     return FrontEnd.get_graph_layout(fig)
 
 
+# @app.callback(Output("loading-output", "children"), Input("loading-input", "value"))
+# def loading_output(value):
+#     from time import sleep
+#     sleep(1)
+#     return value
+
+
 def create_half_dataframes(
     dataframes: dict[str, pd.DataFrame], exclusions=[]
 ) -> dict[str, pd.DataFrame]:
@@ -127,6 +134,13 @@ def random_case(
     )
 
 
+# TODO:
+# Save and continue button
+# Loading bar
+# Results page
+# Email results?
+
+
 def main() -> None:
     Faker.seed(np.random.randint(0, 10000))
     fake = Faker()
@@ -146,7 +160,7 @@ def main() -> None:
     for i in range(total_graphs):
         dataframes, half_dataframes, answers[i] = (
             real_case(num_days, fake)
-            if np.random.choice([True])
+            if np.random.choice([True, False])
             else random_case(num_days, fake)
         )
 
