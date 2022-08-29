@@ -60,6 +60,8 @@ app.layout = html.Div(
 # Create two callback for every store.
 for store in ("memory", "local", "session"):
 
+    print("store:", store)
+
     # add a click to the appropriate store.
     @app.callback(
         Output(store, "data"),
@@ -95,9 +97,8 @@ for store in ("memory", "local", "session"):
             raise PreventUpdate
 
         data = data or {}
-
         return data.get("clicks", 0)
 
 
 if __name__ == "__main__":
-    app.run_server(debug=True, port=8077, threaded=True)
+    app.run_server(debug=False, port=8077, threaded=True)

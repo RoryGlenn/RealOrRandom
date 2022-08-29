@@ -4,9 +4,6 @@ import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
 
 
-# https://dash.plotly.com/dash-core-components/store
-
-
 class FrontEnd:
     """Contains div elements and logic needed to create the front end"""
 
@@ -58,8 +55,10 @@ class FrontEnd:
     @staticmethod
     def get_app_layout() -> html.Div:
         return html.Div(
-            children=[
-                html.H1("Chart"),
+            [
+                # The memory store reverts to the default on every page refresh
+                dcc.Store(id="submit"),
+                html.H1(f"Chart_01"),
                 dbc.Row(
                     [
                         # timeframe dropdown
@@ -158,7 +157,7 @@ class FrontEnd:
                 FrontEnd.get_pattern_textbox(),
                 # confidence
                 FrontEnd.get_confidence_slider(),
-                # FrontEnd.submit(),
+                FrontEnd.submit_button(),
             ],
             style={
                 "margin-left": "5%",
@@ -182,7 +181,7 @@ class FrontEnd:
                     value="1_Day",
                 ),
             ],
-            style={"width": "25%"},
+            style={"width": "10%", "margin-bottom": "10px"},
         )
 
     @staticmethod
@@ -213,7 +212,7 @@ class FrontEnd:
                     id="realorrandom-dropdown", options=["Real", "Random"], value=""
                 ),
             ],
-            style={"width": "25%"},
+            style={"width": "25%", "margin-bottom": "30px"},
         )
 
     @staticmethod
@@ -243,15 +242,17 @@ class FrontEnd:
         )
 
     @staticmethod
-    def submit() -> html.Div:
+    def submit_button() -> html.Div:
         return html.Div(
             [
                 dcc.ConfirmDialogProvider(
-                    html.Button(
-                        "Submit",
+                    html.Th(
+                        html.Button(
+                            id="submit-button", children="Submit", type="button"
+                        )
                     ),
                     id="submit-provider",
-                    message="You will not be able to go back once you press ok.\nAre you sure you want to continue?",
+                    message="You will not be able to go back.\nAre you sure you want to continue?",
                 ),
                 html.Div(id="submit_output-provider"),
             ],

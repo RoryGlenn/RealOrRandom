@@ -6,7 +6,11 @@ from dash import Dash
 from faker import Faker
 import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
-from dash.dependencies import Input, Output, State
+
+# from dash.dependencies import Input, Output, State
+from dash import Dash, Input, Output, State
+from dash.exceptions import PreventUpdate
+
 
 from dates import Dates
 from download import Download
@@ -21,9 +25,11 @@ from constants.constants import (
     DATA_FILENAMES,
 )
 
-app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
+app = Dash(__name__, external_stylesheets=[dbc.themes.COSMO])
 app.layout = FrontEnd.get_app_layout()
 results = {}
+graph_id = 0
 
 
 @app.callback(
@@ -51,35 +57,68 @@ def update_ohlc_chart(user_timeframe: str):
     return FrontEnd.get_graph_layout(fig)
 
 
-# save and continue call back
-# @app.callback(
-#     # Output("page-content", "children"),
-#     Input("save_and_continue-provider", "value"),
-#     State("1dayupperbounds-dropdown", "value"),
-#     State("1daylowerbounds-dropdown", "value"),
-#     State("5dayupperbounds-dropdown", "value"),
-#     State("5daylowerbounds-dropdown", "value"),
-#     State("10dayupperbounds-dropdown", "value"),
-#     State("10daylowerbounds-dropdown", "value"),
-#     State("30dayupperbounds-dropdown", "value"),
-#     State("30daylowerbounds-dropdown", "value"),
-#     State("60dayupperbounds-dropdown", "value"),
-#     State("60daylowerbounds-dropdown", "value"),
-#     State("realorrandom-dropdown", "value"),
-#     State("pattern-textbox", "value"),
-#     State("confidence-slider", "value"),
-# )
-# def loading_output(value):
-#     """Store the results from each section and load the next page"""
-#     print("value", value)
-#     print("value type", type(value))
+# add a click to the appropriate store.
+@app.callback(
+    Output("submit", "value"),
+    Input("submit-button", "n_clicks"),
+    State("1dayupperbounds-dropdown", "value"),
+    State("1daylowerbounds-dropdown", "value"),
+    State("5dayupperbounds-dropdown", "value"),
+    State("5daylowerbounds-dropdown", "value"),
+    State("10dayupperbounds-dropdown", "value"),
+    State("10daylowerbounds-dropdown", "value"),
+    State("30dayupperbounds-dropdown", "value"),
+    State("30daylowerbounds-dropdown", "value"),
+    State("60dayupperbounds-dropdown", "value"),
+    State("60daylowerbounds-dropdown", "value"),
+    State("realorrandom-dropdown", "value"),
+    State("pattern-textbox", "value"),
+    State("confidence-slider", "value"),
+)
+def on_submit(
+    n_clicks: int,
+    dayupperbounds1: float,
+    daylowerbounds1: float,
+    dayupperbounds5: float,
+    daylowerbounds5: float,
+    dayupperbounds10: float,
+    daylowerbounds10: float,
+    dayupperbounds30: float,
+    daylowerbounds30: float,
+    dayupperbounds60: float,
+    daylowerbounds60: float,
+    real_or_random: str,
+    pattern: str,
+    confidence: int,
+):
+    global results
+    global graph_id
+
+    if n_clicks is None:
+        # prevent the None callbacks is important with the store component.
+        # you don't want to update the store for nothing.
+        raise PreventUpdate
 
 
-# @app.callback(Output("loading-output", "children"), Input("loading-input", "value"))
-# def loading_output(value):
-#     from time import sleep
-#     sleep(1)
-#     return value
+    results[graph_id] = {
+        "1dayupperbounds-dropdown": dayupperbounds1,
+        "1daylowerbounds-dropdown": daylowerbounds1,
+        "5dayupperbounds-dropdown": dayupperbounds5,
+        "5daylowerbounds-dropdown": daylowerbounds5,
+        "10dayupperbounds-dropdown": dayupperbounds10,
+        "10daylowerbounds-dropdown": daylowerbounds10,
+        "30dayupperbounds-dropdown": dayupperbounds30,
+        "30daylowerbounds-dropdown": daylowerbounds30,
+        "60dayupperbounds-dropdown": dayupperbounds60,
+        "60daylowerbounds-dropdown": daylowerbounds60,
+        "realorrandom-dropdown": real_or_random,
+        "pattern-textbox": pattern,
+        "confidence-slider": confidence,
+        # "chart_id": graph_id,
+    }
+
+    graph_id += 1
+    return results
 
 
 def create_half_dataframes(
@@ -161,11 +200,11 @@ def random_case(
 
 # TODO:
 # Save and continue button
+# Turn timeframe dropdown into trading view buttons instead
 # Loading bar
+# prevent the user from clicking the submit button until everything is filled out
 # Results page
 # Email results?
-
-
 def main() -> None:
     Faker.seed(np.random.randint(0, 10000))
     fake = Faker()
@@ -183,25 +222,18 @@ def main() -> None:
     print("Starting test...")
 
     for i in range(total_graphs):
-        dataframes, half_dataframes, answers[i] = (
+        FrontEnd.dataframes, FrontEnd.half_dataframes, answers[i] = (
             real_case(num_days, fake)
             if np.random.choice([False])
             else random_case(num_days, fake)
         )
 
-        for t, df in half_dataframes.items():
-            print(t)
-            print(df)
-            
-        reset_indices(dataframes, half_dataframes)
-
-        FrontEnd.dataframes = dataframes
-        FrontEnd.half_dataframes = half_dataframes
+        reset_indices(FrontEnd.dataframes, FrontEnd.half_dataframes)
 
     print("Finished")
     print("Answers:", answers)
     print()
-    app.run_server(debug=False)
+    app.run_server(debug=False, port=8080)
 
 
 if __name__ == "__main__":

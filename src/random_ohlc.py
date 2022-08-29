@@ -25,13 +25,6 @@ class RandomOHLC:
         self.name = name
         self.volatility = volatility
 
-        self.timecounter1 = 0
-        self.timecounter2 = 0
-
-        self.gen_df_count1 = 0
-        self.gen_df_count2 = 0
-        self.gen_df_count3 = 0
-
         # Use Statistical functions (scipy.stats) instead of these!
         self.__distribution_functions = {
             1: np.random.normal,
@@ -182,9 +175,12 @@ class RandomOHLC:
         df = df["price"].resample("1min", label="right", closed="right").ohlc()
         # df = df["price"].resample("1min", label="left", closed="left").ohlc()
         ##################################
-        
+
         df.reset_index(inplace=True)
-        df.rename(columns={"open": "Open", "high":"High", "low":"Low", "close":"Close"}, inplace=True)
+        df.rename(
+            columns={"open": "Open", "high": "High", "low": "Low", "close": "Close"},
+            inplace=True,
+        )
         return df
 
     def __create_volatile_periods(self) -> None:
