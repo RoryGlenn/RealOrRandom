@@ -56,10 +56,10 @@ class RandomOHLC:
             "1M": None,
         }
         self.agg_dict = {
-            "open": "first",
-            "high": "max",
-            "low": "min",
-            "close": "last",
+            "Open": "first",
+            "High": "max",
+            "Low": "min",
+            "Close": "last",
         }
 
     @property
@@ -102,30 +102,30 @@ class RandomOHLC:
 
         _max = np.max(
             [
-                np.max(self.__df_1min.open),
-                np.max(self.__df_1min.high),
-                np.max(self.__df_1min.low),
-                np.max(self.__df_1min.close),
+                np.max(self.__df_1min.Open),
+                np.max(self.__df_1min.High),
+                np.max(self.__df_1min.Low),
+                np.max(self.__df_1min.Close),
             ]
         )
         _min = np.min(
             [
-                np.min(self.__df_1min.open),
-                np.min(self.__df_1min.high),
-                np.min(self.__df_1min.low),
-                np.min(self.__df_1min.close),
+                np.min(self.__df_1min.Open),
+                np.min(self.__df_1min.High),
+                np.min(self.__df_1min.Low),
+                np.min(self.__df_1min.Close),
             ]
         )
-        norm_open = (self.__df_1min.open - _min) / (_max - _min)
-        norm_high = (self.__df_1min.high - _min) / (_max - _min)
-        norm_low = (self.__df_1min.low - _min) / (_max - _min)
-        norm_close = (self.__df_1min.close - _min) / (_max - _min)
+        norm_open = (self.__df_1min.Open - _min) / (_max - _min)
+        norm_high = (self.__df_1min.High - _min) / (_max - _min)
+        norm_low = (self.__df_1min.Low - _min) / (_max - _min)
+        norm_close = (self.__df_1min.Close - _min) / (_max - _min)
 
         random_multiplier = np.random.randint(9, 999)
-        self.__df_1min.open = round(norm_open * random_multiplier, 4)
-        self.__df_1min.high = round(norm_high * random_multiplier, 4)
-        self.__df_1min.low = round(norm_low * random_multiplier, 4)
-        self.__df_1min.close = round(norm_close * random_multiplier, 4)
+        self.__df_1min.Open = round(norm_open * random_multiplier, 4)
+        self.__df_1min.High = round(norm_high * random_multiplier, 4)
+        self.__df_1min.Low = round(norm_low * random_multiplier, 4)
+        self.__df_1min.Close = round(norm_close * random_multiplier, 4)
 
     def __create_dataframe(
         self,
@@ -136,7 +136,7 @@ class RandomOHLC:
     ):
         return pd.DataFrame(
             {
-                "date": np.tile(
+                "Date": np.tile(
                     pd.date_range(
                         start=start_date,
                         periods=num_bars,
@@ -174,22 +174,17 @@ class RandomOHLC:
         prices = start_price + np.cumsum(steps)
         prices = np.abs(prices.round(decimals=6))
 
-        gen_df_count1 = perf_counter()
         df = self.__create_dataframe(num_bars, frequency, prices)
-        self.gen_df_count1 += perf_counter() - gen_df_count1
+        df.set_index("Date", inplace=True)
 
-        gen_df_count2 = perf_counter()
-        df.set_index("date", inplace=True)
-        self.gen_df_count2 += perf_counter() - gen_df_count2
-
-        gen_df_count3 = perf_counter()
         # THE BIGGEST BOTTLE NECK IS HERE!!!
         ##################################
         df = df["price"].resample("1min", label="right", closed="right").ohlc()
         # df = df["price"].resample("1min", label="left", closed="left").ohlc()
         ##################################
-        self.gen_df_count3 += perf_counter() - gen_df_count3
-        # self.timecounter2 += perf_counter() - start2
+        
+        df.reset_index(inplace=True)
+        df.rename(columns={"open": "Open", "high":"High", "low":"Low", "close":"Close"}, inplace=True)
         return df
 
     def __create_volatile_periods(self) -> None:
@@ -237,81 +232,79 @@ class RandomOHLC:
             new_df = self.__generate_random_df(
                 num_bars=endi - starti + 1,
                 frequency="1min",
-                start_price=self.__df_1min.iloc[starti]["close"],
+                start_price=self.__df_1min.iloc[starti]["Close"],
                 volatility=self.volatility * np.random.uniform(1.01, 1.02),
             )
 
-            self.__df_1min.loc[starti:endi, "open"] = new_df["open"].values
-            self.__df_1min.loc[starti:endi, "high"] = new_df["high"].values
-            self.__df_1min.loc[starti:endi, "low"] = new_df["low"].values
-            self.__df_1min.loc[starti:endi, "close"] = new_df["close"].values
+            self.__df_1min.loc[starti:endi, "Open"] = new_df["Open"].values
+            self.__df_1min.loc[starti:endi, "High"] = new_df["High"].values
+            self.__df_1min.loc[starti:endi, "Low"] = new_df["Low"].values
+            self.__df_1min.loc[starti:endi, "Close"] = new_df["Close"].values
 
     def __correct_lowcolumn_error(self, df: pd.DataFrame) -> np.ndarray:
-        """get all the rows where the 'low' cell is not the lowest value"""
+        """get all the rows where the 'Low' cell is not the lowest value"""
 
         conditions = [
-            # figure out which value is the lowest value and assign it to the low column
-            (df["open"] < df["high"]) & (df["open"] < df["close"]),
-            (df["high"] < df["open"]) & (df["high"] < df["close"]),
-            (df["close"] < df["high"]) & (df["close"] < df["open"]),
+            # figure out which value is the lowest value and assign it to the Low column
+            (df["Open"] < df["High"]) & (df["Open"] < df["Close"]),
+            (df["High"] < df["Open"]) & (df["High"] < df["Close"]),
+            (df["Close"] < df["High"]) & (df["Close"] < df["Open"]),
         ]
-        choices = [df["open"], df["high"], df["close"]]
+        choices = [df["Open"], df["High"], df["Close"]]
         return np.where(
             (
-                (df["low"] > df["open"])
-                | (df["low"] > df["high"])
-                | (df["low"] > df["close"])
+                (df["Low"] > df["Open"])
+                | (df["Low"] > df["High"])
+                | (df["Low"] > df["Close"])
             ),
             # assign the minimum value
             np.select(conditions, choices),
             # assign the original value if no error occurred at the current index
-            df["low"],
+            df["Low"],
         )
 
     def __correct_highcolumn_error(self, df: pd.DataFrame) -> np.ndarray:
-        """Get all the rows where the 'high' cell is not the highest value"""
+        """Get all the rows where the 'High' cell is not the highest value"""
 
         conditions = [
-            # figure out which value is the highest value and assign it to the high column
-            (df["open"] > df["low"]) & (df["open"] > df["close"]),
-            (df["low"] > df["open"]) & (df["low"] > df["close"]),
-            (df["close"] > df["open"]) & (df["close"] > df["low"]),
+            # figure out which value is the highest value and assign it to the High column
+            (df["Open"] > df["Low"]) & (df["Open"] > df["Close"]),
+            (df["Low"] > df["Open"]) & (df["Low"] > df["Close"]),
+            (df["Close"] > df["Open"]) & (df["Close"] > df["Low"]),
         ]
 
-        choices = [df["open"], df["low"], df["close"]]
+        choices = [df["Open"], df["Low"], df["Close"]]
 
         return np.where(
             (
-                (df["high"] < df["open"])
-                | (df["high"] < df["low"])
-                | (df["high"] < df["close"])
+                (df["High"] < df["Open"])
+                | (df["High"] < df["Low"])
+                | (df["High"] < df["Close"])
             ),
             # assign the maximum value
             np.select(conditions, choices),
             # assign the original value if no error occurred at the current index
-            df["high"],
+            df["High"],
         )
 
     def __connect_open_close_candles(self) -> None:
-        """Returns a dataframe where every candles close is the next candles open.
+        """Returns a dataframe where every candles Close is the next candles Open.
         This is needed because cryptocurrencies run 24/7.
         There are no breaks or pauses so each candle is connected to the next candle.
 
         """
+        prev_close = self.__df_1min["Close"].shift(1).fillna(0).astype(float)
+        self.__df_1min["Open"] = prev_close
+        self.__df_1min.at[0, "Open"] = self.start_price
 
-        prev_close = self.__df_1min["close"].shift(1).fillna(0).astype(float)
-        self.__df_1min["open"] = prev_close
-        self.__df_1min.at[0, "open"] = self.start_price
-
-        self.__df_1min.low = self.__correct_lowcolumn_error(self.__df_1min)
-        self.__df_1min.high = self.__correct_highcolumn_error(self.__df_1min)
+        self.__df_1min.Low = self.__correct_lowcolumn_error(self.__df_1min)
+        self.__df_1min.High = self.__correct_highcolumn_error(self.__df_1min)
 
     def create_realistic_ohlc(self) -> None:
         """Process for creating slightly more realistic candles"""
-        self.__df_1min.reset_index(inplace=True)
         # self.__create_volatile_periods()
         self.__connect_open_close_candles()
-        self.__df_1min.set_index("date", inplace=True)
+        self.__df_1min.set_index("Date", inplace=True)
 
     def __downsample_ohlc_data(self, timeframe: str, df: pd.DataFrame) -> None:
         """

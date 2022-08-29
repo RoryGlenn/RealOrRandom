@@ -89,7 +89,7 @@ class FrontEnd:
                             ),
                         ]
                     ),
-                    id="1d",
+                    # id="1d",
                 ),
                 html.Div(
                     dbc.Row(
@@ -105,7 +105,7 @@ class FrontEnd:
                             ),
                         ]
                     ),
-                    id="5d",
+                    # id="5d",
                 ),
                 html.Div(
                     dbc.Row(
@@ -158,7 +158,7 @@ class FrontEnd:
                 FrontEnd.get_pattern_textbox(),
                 # confidence
                 FrontEnd.get_confidence_slider(),
-                FrontEnd.save_and_continue(),
+                # FrontEnd.submit(),
             ],
             style={
                 "margin-left": "5%",
@@ -184,10 +184,6 @@ class FrontEnd:
             ],
             style={"width": "25%"},
         )
-
-    @staticmethod
-    def get_single_bounds_dropdown():
-        return
 
     @staticmethod
     def get_bounds_dropdown(text: str, id: str) -> html.Div:
@@ -247,17 +243,17 @@ class FrontEnd:
         )
 
     @staticmethod
-    def save_and_continue() -> html.Div:
+    def submit() -> html.Div:
         return html.Div(
             [
                 dcc.ConfirmDialogProvider(
-                    children=html.Button(
-                        "Save and Continue",
+                    html.Button(
+                        "Submit",
                     ),
-                    id="save_and_continue-provider",
+                    id="submit-provider",
                     message="You will not be able to go back once you press ok.\nAre you sure you want to continue?",
                 ),
-                html.Div(id="output-provider"),
+                html.Div(id="submit_output-provider"),
             ],
             style={"width": "25%", "margin-bottom": "30px"},
         )

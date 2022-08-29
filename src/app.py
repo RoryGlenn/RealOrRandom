@@ -6,7 +6,7 @@ from dash import Dash
 from faker import Faker
 import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 
 from dates import Dates
 from download import Download
@@ -23,6 +23,7 @@ from constants.constants import (
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = FrontEnd.get_app_layout()
+results = {}
 
 
 @app.callback(
@@ -48,6 +49,30 @@ def update_ohlc_chart(user_timeframe: str):
         )
     )
     return FrontEnd.get_graph_layout(fig)
+
+
+# save and continue call back
+# @app.callback(
+#     # Output("page-content", "children"),
+#     Input("save_and_continue-provider", "value"),
+#     State("1dayupperbounds-dropdown", "value"),
+#     State("1daylowerbounds-dropdown", "value"),
+#     State("5dayupperbounds-dropdown", "value"),
+#     State("5daylowerbounds-dropdown", "value"),
+#     State("10dayupperbounds-dropdown", "value"),
+#     State("10daylowerbounds-dropdown", "value"),
+#     State("30dayupperbounds-dropdown", "value"),
+#     State("30daylowerbounds-dropdown", "value"),
+#     State("60dayupperbounds-dropdown", "value"),
+#     State("60daylowerbounds-dropdown", "value"),
+#     State("realorrandom-dropdown", "value"),
+#     State("pattern-textbox", "value"),
+#     State("confidence-slider", "value"),
+# )
+# def loading_output(value):
+#     """Store the results from each section and load the next page"""
+#     print("value", value)
+#     print("value type", type(value))
 
 
 # @app.callback(Output("loading-output", "children"), Input("loading-input", "value"))
@@ -160,10 +185,14 @@ def main() -> None:
     for i in range(total_graphs):
         dataframes, half_dataframes, answers[i] = (
             real_case(num_days, fake)
-            if np.random.choice([True, False])
+            if np.random.choice([False])
             else random_case(num_days, fake)
         )
 
+        for t, df in half_dataframes.items():
+            print(t)
+            print(df)
+            
         reset_indices(dataframes, half_dataframes)
 
         FrontEnd.dataframes = dataframes
@@ -172,7 +201,7 @@ def main() -> None:
     print("Finished")
     print("Answers:", answers)
     print()
-    app.run_server(debug=True)
+    app.run_server(debug=False)
 
 
 if __name__ == "__main__":
