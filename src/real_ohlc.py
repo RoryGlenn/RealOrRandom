@@ -46,13 +46,12 @@ class RealOHLC:
 
         for file in filenames:
             df = pd.read_csv(DATA_PATH + "/" + file, skiprows=1)
-            date = "date" if "date" in df.columns else "Date"
             dt = datetime.strptime(
-                df.loc[len(df) - 1, date], "%Y-%m-%d %H:%M:%S"
+                df.loc[len(df) - 1, "Date"], "%Y-%m-%d %H:%M:%S"
             ) + timedelta(days=90)
             date_ranges[file] = {
                 "start_date": dt.strftime("%Y-%m-%d %H:%M:%S"),
-                "end_date": df.loc[0, date],
+                "end_date": df.loc[0, "Date"],
             }
         return date_ranges
 
@@ -77,6 +76,12 @@ class RealOHLC:
         dt_list = [
             start_date_dt + timedelta(days=x) for x in range(diff_dt.days - num_days)
         ]
+
+        if len(dt_list) == 0:
+            from sys import exit as sysexit
+
+            print("dt_list is empty!")
+            sysexit(1)
 
         # randomly choose a start date, then go 'num_days' into the future to get the end date
         start_date_dt = np.random.choice(dt_list)
@@ -218,11 +223,10 @@ class RealOHLC:
     def abstract_dates(self) -> None:
         """Remove the real dates and replace them with fake dates"""
         self.__df.reset_index(inplace=True)
-        date = "date" if "date" in self.__df.columns else "Date"
 
         dates_new = pd.DataFrame(
             {
-                date: np.tile(
+                "Date": np.tile(
                     pd.date_range(
                         start="2000-01-01",
                         periods=len(self.__df),
@@ -233,5 +237,5 @@ class RealOHLC:
             }
         )
 
-        self.__df[date] = dates_new[date]
-        self.__df.set_index(date, inplace=True)
+        self.__df["Date"] = dates_new["Date"]
+        self.__df.set_index("Date", inplace=True)

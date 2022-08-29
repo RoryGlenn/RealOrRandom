@@ -8,7 +8,7 @@ app = Dash(__name__, external_stylesheets=[dbc.themes.LUMEN])
 df = pd.read_csv(
     "https://raw.githubusercontent.com/Coding-with-Adam/Dash-by-Plotly/master/Dash_Interactive_Graphs/Candle_OHLC/oil_prices.csv"
 )
-df.Date = pd.to_datetime(df.Date)
+df["Date"] = pd.to_datetime(df["Date"])
 
 app.layout = dbc.Container(
     [

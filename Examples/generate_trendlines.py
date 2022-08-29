@@ -103,11 +103,11 @@ def main() -> None:
 
     data = [
         go.Candlestick(
-            x=df["date"],
-            open=df["open"],
-            high=df["high"],
-            low=df["low"],
-            close=df["close"],
+            x=df["Date"],
+            open=df["Open"],
+            high=df["High"],
+            low=df["Low"],
+            close=df["Close"],
             name="Candlestick chart",
         ),
     ]

@@ -20,57 +20,56 @@ class Dates:
             if isfile(join(path, f)) and join(path, f)[-4:] == ".csv"
         ]
 
-    @staticmethod
-    def get_start_end_dates() -> dict[str, dict[str]]:
-        """Returns a dictionary containing all of the file names as the key
-        and start/end dates as the value.
-        The start date is also adjusted 90 days into the future
-        to avoid out of bounds issues when a random start date is picked.
-        """
-        filenames = Dates.get_filenames(DATA_PATH)
-        date_ranges = {}
+    # @staticmethod
+    # def get_start_end_dates() -> dict[str, dict[str]]:
+    #     """Returns a dictionary containing all of the file names as the key
+    #     and start/end dates as the value.
+    #     The start date is also adjusted 90 days into the future
+    #     to avoid out of bounds issues when a random start date is picked.
+    #     """
+    #     filenames = Dates.get_filenames(DATA_PATH)
+    #     date_ranges = {}
 
-        for file in filenames:
-            df = pd.read_csv(DATA_PATH + "/" + file, skiprows=1)
-            date = "date" if "date" in df.columns else "Date"
-            dt = datetime.strptime(
-                df.loc[len(df) - 1, date], "%Y-%m-%d %H:%M:%S"
-            ) + timedelta(days=90)
-            date_ranges[file] = {
-                "start_date": dt.strftime("%Y-%m-%d %H:%M:%S"),
-                "end_date": df.loc[0, date],
-            }
-        return date_ranges
+    #     for file in filenames:
+    #         df = pd.read_csv(DATA_PATH + "/" + file, skiprows=1)
+    #         dt = datetime.strptime(
+    #             df.loc[len(df) - 1, "Date"], "%Y-%m-%d %H:%M:%S"
+    #         ) + timedelta(days=90)
+    #         date_ranges[file] = {
+    #             "start_date": dt.strftime("%Y-%m-%d %H:%M:%S"),
+    #             "end_date": df.loc[0, "Date"],
+    #         }
+    #     return date_ranges
 
-    @staticmethod
-    def get_start_end_date_strs(date_ranges: dict, num_days: int) -> Tuple[str, str]:
-        from datetime import timedelta
+    # @staticmethod
+    # def get_start_end_date_strs(date_ranges: dict, num_days: int) -> Tuple[str, str]:
+    #     """Returns the start and end date as strings"""
 
-        # get the total number of days we can use
-        start_date_dt = datetime.strptime(
-            date_ranges["start_date"], "%Y-%m-%d %H:%M:%S"
-        )
-        end_date_dt = datetime.strptime(date_ranges["end_date"], "%Y-%m-%d %H:%M:%S")
+    #     # get the total number of days we can use
+    #     start_date_dt = datetime.strptime(
+    #         date_ranges["start_date"], "%Y-%m-%d %H:%M:%S"
+    #     )
+    #     end_date_dt = datetime.strptime(date_ranges["end_date"], "%Y-%m-%d %H:%M:%S")
 
-        # get the number of days from the start date to the end date
-        diff_dt = end_date_dt - start_date_dt
+    #     # get the number of days from the start date to the end date
+    #     diff_dt = end_date_dt - start_date_dt
 
-        # Create a list of all the dates within the given date bounds.
-        # Limit the total number of days we can use to diff_dt.days-num_days
-        # so the last 'num_days' will be off limits to the start date.
-        # By doing this, we protect ourselves from an out of bounds error
-        dt_list = [
-            start_date_dt + timedelta(days=x) for x in range(diff_dt.days - num_days)
-        ]
+    #     # Create a list of all the dates within the given date bounds.
+    #     # Limit the total number of days we can use to diff_dt.days-num_days
+    #     # so the last 'num_days' will be off limits to the start date.
+    #     # By doing this, we protect ourselves from an out of bounds error
+    #     dt_list = [
+    #         start_date_dt + timedelta(days=x) for x in range(diff_dt.days - num_days)
+    #     ]
 
-        # randomly choose a start date, then go 'num_days' into the future to get the end date
-        start_date_dt = np.random.choice(dt_list)
-        end_date_dt = start_date_dt + timedelta(days=num_days)
+    #     # randomly choose a start date, then go 'num_days' into the future to get the end date
+    #     start_date_dt = np.random.choice(dt_list)
+    #     end_date_dt = start_date_dt + timedelta(days=num_days)
 
-        # create the start and end date strings
-        start_date_str = start_date_dt.strftime("%Y-%m-%d %H:%M:%S")
-        end_date_str = end_date_dt.strftime("%Y-%m-%d %H:%M:%S")
-        return start_date_str, end_date_str
+    #     # create the start and end date strings
+    #     start_date_str = start_date_dt.strftime("%Y-%m-%d %H:%M:%S")
+    #     end_date_str = end_date_dt.strftime("%Y-%m-%d %H:%M:%S")
+    #     return start_date_str, end_date_str
 
     @staticmethod
     def create_dates(

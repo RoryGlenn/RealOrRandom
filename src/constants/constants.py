@@ -29,3 +29,6 @@ VOLATILE_PERIOD_MIN = 100
 VOLATILE_PERIOD_MAX = 500
 
 DATA_PATH = "data"
+DATA_FILENAMES = "data_filenames.txt"
+GITHUB_URL = "https://raw.githubusercontent.com/RoryGlenn/RealOrRandom/main/data/"
+DOWNLOAD_PATH = "data"

@@ -9,11 +9,17 @@ import dash_bootstrap_components as dbc
 from dash.dependencies import Input, Output
 
 from dates import Dates
+from download import Download
 from frontend import FrontEnd
 from real_ohlc import RealOHLC
 from random_ohlc import RandomOHLC
-from constants.constants import DATA_PATH, SECONDS_IN_1DAY
-from download import Download
+from constants.constants import (
+    DATA_PATH,
+    DOWNLOAD_PATH,
+    GITHUB_URL,
+    SECONDS_IN_1DAY,
+    DATA_FILENAMES,
+)
 
 app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
 app.layout = FrontEnd.get_app_layout()
@@ -31,19 +37,14 @@ def update_ohlc_chart(user_timeframe: str):
         user_timeframe = "1_Day"
 
     df = FrontEnd.half_dataframes[FrontEnd.timeframe_map[user_timeframe]]
-    date = "date" if "date" in df.columns else "Date"
-    open = "open" if "open" in df.columns else "Open"
-    high = "high" if "high" in df.columns else "High"
-    low = "low" if "low" in df.columns else "Low"
-    close = "close" if "close" in df.columns else "Close"
 
     fig = go.Figure(
         data=go.Candlestick(
-            x=df[date],
-            open=df[open],
-            high=df[high],
-            low=df[low],
-            close=df[close],
+            x=df["Date"],
+            open=df["Open"],
+            high=df["High"],
+            low=df["Low"],
+            close=df["Close"],
         )
     )
     return FrontEnd.get_graph_layout(fig)
@@ -60,10 +61,15 @@ def create_half_dataframes(
     }
 
 
-def reset_indices(dataframes: dict[str, pd.DataFrame], half_dataframes: dict[str, pd.DataFrame]) -> None:
+def reset_indices(
+    dataframes: dict[str, pd.DataFrame], half_dataframes: dict[str, pd.DataFrame]
+) -> None:
     """Resets the index for every dataframe in dataframes and half_dataframes"""
-    {df.reset_index(inplace=True): hdf.reset_index(inplace=True) for df, hdf in zip(dataframes.values(), half_dataframes.values())}
-           
+    {
+        df.reset_index(inplace=True): hdf.reset_index(inplace=True)
+        for df, hdf in zip(dataframes.values(), half_dataframes.values())
+    }
+
 
 def real_case(
     num_days: int, fake: Faker, exclusions: list[str] = []
@@ -122,19 +128,18 @@ def random_case(
 
 
 def main() -> None:
-    Download.download_data(
-        url="https://raw.githubusercontent.com/RoryGlenn/RealOrRandom/main/data/",
-        files_to_download=Download.get_data_filenames("data_filenames.txt"),
-        download_path="data",
-    )
-
-    timeframe_exclusions = ["1min", "5min", "15min", "30min", "1H", "2H", "4H"]
-
-    Faker.seed(np.random.randint(0, 1000))
+    Faker.seed(np.random.randint(0, 10000))
     fake = Faker()
     answers = {}
     num_days = 120  # 120 will be the standard
     total_graphs = 1
+    timeframe_exclusions = ["1min", "5min", "15min", "30min", "1H", "2H", "4H"]
+
+    Download.download_data(
+        url=GITHUB_URL,
+        files_to_download=Download.get_data_filenames(DATA_FILENAMES),
+        download_path=DOWNLOAD_PATH,
+    )
 
     print("Starting test...")
 
@@ -153,7 +158,7 @@ def main() -> None:
     print("Finished")
     print("Answers:", answers)
     print()
-    app.run_server()
+    app.run_server(debug=True)
 
 
 if __name__ == "__main__":
