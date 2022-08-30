@@ -61,32 +61,22 @@ def update_ohlc_chart(user_timeframe: str):
 @app.callback(
     Output("submit", "value"),
     Input("submit-button", "n_clicks"),
-    State("1dayupperbounds-dropdown", "value"),
-    State("1daylowerbounds-dropdown", "value"),
-    State("5dayupperbounds-dropdown", "value"),
-    State("5daylowerbounds-dropdown", "value"),
-    State("10dayupperbounds-dropdown", "value"),
-    State("10daylowerbounds-dropdown", "value"),
-    State("30dayupperbounds-dropdown", "value"),
-    State("30daylowerbounds-dropdown", "value"),
-    State("60dayupperbounds-dropdown", "value"),
-    State("60daylowerbounds-dropdown", "value"),
+    State("1daybounds-slider", "value"),
+    State("5daybounds-slider", "value"),
+    State("10daybounds-slider", "value"),
+    State("30daybounds-slider", "value"),
+    State("60daybounds-slider", "value"),
     State("realorrandom-dropdown", "value"),
     State("pattern-textbox", "value"),
     State("confidence-slider", "value"),
 )
 def on_submit(
     n_clicks: int,
-    dayupperbounds1: float,
-    daylowerbounds1: float,
-    dayupperbounds5: float,
-    daylowerbounds5: float,
-    dayupperbounds10: float,
-    daylowerbounds10: float,
-    dayupperbounds30: float,
-    daylowerbounds30: float,
-    dayupperbounds60: float,
-    daylowerbounds60: float,
+    daybounds1: list[float],
+    daybounds5: list[float],
+    daybounds10: list[float],
+    daybounds30: list[float],
+    daybounds60: list[float],
     real_or_random: str,
     pattern: str,
     confidence: int,
@@ -100,16 +90,11 @@ def on_submit(
         raise PreventUpdate
 
     results[graph_id] = {
-        "1dayupperbounds-dropdown": dayupperbounds1,
-        "1daylowerbounds-dropdown": daylowerbounds1,
-        "5dayupperbounds-dropdown": dayupperbounds5,
-        "5daylowerbounds-dropdown": daylowerbounds5,
-        "10dayupperbounds-dropdown": dayupperbounds10,
-        "10daylowerbounds-dropdown": daylowerbounds10,
-        "30dayupperbounds-dropdown": dayupperbounds30,
-        "30daylowerbounds-dropdown": daylowerbounds30,
-        "60dayupperbounds-dropdown": dayupperbounds60,
-        "60daylowerbounds-dropdown": daylowerbounds60,
+        "1daybounds-slider": daybounds1,
+        "5daybounds-slider": daybounds5,
+        "10daybounds-slider": daybounds10,
+        "30daybounds-slider": daybounds30,
+        "60daybounds-slider": daybounds60,
         "realorrandom-dropdown": real_or_random,
         "pattern-textbox": pattern,
         "confidence-slider": confidence,
@@ -231,7 +216,7 @@ def main() -> None:
     print("Finished")
     print("Answers:", answers)
     print()
-    app.run_server(debug=True, port=8080)
+    app.run_server(debug=False, port=8080)
 
 
 if __name__ == "__main__":

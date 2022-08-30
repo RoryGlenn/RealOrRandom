@@ -58,7 +58,7 @@ class FrontEnd:
             [
                 # The memory store reverts to the default on every page refresh
                 dcc.Store(id="submit"),
-                html.H1(f"Chart_01"),
+                html.H1("Chart"),
                 dbc.Row(
                     [
                         # timeframe dropdown
@@ -166,20 +166,6 @@ class FrontEnd:
     def get_bounds_slider(text: str, id: str) -> html.Div:
         """What are the upper bounds and what are the lower bounds for your price
         prediction 1, 5, 10, 30, 60 bars from the last candle bar?"""
-        # return html.Div(
-        #     [
-        #         html.P(text),
-        #         dcc.Dropdown(
-        #             id=id,
-        #             options=[
-        #                 {"label": str(i) + " %", "value": i} for i in FrontEnd.bounds
-        #             ],
-        #             value=0,
-        #         ),
-        #     ],
-        #     style={"width": "25%", "margin-bottom": "30px"},
-        # )
-
         return html.Div(
             [html.P(text), FrontEnd.bounds_slider(id)],
             style={"width": "50%", "margin-bottom": "20px"},
@@ -194,7 +180,7 @@ class FrontEnd:
                 dcc.Dropdown(
                     id="realorrandom-dropdown",
                     options=["Real", "Random"],
-                    value="required",
+                    value="",
                 ),
             ],
             style={"width": "25%", "margin-bottom": "30px"},
@@ -220,8 +206,16 @@ class FrontEnd:
         """How confident are you overall in your answers?"""
         return html.Div(
             [
-                html.P("Rate your overall confidence in your answers"),
-                dcc.RangeSlider(id="confidence-slider", min=0, max=100, step=10),
+                html.P("What is your overall confidence in your answers?"),
+                html.P("( 0: not at all confident, 10: extremely confident )"),
+                dcc.Slider(
+                    id="confidence-slider",
+                    min=0,
+                    max=10,
+                    step=1,
+                    value=5,
+                    tooltip={"placement": "bottom", "always_visible": False},
+                ),
             ],
             style={"width": "25%", "margin-bottom": "30px"},
         )
