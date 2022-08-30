@@ -74,49 +74,35 @@ class FrontEnd:
                 html.Hr(),
                 html.Div(id="page-content"),
                 # Bounds dropdown
-                # 1 day
                 html.Div(
                     dbc.Row(
                         [
-                            FrontEnd.get_bounds_dropdown(
-                                text="What will the upper bounds be 1 day after the last candle bar?",
-                                id="1dayupperbounds-dropdown",
-                            ),
-                            FrontEnd.get_bounds_dropdown(
-                                text="What will the lower bounds be 1 day after the last candle bar?",
-                                id="1daylowerbounds-dropdown",
+                            # 1 day
+                            FrontEnd.get_bounds_slider(
+                                text="What will the lower and upper bounds be 1 day after the last candle bars close price?",
+                                id="1daybounds-slider",
                             ),
                         ]
                     ),
-                    # id="1d",
                 ),
                 html.Div(
                     dbc.Row(
                         [
                             # 5 days
-                            FrontEnd.get_bounds_dropdown(
-                                text="What will the upper bounds be 5 days after the last candle bar?",
-                                id="5dayupperbounds-dropdown",
-                            ),
-                            FrontEnd.get_bounds_dropdown(
-                                text="What will the lower bounds be 5 days after the last candle bar?",
-                                id="5daylowerbounds-dropdown",
+                            FrontEnd.get_bounds_slider(
+                                text="What will the lower and upper bounds be 5 days after the last candle bars close price?",
+                                id="5daybounds-slider",
                             ),
                         ]
                     ),
-                    # id="5d",
                 ),
                 html.Div(
                     dbc.Row(
                         [
                             # 10 days
-                            FrontEnd.get_bounds_dropdown(
-                                text="What will the upper bounds be 10 days after the last candle bar?",
-                                id="10dayupperbounds-dropdown",
-                            ),
-                            FrontEnd.get_bounds_dropdown(
-                                text="What will the lower bounds be 10 days after the last candle bar?",
-                                id="10daylowerbounds-dropdown",
+                            FrontEnd.get_bounds_slider(
+                                text="What will the lower and upper bounds be 10 days after the last candle bars close price?",
+                                id="10daybounds-slider",
                             ),
                         ]
                     ),
@@ -125,13 +111,9 @@ class FrontEnd:
                     dbc.Row(
                         [
                             # 30 days
-                            FrontEnd.get_bounds_dropdown(
-                                text="What will the upper bounds be 30 days after the last candle bar?",
-                                id="30dayupperbounds-dropdown",
-                            ),
-                            FrontEnd.get_bounds_dropdown(
-                                text="What will the lower bounds be 30 days after the last candle bar?",
-                                id="30daylowerbounds-dropdown",
+                            FrontEnd.get_bounds_slider(
+                                text="What will the lower and upper bounds be 30 days after the last candle bars close price?",
+                                id="30daybounds-slider",
                             ),
                         ]
                     ),
@@ -140,13 +122,9 @@ class FrontEnd:
                     dbc.Row(
                         [
                             # 60 days
-                            FrontEnd.get_bounds_dropdown(
-                                text="What will the upper bounds be 60 days after the last candle bar?",
-                                id="60dayupperbounds-dropdown",
-                            ),
-                            FrontEnd.get_bounds_dropdown(
-                                text="What will the lower bounds be 60 days after the last candle bar?",
-                                id="60daylowerbounds-dropdown",
+                            FrontEnd.get_bounds_slider(
+                                text="What will the lower and upper bounds be 60 days after the last candle bars close price?",
+                                id="60daybounds-slider",
                             ),
                         ],
                     ),
@@ -185,21 +163,26 @@ class FrontEnd:
         )
 
     @staticmethod
-    def get_bounds_dropdown(text: str, id: str) -> html.Div:
+    def get_bounds_slider(text: str, id: str) -> html.Div:
         """What are the upper bounds and what are the lower bounds for your price
         prediction 1, 5, 10, 30, 60 bars from the last candle bar?"""
+        # return html.Div(
+        #     [
+        #         html.P(text),
+        #         dcc.Dropdown(
+        #             id=id,
+        #             options=[
+        #                 {"label": str(i) + " %", "value": i} for i in FrontEnd.bounds
+        #             ],
+        #             value=0,
+        #         ),
+        #     ],
+        #     style={"width": "25%", "margin-bottom": "30px"},
+        # )
+
         return html.Div(
-            [
-                html.P(text),
-                dcc.Dropdown(
-                    id=id,
-                    options=[
-                        {"label": str(i) + " %", "value": i} for i in FrontEnd.bounds
-                    ],
-                    value=0,
-                ),
-            ],
-            style={"width": "25%", "margin-bottom": "30px"},
+            [html.P(text), FrontEnd.bounds_slider(id)],
+            style={"width": "50%", "margin-bottom": "20px"},
         )
 
     @staticmethod
@@ -209,7 +192,9 @@ class FrontEnd:
             [
                 html.P("Is this graph real or random?"),
                 dcc.Dropdown(
-                    id="realorrandom-dropdown", options=["Real", "Random"], value=""
+                    id="realorrandom-dropdown",
+                    options=["Real", "Random"],
+                    value="required",
                 ),
             ],
             style={"width": "25%", "margin-bottom": "30px"},
@@ -257,4 +242,35 @@ class FrontEnd:
                 html.Div(id="submit_output-provider"),
             ],
             style={"width": "25%", "margin-bottom": "30px"},
+        )
+
+    def bounds_slider(id: str) -> html.Div:
+        return html.Div(
+            [
+                dcc.RangeSlider(
+                    id=id,  # any name you'd like to give it
+                    step=0.5,  # number of steps between values
+                    marks={
+                        -100: {"label": "-100%", "style": {"color": "#f50"}},
+                        100: {"label": "100%", "style": {"color": "#77b0b1"}},
+                    },
+                    min=-100,
+                    max=100,
+                    value=[-50, 50],  # default value initially chosen
+                    dots=True,  # True, False - insert dots, only when step>1
+                    allowCross=False,  # True,False - Manage handle crossover
+                    disabled=False,  # True,False - disable handle
+                    pushable=2,  # any number, or True with multiple handles
+                    updatemode="mouseup",  # 'mouseup', 'drag' - update value method
+                    included=True,  # True, False - highlight handle
+                    vertical=False,  # True, False - vertical, horizontal slider
+                    verticalHeight=900,  # hight of slider (pixels) when vertical=True
+                    className="None",
+                    tooltip={
+                        "always_visible": False,  # show current slider values
+                        "placement": "bottom",
+                    },
+                ),
+            ],
+            style={"width": "50%", "margin-bottom": "30px"},
         )

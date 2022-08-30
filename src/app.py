@@ -99,7 +99,6 @@ def on_submit(
         # you don't want to update the store for nothing.
         raise PreventUpdate
 
-
     results[graph_id] = {
         "1dayupperbounds-dropdown": dayupperbounds1,
         "1daylowerbounds-dropdown": daylowerbounds1,
@@ -114,7 +113,6 @@ def on_submit(
         "realorrandom-dropdown": real_or_random,
         "pattern-textbox": pattern,
         "confidence-slider": confidence,
-        # "chart_id": graph_id,
     }
 
     graph_id += 1
@@ -233,7 +231,7 @@ def main() -> None:
     print("Finished")
     print("Answers:", answers)
     print()
-    app.run_server(debug=False, port=8080)
+    app.run_server(debug=True, port=8080)
 
 
 if __name__ == "__main__":
