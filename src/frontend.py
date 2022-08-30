@@ -79,7 +79,7 @@ class FrontEnd:
                         [
                             # 1 day
                             FrontEnd.get_bounds_slider(
-                                text="What will the lower and upper bounds be 1 day after the last candle bars close price?",
+                                text="What will the price be 1 day after the last candle bars close price?",
                                 id="1daybounds-slider",
                             ),
                         ]
@@ -90,7 +90,7 @@ class FrontEnd:
                         [
                             # 5 days
                             FrontEnd.get_bounds_slider(
-                                text="What will the lower and upper bounds be 5 days after the last candle bars close price?",
+                                text="What will the price be 5 days after the last candle bars close price?",
                                 id="5daybounds-slider",
                             ),
                         ]
@@ -101,7 +101,7 @@ class FrontEnd:
                         [
                             # 10 days
                             FrontEnd.get_bounds_slider(
-                                text="What will the lower and upper bounds be 10 days after the last candle bars close price?",
+                                text="What will the price be 10 days after the last candle bars close price?",
                                 id="10daybounds-slider",
                             ),
                         ]
@@ -112,7 +112,7 @@ class FrontEnd:
                         [
                             # 30 days
                             FrontEnd.get_bounds_slider(
-                                text="What will the lower and upper bounds be 30 days after the last candle bars close price?",
+                                text="What will the price be 30 days after the last candle bars close price?",
                                 id="30daybounds-slider",
                             ),
                         ]
@@ -123,7 +123,7 @@ class FrontEnd:
                         [
                             # 60 days
                             FrontEnd.get_bounds_slider(
-                                text="What will the lower and upper bounds be 60 days after the last candle bars close price?",
+                                text="What will the price be 60 days after the last candle bars close price?",
                                 id="60daybounds-slider",
                             ),
                         ],
@@ -241,20 +241,43 @@ class FrontEnd:
     def bounds_slider(id: str) -> html.Div:
         return html.Div(
             [
-                dcc.RangeSlider(
+                # dcc.RangeSlider(
+                #     id=id,  # any name you'd like to give it
+                #     step=0.5,  # number of steps between values
+                #     marks={
+                #         -100: {"label": "-100%", "style": {"color": "#f50"}},
+                #         100: {"label": "100%", "style": {"color": "#77b0b1"}},
+                #     },
+                #     min=-100,
+                #     max=100,
+                #     value=[-50, 50],  # default value initially chosen
+                #     dots=True,  # True, False - insert dots, only when step>1
+                #     allowCross=False,  # True,False - Manage handle crossover
+                #     disabled=False,  # True,False - disable handle
+                #     pushable=2,  # any number, or True with multiple handles
+                #     updatemode="mouseup",  # 'mouseup', 'drag' - update value method
+                #     included=True,  # True, False - highlight handle
+                #     vertical=False,  # True, False - vertical, horizontal slider
+                #     verticalHeight=900,  # hight of slider (pixels) when vertical=True
+                #     className="None",
+                #     tooltip={
+                #         "always_visible": False,  # show current slider values
+                #         "placement": "bottom",
+                #     },
+                # ),
+                dcc.Slider(
                     id=id,  # any name you'd like to give it
                     step=0.5,  # number of steps between values
                     marks={
                         -100: {"label": "-100%", "style": {"color": "#f50"}},
+                        0: {"label": "0%", "style": {"color": "#0f1000"}},
                         100: {"label": "100%", "style": {"color": "#77b0b1"}},
                     },
                     min=-100,
                     max=100,
-                    value=[-50, 50],  # default value initially chosen
+                    value=0,  # default value initially chosen
                     dots=True,  # True, False - insert dots, only when step>1
-                    allowCross=False,  # True,False - Manage handle crossover
                     disabled=False,  # True,False - disable handle
-                    pushable=2,  # any number, or True with multiple handles
                     updatemode="mouseup",  # 'mouseup', 'drag' - update value method
                     included=True,  # True, False - highlight handle
                     vertical=False,  # True, False - vertical, horizontal slider

@@ -7,7 +7,6 @@ from faker import Faker
 import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
 
-# from dash.dependencies import Input, Output, State
 from dash import Dash, Input, Output, State
 from dash.exceptions import PreventUpdate
 
@@ -28,8 +27,10 @@ from constants.constants import (
 external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
 app = Dash(__name__, external_stylesheets=[dbc.themes.COSMO])
 app.layout = FrontEnd.get_app_layout()
+user_answers = {}
 results = {}
 graph_id = 0
+total_graphs = 1
 
 
 @app.callback(
@@ -81,15 +82,16 @@ def on_submit(
     pattern: str,
     confidence: int,
 ):
-    global results
+    global user_answers
     global graph_id
+    global total_graphs
 
     if n_clicks is None:
         # prevent the None callbacks is important with the store component.
         # you don't want to update the store for nothing.
         raise PreventUpdate
 
-    results[graph_id] = {
+    user_answers[graph_id] = {
         "1daybounds-slider": daybounds1,
         "5daybounds-slider": daybounds5,
         "10daybounds-slider": daybounds10,
@@ -100,8 +102,11 @@ def on_submit(
         "confidence-slider": confidence,
     }
 
+    if len(user_answers) == total_graphs:
+        calculate_results()
+
     graph_id += 1
-    return results
+    return user_answers
 
 
 def create_half_dataframes(
@@ -143,7 +148,6 @@ def real_case(
 
     real_ohlc.create_df(start_date_str, end_date_str, merge_csvs=True)
     real_ohlc.normalize_ohlc_data()
-
     real_ohlc.abstract_dates()
     real_ohlc.resample_timeframes()
 
@@ -181,19 +185,73 @@ def random_case(
     )
 
 
+def get_relative_change(initial_value: float, final_value: float) -> float:
+    """Returns the relative change.
+    Formula = (x2 - x1) / x1"""
+    return (final_value - initial_value) / initial_value
+
+
+def get_results(users_answers: dict, relative_change, day_number: int) -> dict:
+    return {
+        f"relative_change_{day_number}day": relative_change,
+        "user_1day": users_answers[f"{day_number}daybounds-slider"],
+        "user_off_by_1day": abs(relative_change) - abs(users_answers[f"{day_number}daybounds-slider"]),
+        "user_real_or_random": users_answers["realorrandom-dropdown"],
+        "user_pattern": users_answers["pattern-textbox"],
+        "user_confidence": users_answers["confidence-slider"],
+    }
+
+
+def calculate_results() -> None:
+    """Compare the users guessed price to the actual price in the full dataframe"""
+    global user_answers
+    global graph_id
+    global results
+
+    # need to iterate over all graphs!
+    # right now, this only iterates over 1 graph
+
+    for g_id, usrs_answer in user_answers.items():
+        # for g_id, timeframe, result, df in zip(results.items(), FrontEnd.dataframes):
+        initial_price = FrontEnd.half_dataframes["1D"].loc[59, "Close"]
+
+        future_1day = FrontEnd.dataframes["1D"].loc[60, "Close"]
+        future_5day = FrontEnd.dataframes["1D"].loc[64, "Close"]
+        future_10day = FrontEnd.dataframes["1D"].loc[69, "Close"]
+        future_30day = FrontEnd.dataframes["1D"].loc[89, "Close"]
+        future_60day = FrontEnd.dataframes["1D"].loc[119, "Close"]
+
+        relative_change_1day = get_relative_change(initial_price, future_1day) * 100
+        relative_change_5day = get_relative_change(initial_price, future_5day) * 100
+        relative_change_10day = get_relative_change(initial_price, future_10day) * 100
+        relative_change_30day = get_relative_change(initial_price, future_30day) * 100
+        relative_change_60day = get_relative_change(initial_price, future_60day) * 100
+
+        results[g_id] = [
+            get_results(usrs_answer, relative_change_1day, 1),
+            get_results(usrs_answer, relative_change_5day, 5),
+            get_results(usrs_answer, relative_change_10day, 10),
+            get_results(usrs_answer, relative_change_30day, 30),
+            get_results(usrs_answer, relative_change_60day, 60),
+        ]
+        
+    from pprint import pprint
+    pprint(results)
+
+
 # TODO:
 # Save and continue button
 # Turn timeframe dropdown into trading view buttons instead
 # Loading bar
 # prevent the user from clicking the submit button until everything is filled out
 # Results page
+# Dataframes create 121 instead of 120 days (off by 1)
 # Email results?
 def main() -> None:
     Faker.seed(np.random.randint(0, 10000))
     fake = Faker()
     answers = {}
     num_days = 120  # 120 will be the standard
-    total_graphs = 1
     timeframe_exclusions = ["1min", "5min", "15min", "30min", "1H", "2H", "4H"]
 
     Download.download_data(
