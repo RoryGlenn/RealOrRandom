@@ -132,7 +132,7 @@ class FrontEnd:
                 # Real or Random
                 FrontEnd.get_real_or_random_dropdown(),
                 # pattern
-                FrontEnd.get_pattern_textbox(),
+                FrontEnd.get_pattern_dropdown(),
                 # confidence
                 FrontEnd.get_confidence_slider(),
                 FrontEnd.submit_button(),
@@ -187,15 +187,14 @@ class FrontEnd:
         )
 
     @staticmethod
-    def get_pattern_textbox() -> html.Div:
-        """Do you see a recognizable pattern in the graph? If so, what pattern is it?"""
+    def get_pattern_dropdown() -> html.Div:
+        """What pattern do you see?"""
         return html.Div(
             [
-                html.P(
-                    "Do you see a recognizable pattern in the graph? If so, what pattern is it?"
-                ),
-                dcc.Textarea(
-                    id="pattern-textbox",
+                html.P("What pattern do you see?"),
+                dcc.Dropdown(
+                    options=FrontEnd.__get_candle_stick_patterns(),
+                    id="pattern-dropdown",
                 ),
             ],
             style={"width": "25%", "margin-bottom": "30px"},
@@ -207,7 +206,8 @@ class FrontEnd:
         return html.Div(
             [
                 html.P("What is your overall confidence in your answers?"),
-                html.P("( 0: not at all confident, 10: extremely confident )"),
+                html.P("0: not at all confident"),
+                html.P("10: extremely confident"),
                 dcc.Slider(
                     id="confidence-slider",
                     min=0,
@@ -231,7 +231,7 @@ class FrontEnd:
                         )
                     ),
                     id="submit-provider",
-                    message="You will not be able to go back.\nAre you sure you want to continue?",
+                    message="You will not be able to go back after submitting.\nAre you sure you want to continue?",
                 ),
                 html.Div(id="submit_output-provider"),
             ],
@@ -241,30 +241,6 @@ class FrontEnd:
     def bounds_slider(id: str) -> html.Div:
         return html.Div(
             [
-                # dcc.RangeSlider(
-                #     id=id,  # any name you'd like to give it
-                #     step=0.5,  # number of steps between values
-                #     marks={
-                #         -100: {"label": "-100%", "style": {"color": "#f50"}},
-                #         100: {"label": "100%", "style": {"color": "#77b0b1"}},
-                #     },
-                #     min=-100,
-                #     max=100,
-                #     value=[-50, 50],  # default value initially chosen
-                #     dots=True,  # True, False - insert dots, only when step>1
-                #     allowCross=False,  # True,False - Manage handle crossover
-                #     disabled=False,  # True,False - disable handle
-                #     pushable=2,  # any number, or True with multiple handles
-                #     updatemode="mouseup",  # 'mouseup', 'drag' - update value method
-                #     included=True,  # True, False - highlight handle
-                #     vertical=False,  # True, False - vertical, horizontal slider
-                #     verticalHeight=900,  # hight of slider (pixels) when vertical=True
-                #     className="None",
-                #     tooltip={
-                #         "always_visible": False,  # show current slider values
-                #         "placement": "bottom",
-                #     },
-                # ),
                 dcc.Slider(
                     id=id,  # any name you'd like to give it
                     step=0.5,  # number of steps between values
@@ -291,3 +267,50 @@ class FrontEnd:
             ],
             style={"width": "50%", "margin-bottom": "30px"},
         )
+
+    def __get_candle_stick_patterns() -> list[str]:
+        return [
+            # Else...
+            "No Pattern",
+            "I Don't Know",
+            # Bullish
+            "Hammer",
+            "Piercing Pattern",
+            "Bullish Engulfing",
+            "The Morning Star",
+            "Three White Soldiers",
+            "White Marubozu",
+            "Three Inside Up",
+            "Bullish Harami",
+            "Tweezer Bottom",
+            "Inverted Hammer",
+            "Three Outside Up",
+            "On-Neck Pattern",
+            "Bullish Counterattack",
+            # Bearish
+            "Hanging man",
+            "Dark cloud cover",
+            "Bearish Engulfing",
+            "The Evening Star",
+            "Three Black Crows",
+            "Black Marubozu",
+            "Three Inside Down",
+            "Bearish Harami",
+            "Shooting Star",
+            "Tweezer Top",
+            "Three Outside Down",
+            "Bearish Counterattack",
+            # Continuation Candlestick Patterns
+            "Doji",
+            "Spinning Top",
+            "Falling Three Methods",
+            "Rising Three Methods",
+            "Upside Tasuki Gap",
+            "Downside Tasuki Gap",
+            "Mat-Hold",
+            "Rising Window",
+            "Falling Window",
+            "High Wave",
+            # N/A
+            "Other",
+        ]

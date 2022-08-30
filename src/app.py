@@ -24,8 +24,8 @@ from constants.constants import (
     DATA_FILENAMES,
 )
 
-external_stylesheets = ["https://codepen.io/chriddyp/pen/bWLwgP.css"]
-app = Dash(__name__, external_stylesheets=[dbc.themes.COSMO])
+external_stylesheets = "https://codepen.io/chriddyp/pen/bWLwgP.css"
+app = Dash(__name__, external_stylesheets=[external_stylesheets])
 app.layout = FrontEnd.get_app_layout()
 user_answers = {}
 results = {}
@@ -68,7 +68,7 @@ def update_ohlc_chart(user_timeframe: str):
     State("30daybounds-slider", "value"),
     State("60daybounds-slider", "value"),
     State("realorrandom-dropdown", "value"),
-    State("pattern-textbox", "value"),
+    State("pattern-dropdown", "value"),
     State("confidence-slider", "value"),
 )
 def on_submit(
@@ -98,7 +98,7 @@ def on_submit(
         "30daybounds-slider": daybounds30,
         "60daybounds-slider": daybounds60,
         "realorrandom-dropdown": real_or_random,
-        "pattern-textbox": pattern,
+        "pattern-dropdown": pattern,
         "confidence-slider": confidence,
     }
 
@@ -191,28 +191,29 @@ def get_relative_change(initial_value: float, final_value: float) -> float:
     return (final_value - initial_value) / initial_value
 
 
-def get_results(users_answers: dict, relative_change, day_number: int) -> dict:
+def get_results(users_answers: dict, relative_change: float, day_number: int) -> dict:
     return {
         f"relative_change_{day_number}day": relative_change,
         "user_1day": users_answers[f"{day_number}daybounds-slider"],
-        "user_off_by_1day": abs(relative_change) - abs(users_answers[f"{day_number}daybounds-slider"]),
+        "user_off_by_1day": abs(relative_change)
+        - abs(users_answers[f"{day_number}daybounds-slider"]),
         "user_real_or_random": users_answers["realorrandom-dropdown"],
-        "user_pattern": users_answers["pattern-textbox"],
+        "user_pattern": users_answers["pattern-dropdown"],
         "user_confidence": users_answers["confidence-slider"],
     }
 
 
 def calculate_results() -> None:
     """Compare the users guessed price to the actual price in the full dataframe"""
+    from pprint import pprint
+
     global user_answers
     global graph_id
     global results
 
-    # need to iterate over all graphs!
+    # need to iterate over all graphs!!!!
     # right now, this only iterates over 1 graph
-
     for g_id, usrs_answer in user_answers.items():
-        # for g_id, timeframe, result, df in zip(results.items(), FrontEnd.dataframes):
         initial_price = FrontEnd.half_dataframes["1D"].loc[59, "Close"]
 
         future_1day = FrontEnd.dataframes["1D"].loc[60, "Close"]
@@ -234,8 +235,7 @@ def calculate_results() -> None:
             get_results(usrs_answer, relative_change_30day, 30),
             get_results(usrs_answer, relative_change_60day, 60),
         ]
-        
-    from pprint import pprint
+
     pprint(results)
 
 
@@ -245,7 +245,7 @@ def calculate_results() -> None:
 # Loading bar
 # prevent the user from clicking the submit button until everything is filled out
 # Results page
-# Dataframes create 121 instead of 120 days (off by 1)
+# Dataframes create 121 instead of 120 days (off by 1) (THE FIRST CANDLE BAR IS BROKEN!)
 # Email results?
 def main() -> None:
     Faker.seed(np.random.randint(0, 10000))
@@ -274,7 +274,7 @@ def main() -> None:
     print("Finished")
     print("Answers:", answers)
     print()
-    app.run_server(debug=False, port=8080)
+    app.run_server(debug=True, port=8080)
 
 
 if __name__ == "__main__":

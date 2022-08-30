@@ -291,7 +291,9 @@ class RandomOHLC:
         """
         prev_close = self.__df_1min["Close"].shift(1).fillna(0).astype(float)
         self.__df_1min["Open"] = prev_close
-        self.__df_1min.at[0, "Open"] = self.start_price
+        
+        self.__df_1min.at[1, "Open"] = self.start_price
+        self.__df_1min.drop([0], axis=0, inplace=True)
 
         self.__df_1min.Low = self.__correct_lowcolumn_error(self.__df_1min)
         self.__df_1min.High = self.__correct_highcolumn_error(self.__df_1min)
