@@ -3,6 +3,8 @@ from dash import dcc, html
 import plotly.graph_objects as go
 import dash_bootstrap_components as dbc
 
+# https://dash-example-index.herokuapp.com/checklist-plots
+
 
 class FrontEnd:
     """Contains div elements and logic needed to create the front end"""
@@ -56,7 +58,9 @@ class FrontEnd:
     def get_app_layout() -> html.Div:
         return html.Div(
             [
+                # dcc.Link(html.Button("LOG_VIEW"), href="/log_stream", refresh=True, id='loadnewpage'),
                 # The memory store reverts to the default on every page refresh
+                # dcc.Store(id="submit", storage_type='session', data=dict),
                 dcc.Store(id="submit"),
                 html.H1("Chart"),
                 dbc.Row(
@@ -237,6 +241,14 @@ class FrontEnd:
             ],
             style={"width": "25%", "margin-bottom": "30px"},
         )
+        # return (
+        #     dcc.Link(
+        #         html.Button("Submit"),
+        #         href="/log_stream",
+        #         refresh=True,
+        #         id="loadnewpage",
+        #     ),
+        # )
 
     def bounds_slider(id: str) -> html.Div:
         return html.Div(

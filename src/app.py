@@ -5,7 +5,8 @@ import pandas as pd
 from dash import Dash
 from faker import Faker
 import plotly.graph_objects as go
-import dash_bootstrap_components as dbc
+
+# import dash_bootstrap_components as dbc
 
 from dash import Dash, Input, Output, State
 from dash.exceptions import PreventUpdate
@@ -60,8 +61,9 @@ def update_ohlc_chart(user_timeframe: str):
 
 # add a click to the appropriate store.
 @app.callback(
-    Output("submit", "value"),
+    Output("submit-button", "value"),
     Input("submit-button", "n_clicks"),
+    # Input("submit-button", "value"),
     State("1daybounds-slider", "value"),
     State("5daybounds-slider", "value"),
     State("10daybounds-slider", "value"),
