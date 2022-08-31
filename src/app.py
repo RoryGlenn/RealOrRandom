@@ -6,11 +6,8 @@ from dash import Dash
 from faker import Faker
 import plotly.graph_objects as go
 
-# import dash_bootstrap_components as dbc
-
 from dash import Dash, Input, Output, State
 from dash.exceptions import PreventUpdate
-
 
 from dates import Dates
 from download import Download
@@ -63,7 +60,6 @@ def update_ohlc_chart(user_timeframe: str):
 @app.callback(
     Output("submit-button", "value"),
     Input("submit-button", "n_clicks"),
-    # Input("submit-button", "value"),
     State("1daybounds-slider", "value"),
     State("5daybounds-slider", "value"),
     State("10daybounds-slider", "value"),
@@ -74,7 +70,7 @@ def update_ohlc_chart(user_timeframe: str):
     State("confidence-slider", "value"),
 )
 def on_submit(
-    n_clicks: int,
+    num_clicks: int,
     daybounds1: list[float],
     daybounds5: list[float],
     daybounds10: list[float],
@@ -88,7 +84,7 @@ def on_submit(
     global graph_id
     global total_graphs
 
-    if n_clicks is None:
+    if num_clicks is None:
         # prevent the None callbacks is important with the store component.
         # you don't want to update the store for nothing.
         raise PreventUpdate
@@ -155,7 +151,13 @@ def real_case(
 
     half_dataframes = create_half_dataframes(real_ohlc.resampled_data, exclusions)
 
-    answer = f"Real -> Name: {fake.name()}, Start Date: {start_date_str}, End Date: {end_date_str}, File: {data_choice}"
+    answer = {
+        "Real_Or_Random": "Real",
+        "Name": fake.name(),
+        "Start_Date": start_date_str,
+        "End_Date": end_date_str,
+        "File": data_choice,
+    }
     return real_ohlc.resampled_data, half_dataframes, answer
 
 
@@ -179,12 +181,14 @@ def random_case(
     random_ohlc.resample_timeframes()
 
     half_dataframes = create_half_dataframes(random_ohlc.resampled_data, exclusions)
-
-    return (
-        random_ohlc.resampled_data,
-        half_dataframes,
-        f"Random: {fake.name()}, Start Date: None, End Date: None",
-    )
+    answer = {
+        "Real_Or_Random": "Random",
+        "Name": fake.name(),
+        "Start_Date": "None",
+        "End_Date": "None",
+        "File": "None",
+    }
+    return random_ohlc.resampled_data, half_dataframes, answer
 
 
 def get_relative_change(initial_value: float, final_value: float) -> float:
@@ -242,13 +246,13 @@ def calculate_results() -> None:
 
 
 # TODO:
-# Save and continue button
-# Turn timeframe dropdown into trading view buttons instead
-# Loading bar
-# prevent the user from clicking the submit button until everything is filled out
-# Results page
-# Dataframes create 121 instead of 120 days (off by 1) (THE FIRST CANDLE BAR IS BROKEN!)
-# Email results?
+#     Save and continue button
+#     Turn timeframe dropdown into trading view buttons instead
+#     Loading bar
+#     prevent the user from clicking the submit button until everything is filled out
+#     Results page
+#     Dataframes create 121 instead of 120 days (off by 1) (THE FIRST CANDLE BAR IS BROKEN!)
+#     Email results?
 def main() -> None:
     Faker.seed(np.random.randint(0, 10000))
     fake = Faker()
@@ -265,17 +269,19 @@ def main() -> None:
     print("Starting test...")
 
     for i in range(total_graphs):
-        FrontEnd.dataframes, FrontEnd.half_dataframes, answers[i] = (
+        FrontEnd.dataframes, FrontEnd.half_dataframes, answers["graph_" + str(i)] = (
             real_case(num_days, fake)
-            if np.random.choice([False])
+            if np.random.choice([True, False])
             else random_case(num_days, fake)
         )
 
         reset_indices(FrontEnd.dataframes, FrontEnd.half_dataframes)
 
-    print("Finished")
-    print("Answers:", answers)
+    from pprint import pprint
+
+    pprint(answers)
     print()
+
     app.run_server(debug=True, port=8080)
 
 

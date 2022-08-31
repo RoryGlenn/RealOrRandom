@@ -12,16 +12,17 @@ class FrontEnd:
     dataframes = {}
     half_dataframes = {}
     timeframe_map = {
-        # "1_Minute": "1min",
-        # "5_Minute": "5min",
-        "15_Minute": "15min",
-        "30_Minute": "30min",
-        "1_Hour": "1H",
-        "2_Hour": "2H",
-        "4_Hour": "4H",
-        "1_Day": "1D",
-        "1_Week": "1W",
-        "1_Month": "1M",
+        # "1m": "1min",
+        # "5m": "5min",
+        "15m": "15min",
+        "30m": "30min",
+        "1h": "1H",
+        "2h": "2H",
+        "4h": "4H",
+        "1D": "1D",
+        "3D": "3D",
+        "W": "1W",
+        "M": "1M",
     }
 
     bounds = np.round(np.linspace(-100, 100, 2001), 1)
@@ -160,7 +161,7 @@ class FrontEnd:
                         {"label": timeframe, "value": timeframe}
                         for timeframe in FrontEnd.timeframe_map
                     ],
-                    value="1_Day",
+                    value="1D",
                 ),
             ],
             style={"width": "10%", "margin-bottom": "10px"},
@@ -210,8 +211,8 @@ class FrontEnd:
         return html.Div(
             [
                 html.P("What is your overall confidence in your answers?"),
-                html.P("0: not at all confident"),
-                html.P("10: extremely confident"),
+                html.P("(0: not at all confident, 10: extremely confident)"),
+                # html.P("10: extremely confident"),
                 dcc.Slider(
                     id="confidence-slider",
                     min=0,
