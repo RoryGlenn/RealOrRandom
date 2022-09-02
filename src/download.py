@@ -27,7 +27,7 @@ class Download:
                     with open(download_path + "/" + file, "wb") as file:
                         for chunk in response.iter_content(chunk_size=256):
                             file.write(chunk)
-                    print(f"File {file} downloaded succesfully")
+                    print(f"File {file.name.split('/')[1]} downloaded succesfully")
                 else:
                     print(
                         f"Error: status code: {response.status_code} can't download file {file}"

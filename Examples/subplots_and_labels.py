@@ -2,7 +2,6 @@ import pandas as pd
 import plotly.io as pio
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from constants.constants import *
 
 pio.renderers.default = "browser"
 
@@ -22,11 +21,11 @@ def get_candlestick_plot(
 
     fig.add_trace(
         go.Candlestick(
-            x=df["date"],
-            open=df["open"],
-            high=df["high"],
-            low=df["low"],
-            close=df["close"],
+            x=df["Date"],
+            open=df["Open"],
+            high=df["High"],
+            low=df["Low"],
+            close=df["Close"],
             name="Candlestick chart",
         ),
         row=1,
@@ -34,31 +33,31 @@ def get_candlestick_plot(
     )
 
     fig.add_trace(
-        go.Line(x=df["date"], y=df[f"{ma1}_ma"], name=f"{ma1} SMA"),
+        go.Line(x=df["Date"], y=df[f"{ma1}_ma"], name=f"{ma1} SMA"),
         row=1,
         col=1,
     )
 
     fig.add_trace(
-        go.Line(x=df["date"], y=df[f"{ma2}_ma"], name=f"{ma2} SMA"),
+        go.Line(x=df["Date"], y=df[f"{ma2}_ma"], name=f"{ma2} SMA"),
         row=1,
         col=1,
     )
 
     fig.add_trace(
-        go.Line(x=df["date"], y=df[f"{ma3}_ma"], name=f"{ma3} SMA"),
+        go.Line(x=df["Date"], y=df[f"{ma3}_ma"], name=f"{ma3} SMA"),
         row=1,
         col=1,
     )
 
     fig.add_trace(
-        go.Line(x=df["date"], y=df[f"{ma4}_ma"], name=f"{ma4} SMA"),
+        go.Line(x=df["Date"], y=df[f"{ma4}_ma"], name=f"{ma4} SMA"),
         row=1,
         col=1,
     )
 
     fig.add_trace(
-        go.Bar(x=df["date"], y=df["Volume BTC"], name="Volume BTC"),
+        go.Bar(x=df["Date"], y=df["Volume"], name="Volume"),
         row=2,
         col=1,
     )
@@ -68,7 +67,7 @@ def get_candlestick_plot(
     fig["layout"]["yaxis2"]["title"] = "Volume"
 
     fig.update_xaxes(
-        rangebreaks=[{"bounds": ["sat", "mon"]}],
+        # rangebreaks=[{"bounds": ["sat", "mon"]}],
         rangeslider_visible=False,
     )
 
@@ -76,19 +75,21 @@ def get_candlestick_plot(
 
 
 if __name__ == "__main__":
+    BTC = ("gemini_BTCUSD_2021_1min.csv",)
+
     df = pd.read_csv(
-        BINANCE_BTCUSDT_DAY,
-        usecols=["date", "symbol", "open", "high", "low", "close", "Volume BTC"],
+        "data\\gemini_ZECUSD_2020_1min.csv",
+        usecols=["Date", "Symbol", "Open", "High", "Low", "Close", "Volume"],
         skiprows=1,
     )
 
-    df["10_ma"] = df["close"].rolling(10).mean()
-    df["20_ma"] = df["close"].rolling(20).mean()
-    df["50_ma"] = df["close"].rolling(50).mean()
-    df["100_ma"] = df["close"].rolling(100).mean()
+    df["10_ma"] = df["Close"].rolling(10).mean()
+    df["20_ma"] = df["Close"].rolling(20).mean()
+    df["50_ma"] = df["Close"].rolling(50).mean()
+    df["100_ma"] = df["Close"].rolling(100).mean()
 
     # reverse the data
     df = df[::-1]
 
-    fig = get_candlestick_plot(df[-120:], 10, 20, 50, 100, BINANCE_BTCUSDT_DAY)
+    fig = get_candlestick_plot(df[-120:], 10, 20, 50, 100, BTC)
     fig.show()

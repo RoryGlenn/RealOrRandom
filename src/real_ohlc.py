@@ -7,7 +7,9 @@ from constants.constants import MINUTES_IN_1DAY, HOURS_IN_1DAY, DATA_PATH
 
 
 class RealOHLC:
-    def __init__(self, data_choice: str, num_days: int) -> None:
+    def __init__(
+        self, data_choice: str, num_days: int, data_files: list[str] = []
+    ) -> None:
         self.total_days = num_days
         self.__data_choice = data_choice
         self.__agg_dict = {
@@ -18,6 +20,7 @@ class RealOHLC:
         }
         self.__df = None
         self.resampled_data = {}
+        self.data_files = data_files
 
     @property
     def df(self) -> pd.DataFrame:
@@ -45,14 +48,17 @@ class RealOHLC:
         date_ranges = {}
 
         for file in filenames:
-            df = pd.read_csv(DATA_PATH + "/" + file, skiprows=1)
-            dt = datetime.strptime(
-                df.loc[len(df) - 1, "Date"], "%Y-%m-%d %H:%M:%S"
-            ) + timedelta(days=90)
-            date_ranges[file] = {
-                "start_date": dt.strftime("%Y-%m-%d %H:%M:%S"),
-                "end_date": df.loc[0, "Date"],
-            }
+            # protects loop against incorrectly placed files in the data folder
+            if file in self.data_files:
+                df = pd.read_csv(DATA_PATH + "/" + file, skiprows=1)
+
+                dt = datetime.strptime(
+                    df.loc[len(df) - 1, "Date"], "%Y-%m-%d %H:%M:%S"
+                ) + timedelta(days=90)
+                date_ranges[file] = {
+                    "start_date": dt.strftime("%Y-%m-%d %H:%M:%S"),
+                    "end_date": df.loc[0, "Date"],
+                }
         return date_ranges
 
     def get_start_end_date_strs(

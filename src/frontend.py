@@ -154,7 +154,7 @@ class FrontEnd:
     def get_timeframe_dropdown() -> html.Div:
         return html.Div(
             [
-                html.P("Timeframe"),
+                # html.P("Timeframe"),
                 dcc.Dropdown(
                     id="timeframe-dropdown",
                     options=[
