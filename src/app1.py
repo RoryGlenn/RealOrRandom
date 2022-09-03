@@ -1,6 +1,6 @@
+from time import sleep
 from typing import Tuple
 from pprint import pprint
-from time import sleep
 
 import numpy as np
 import pandas as pd
@@ -8,10 +8,11 @@ from dash import Dash
 from faker import Faker
 import plotly.graph_objects as go
 
-from dash import Dash, Input, Output, State, html, dcc, ctx
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
+from dash import Dash, Input, Output, State, html, dcc, ctx
 
+import cufflinks as cf
 from dates import Dates
 from download import Download
 from frontend import FrontEnd
@@ -24,18 +25,18 @@ from constants.constants import (
     SECONDS_IN_1DAY,
     DATA_FILENAMES,
 )
-import cufflinks as cf
 
 user_answers = {}
 results = {}
-graph_id = 0
-total_graphs = 1
+current_graph_id = 0
+TOTAL_GRAPHS = 1
 
-graph_ids = [str(i).zfill(2) for i in range(20)]
+GRAPH_IDS = [str(i).zfill(2) for i in range(20)]
+TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "3D", "W", "M"]
 
-external_stylesheets = "https://codepen.io/chriddyp/pen/bWLwgP.css"
+
+# external_stylesheets = "https://codepen.io/chriddyp/pen/bWLwgP.css"
 # app = Dash(__name__, external_stylesheets=[external_stylesheets])
-# app.layout = FrontEnd.get_app_layout()
 
 # Initialize app
 app = Dash(
@@ -47,11 +48,8 @@ app = Dash(
 app.title = "RealorRandom"
 server = app.server
 
-TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "3D", "W", "M"]
-
 
 # App layout
-# Once page is loaded, every callback is triggered
 app.layout = html.Div(
     id="root",
     children=[
@@ -70,7 +68,35 @@ app.layout = html.Div(
                 html.H4(children="Real or Random"),
                 html.P(
                     id="description",
-                    children="Enter instructions here...",
+                    children=[
+                        "Directions:",
+                        html.P(
+                            id="directions",
+                            children=[
+                                html.Div(
+                                    [
+                                        html.P(),
+                                        html.P(
+                                            "You are given a candle stick chart to analyze and make a future prediction with."
+                                        ),
+                                        html.P(
+                                            "You are able to switch between any timeframe as much as you would like."
+                                        ),
+                                        html.P(
+                                            "You are able to use the straight line drawing tool and the open freeform drawing tool as much as you would like."
+                                        ),
+                                        html.P(
+                                            "After your analysis is complete you must answer all questions to the right."
+                                        ),
+                                        html.P(
+                                            "You must complete the previous step before moving onto the next graph."
+                                        ),
+                                    ],
+                                    style={"margin-left": "30px"},
+                                )
+                            ],
+                        ),
+                    ],
                 ),
             ],
         ),
@@ -170,10 +196,6 @@ app.layout = html.Div(
                         html.Div(
                             id="maingraph-container",
                             children=[
-                                # html.P(
-                                #     "Graph ID: 00",
-                                #     id="maingraph-title",
-                                # ),
                                 dcc.Graph(
                                     id="main-graph",
                                     figure=go.Figure(
@@ -202,14 +224,14 @@ app.layout = html.Div(
                                             "eraseshape",
                                         ],
                                     },
-                                    style={"width": "120vh", "height": "55vh"},
+                                    style={"width": "120vh", "height": "75vh"},
                                 ),
                             ],
                         ),
                         ############################################
                     ],
                 ),
-                # chart to the right of the screen
+                # Questions to the right of the screen
                 html.Div(
                     id="question-container",
                     children=[
@@ -415,16 +437,16 @@ app.layout = html.Div(
                                                         },
                                                         min=-100,
                                                         max=100,
-                                                        value=0,  # default value initially chosen
-                                                        dots=True,  # True, False - insert dots, only when step>1
-                                                        disabled=False,  # True,False - disable handle
-                                                        updatemode="mouseup",  # 'mouseup', 'drag' - update value method
-                                                        included=True,  # True, False - highlight handle
-                                                        vertical=False,  # True, False - vertical, horizontal slider
-                                                        verticalHeight=900,  # hight of slider (pixels) when vertical=True
+                                                        value=0,
+                                                        dots=True,
+                                                        disabled=False,
+                                                        updatemode="mouseup",
+                                                        included=True,
+                                                        vertical=False,
+                                                        verticalHeight=900,
                                                         className="None",
                                                         tooltip={
-                                                            "always_visible": False,  # show current slider values
+                                                            "always_visible": False,
                                                             "placement": "bottom",
                                                         },
                                                     ),
@@ -500,7 +522,7 @@ app.layout = html.Div(
                                                 value="",
                                             ),
                                         ],
-                                        style={"width": "25%", "margin-bottom": "30px"},
+                                        style={"width": "75%", "margin-bottom": "30px"},
                                     ),
                                     # Candle stick pattern
                                     html.Div(
@@ -555,7 +577,7 @@ app.layout = html.Div(
                                                 id="pattern-dropdown",
                                             ),
                                         ],
-                                        style={"width": "25%", "margin-bottom": "30px"},
+                                        style={"width": "75%", "margin-bottom": "30px"},
                                     ),
                                     # Confidence slider
                                     html.Div(
@@ -578,7 +600,7 @@ app.layout = html.Div(
                                                 },
                                             ),
                                         ],
-                                        style={"width": "25%", "margin-bottom": "30px"},
+                                        style={"width": "75%", "margin-bottom": "30px"},
                                     ),
                                     # Submit button
                                     html.Div(
@@ -589,6 +611,9 @@ app.layout = html.Div(
                                                         id="submit-button",
                                                         children="Submit",
                                                         type="button",
+                                                        style={
+                                                            "color": "rgb(44,254,193)"
+                                                        },
                                                     )
                                                 ),
                                                 id="submit-provider",
@@ -596,20 +621,18 @@ app.layout = html.Div(
                                             ),
                                             html.Div(id="submit_output-provider"),
                                         ],
-                                        style={"width": "25%", "margin-bottom": "30px"},
+                                        style={"width": "25%", "margin-bottom": "10px"},
                                     ),
                                 ],
                                 style={
                                     "margin-left": "5%",
-                                    "margin-right": "5%",
-                                    "margin-top": "20px",
-                                    # "margin-bottom": "200px",
                                 },
                             ),
                         ),
                     ],
                 ),
             ],
+            style={"width": "170vh", "height": "85vh"},
         ),
     ],
 )
@@ -620,13 +643,12 @@ def update_map_title(id: int):
     return "Graph ID: {0}".format(id)
 
 
-# ONLY the timeframe button will change the graph!!!
+# connect this call back with the new buttons placed inside the graph
 @app.callback(
     Output("main-graph", "figure"),
     [Input(i, "n_clicks") for i in TIMEFRAMES],
 )
 def display_selected_timeframe(*args) -> go.Figure:
-    # print(args)
     btn_value = "1D" if not any(args) else ctx.triggered_id
 
     df = FrontEnd.half_dataframes[FrontEnd.timeframe_map[btn_value]]
@@ -648,6 +670,43 @@ def display_selected_timeframe(*args) -> go.Figure:
             "font": {"size": 14, "color": "#7fafdf"},
         },
     )
+
+    # fig.update_yaxes(
+    #     showspikes=True,
+    #     spikemode="across",
+    #     spikesnap="cursor",
+    #     spikethickness=0.5,
+    # )
+
+    # fig.update_xaxes(
+    #     showspikes=True,
+    #     spikemode="across",
+    #     spikesnap="cursor",
+    #     spikethickness=0.5,
+
+    # )
+
+    # fig.update_layout(hoverdistance=0)
+    # fig.update_traces(xaxis="x")
+    # fig.update_traces(yaxis="y")
+
+    buttons = [
+        dict(label=i, method="update", args=[{"visible": [False]}]) for i in TIMEFRAMES
+    ]
+
+    fig.update_layout(
+        updatemenus=[
+            dict(
+                type="buttons",
+                direction="right",
+                active=0,
+                x=0.57,
+                y=1.2,
+                buttons=list(buttons),
+            )
+        ]
+    ),
+
     return fig
 
 
@@ -816,7 +875,7 @@ def calculate_results() -> None:
     from pprint import pprint
 
     global user_answers
-    global graph_id
+    global current_graph_id
     global results
 
     # need to iterate over all graphs!!!!
@@ -860,7 +919,7 @@ def main() -> None:
 
     print("Starting test...")
 
-    for i in range(total_graphs):
+    for i in range(TOTAL_GRAPHS):
         FrontEnd.dataframes, FrontEnd.half_dataframes, answers["graph_" + str(i)] = (
             real_case(num_days, fake)
             if np.random.choice([False])

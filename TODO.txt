@@ -3,12 +3,11 @@ TODO:
     Loading bar
     Email results
     Save and continue button
-    Turn timeframe dropdown into trading view buttons instead
     Prevent the user from clicking the submit button until everything is filled out
-
     Optimize the speed of the Real case
     After the submit button is pressed, show the results page.
     After the first 10 tests are taken, allow user to use RSI,MACD, and other indicators for the remaining tests. Compare the results
     Add X, Y crosshair to graph
     add colors to lines when drawing
     save the drawings when switching between timeframes
+    integrate buttons into figure
