@@ -33,7 +33,6 @@ total_graphs = 1
 
 graph_ids = [str(i).zfill(2) for i in range(20)]
 
-
 external_stylesheets = "https://codepen.io/chriddyp/pen/bWLwgP.css"
 # app = Dash(__name__, external_stylesheets=[external_stylesheets])
 # app.layout = FrontEnd.get_app_layout()
@@ -45,75 +44,10 @@ app = Dash(
         {"name": "viewport", "content": "width=device-width, initial-scale=1.0"}
     ],
 )
-app.title = "US Opioid Epidemic"
+app.title = "RealorRandom"
 server = app.server
 
-# Load data
-import pathlib
-import os
-
-APP_PATH = str(pathlib.Path(__file__).parent.resolve())
-
-df_lat_lon = pd.read_csv(os.path.join("", os.path.join("data", "lat_lon_counties.csv")))
-df_lat_lon["FIPS "] = df_lat_lon["FIPS "].apply(lambda x: str(x).zfill(5))
-
-df_full_data = pd.read_csv(
-    os.path.join("", os.path.join("data", "age_adjusted_death_rate_no_quotes.csv"))
-)
-df_full_data["County Code"] = df_full_data["County Code"].apply(
-    lambda x: str(x).zfill(5)
-)
-df_full_data["County"] = (
-    df_full_data["Unnamed: 0"] + ", " + df_full_data.County.map(str)
-)
-
-YEARS = [2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015]
-
 TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "3D", "W", "M"]
-
-
-BINS = [
-    "0-2",
-    "2.1-4",
-    "4.1-6",
-    "6.1-8",
-    "8.1-10",
-    "10.1-12",
-    "12.1-14",
-    "14.1-16",
-    "16.1-18",
-    "18.1-20",
-    "20.1-22",
-    "22.1-24",
-    "24.1-26",
-    "26.1-28",
-    "28.1-30",
-    ">30",
-]
-
-DEFAULT_COLORSCALE = [
-    "#f2fffb",
-    "#bbffeb",
-    "#98ffe0",
-    "#79ffd6",
-    "#6df0c8",
-    "#69e7c0",
-    "#59dab2",
-    "#45d0a5",
-    "#31c194",
-    "#2bb489",
-    "#25a27b",
-    "#1e906d",
-    "#188463",
-    "#157658",
-    "#11684d",
-    "#10523e",
-]
-
-DEFAULT_OPACITY = 0.8
-
-mapbox_access_token = "pk.eyJ1IjoicGxvdGx5bWFwYm94IiwiYSI6ImNrOWJqb2F4djBnMjEzbG50amg0dnJieG4ifQ.Zme1-Uzoi75IaFbieBDl3A"
-mapbox_style = "mapbox://styles/plotlymapbox/cjvprkf3t1kns1cqjxuxmwixz"
 
 
 # App layout
@@ -136,10 +70,7 @@ app.layout = html.Div(
                 html.H4(children="Real or Random"),
                 html.P(
                     id="description",
-                    children="† Deaths are classified using the International Classification of Diseases, \
-                    Tenth Revision (ICD–10). Drug-poisoning deaths are defined as having ICD–10 underlying \
-                    cause-of-death codes X40–X44 (unintentional), X60–X64 (suicide), X85 (homicide), or Y10–Y14 \
-                    (undetermined intent).",
+                    children="Enter instructions here...",
                 ),
             ],
         ),
@@ -156,21 +87,8 @@ app.layout = html.Div(
                                     id="timeframe-text",
                                     children="Select a timeframe:",
                                 ),
-                                # dcc.Slider(
-                                #     id="timeframe-button",
-                                #     min=min(YEARS),
-                                #     max=max(YEARS),
-                                #     value=min(YEARS),
-                                #     marks={
-                                #         str(year): {
-                                #             "label": str(year),
-                                #             "style": {"color": "#7fafdf"},
-                                #         }
-                                #         for year in YEARS
-                                #     },
-                                # ),
                                 html.Div(
-                                    id="timeframebuttons-container",
+                                    id="timeframebutton-container",
                                     style={"color": "#7fafdf"},
                                     children=[
                                         html.Button(
@@ -252,10 +170,10 @@ app.layout = html.Div(
                         html.Div(
                             id="maingraph-container",
                             children=[
-                                html.P(
-                                    "Graph ID: 00",
-                                    id="maingraph-title",
-                                ),
+                                # html.P(
+                                #     "Graph ID: 00",
+                                #     id="maingraph-title",
+                                # ),
                                 dcc.Graph(
                                     id="main-graph",
                                     figure=go.Figure(
@@ -263,6 +181,10 @@ app.layout = html.Div(
                                         layout={
                                             "plot_bgcolor": "rgb(37,46,63)",
                                             "paper_bgcolor": "rgb(37,46,63)",
+                                            "title": "Graph 00",
+                                            "xaxis_title": "Time",
+                                            "yaxis_title": "Price",
+                                            "font": dict(size=14),
                                         },
                                     ),
                                     config={
@@ -289,41 +211,400 @@ app.layout = html.Div(
                 ),
                 # chart to the right of the screen
                 html.Div(
-                    id="graph-container",
+                    id="question-container",
                     children=[
-                        html.P(id="chart-selector", children="Select chart:"),
-                        dcc.Dropdown(
-                            options=[
-                                {
-                                    "label": "Histogram of total number of deaths (single year)",
-                                    "value": "show_absolute_deaths_single_year",
-                                },
-                                {
-                                    "label": "Histogram of total number of deaths (1999-2016)",
-                                    "value": "absolute_deaths_all_time",
-                                },
-                                {
-                                    "label": "Age-adjusted death rate (single year)",
-                                    "value": "show_death_rate_single_year",
-                                },
-                                {
-                                    "label": "Trends in age-adjusted death rate (1999-2016)",
-                                    "value": "death_rate_all_time",
-                                },
-                            ],
-                            value="show_death_rate_single_year",
-                            id="chart-dropdown",
+                        html.P(
+                            id="question-header",
+                            children="Answer the following questions:",
                         ),
-                        dcc.Graph(
-                            id="selected-timeframe2",
-                            figure=dict(
-                                data=[dict(x=0, y=0)],
-                                layout=dict(
-                                    paper_bgcolor="#F4F4F8",
-                                    plot_bgcolor="#F4F4F8",
-                                    autofill=True,
-                                    margin=dict(t=75, r=50, b=100, l=50),
-                                ),
+                        html.Div(
+                            dbc.Row(
+                                [
+                                    # 1 day
+                                    html.Div(
+                                        [
+                                            html.P(
+                                                "What will the price be 1 day after the last candle bars close price?"
+                                            ),
+                                            html.Div(
+                                                [
+                                                    dcc.Slider(
+                                                        id="1daybounds-slider",
+                                                        step=0.5,
+                                                        marks={
+                                                            -100: {
+                                                                "label": "-100%",
+                                                                "style": {
+                                                                    "color": "#f50"
+                                                                },
+                                                            },
+                                                            0: {
+                                                                "label": "0%",
+                                                                "style": {
+                                                                    "color": "#FFFFFF"
+                                                                },
+                                                            },
+                                                            100: {
+                                                                "label": "+100%",
+                                                                "style": {
+                                                                    "color": "#77b0b1"
+                                                                },
+                                                            },
+                                                        },
+                                                        min=-100,
+                                                        max=100,
+                                                        value=0,  # default value initially chosen
+                                                        dots=True,  # True, False - insert dots, only when step>1
+                                                        disabled=False,  # True,False - disable handle
+                                                        updatemode="mouseup",  # 'mouseup', 'drag' - update value method
+                                                        included=True,  # True, False - highlight handle
+                                                        vertical=False,  # True, False - vertical, horizontal slider
+                                                        verticalHeight=900,  # hight of slider (pixels) when vertical=True
+                                                        className="None",
+                                                        tooltip={
+                                                            "always_visible": False,  # show current slider values
+                                                            "placement": "bottom",
+                                                        },
+                                                    ),
+                                                ],
+                                                style={
+                                                    "width": "50%",
+                                                    "margin-bottom": "30px",
+                                                },
+                                            ),
+                                        ],
+                                    ),
+                                    # 5 day
+                                    html.Div(
+                                        [
+                                            html.P(
+                                                "What will the price be 5 days after the last candle bars close price?"
+                                            ),
+                                            html.Div(
+                                                [
+                                                    dcc.Slider(
+                                                        id="5daybounds-slider",
+                                                        step=0.5,
+                                                        marks={
+                                                            -100: {
+                                                                "label": "-100%",
+                                                                "style": {
+                                                                    "color": "#f50"
+                                                                },
+                                                            },
+                                                            0: {
+                                                                "label": "0%",
+                                                                "style": {
+                                                                    "color": "#FFFFFF"
+                                                                },
+                                                            },
+                                                            100: {
+                                                                "label": "+100%",
+                                                                "style": {
+                                                                    "color": "#77b0b1"
+                                                                },
+                                                            },
+                                                        },
+                                                        min=-100,
+                                                        max=100,
+                                                        value=0,  # default value initially chosen
+                                                        dots=True,  # True, False - insert dots, only when step>1
+                                                        disabled=False,  # True,False - disable handle
+                                                        updatemode="mouseup",  # 'mouseup', 'drag' - update value method
+                                                        included=True,  # True, False - highlight handle
+                                                        vertical=False,  # True, False - vertical, horizontal slider
+                                                        verticalHeight=900,  # hight of slider (pixels) when vertical=True
+                                                        className="None",
+                                                        tooltip={
+                                                            "always_visible": False,  # show current slider values
+                                                            "placement": "bottom",
+                                                        },
+                                                    ),
+                                                ],
+                                                style={
+                                                    "width": "50%",
+                                                    "margin-bottom": "30px",
+                                                },
+                                            ),
+                                        ],
+                                    ),
+                                    # 10 day
+                                    html.Div(
+                                        [
+                                            html.P(
+                                                "What will the price be 10 days after the last candle bars close price?"
+                                            ),
+                                            html.Div(
+                                                [
+                                                    dcc.Slider(
+                                                        id="10daybounds-slider",
+                                                        step=0.5,
+                                                        marks={
+                                                            -100: {
+                                                                "label": "-100%",
+                                                                "style": {
+                                                                    "color": "#f50"
+                                                                },
+                                                            },
+                                                            0: {
+                                                                "label": "0%",
+                                                                "style": {
+                                                                    "color": "#FFFFFF"
+                                                                },
+                                                            },
+                                                            100: {
+                                                                "label": "+100%",
+                                                                "style": {
+                                                                    "color": "#77b0b1"
+                                                                },
+                                                            },
+                                                        },
+                                                        min=-100,
+                                                        max=100,
+                                                        value=0,  # default value initially chosen
+                                                        dots=True,  # True, False - insert dots, only when step>1
+                                                        disabled=False,  # True,False - disable handle
+                                                        updatemode="mouseup",  # 'mouseup', 'drag' - update value method
+                                                        included=True,  # True, False - highlight handle
+                                                        vertical=False,  # True, False - vertical, horizontal slider
+                                                        verticalHeight=900,  # hight of slider (pixels) when vertical=True
+                                                        className="None",
+                                                        tooltip={
+                                                            "always_visible": False,  # show current slider values
+                                                            "placement": "bottom",
+                                                        },
+                                                    ),
+                                                ],
+                                                style={
+                                                    "width": "50%",
+                                                    "margin-bottom": "30px",
+                                                },
+                                            ),
+                                        ],
+                                    ),
+                                    # 30 day
+                                    html.Div(
+                                        [
+                                            html.P(
+                                                "What will the price be 30 days after the last candle bars close price?"
+                                            ),
+                                            html.Div(
+                                                [
+                                                    dcc.Slider(
+                                                        id="30daybounds-slider",
+                                                        step=0.5,
+                                                        marks={
+                                                            -100: {
+                                                                "label": "-100%",
+                                                                "style": {
+                                                                    "color": "#f50"
+                                                                },
+                                                            },
+                                                            0: {
+                                                                "label": "0%",
+                                                                "style": {
+                                                                    "color": "#FFFFFF"
+                                                                },
+                                                            },
+                                                            100: {
+                                                                "label": "+100%",
+                                                                "style": {
+                                                                    "color": "#77b0b1"
+                                                                },
+                                                            },
+                                                        },
+                                                        min=-100,
+                                                        max=100,
+                                                        value=0,  # default value initially chosen
+                                                        dots=True,  # True, False - insert dots, only when step>1
+                                                        disabled=False,  # True,False - disable handle
+                                                        updatemode="mouseup",  # 'mouseup', 'drag' - update value method
+                                                        included=True,  # True, False - highlight handle
+                                                        vertical=False,  # True, False - vertical, horizontal slider
+                                                        verticalHeight=900,  # hight of slider (pixels) when vertical=True
+                                                        className="None",
+                                                        tooltip={
+                                                            "always_visible": False,  # show current slider values
+                                                            "placement": "bottom",
+                                                        },
+                                                    ),
+                                                ],
+                                                style={
+                                                    "width": "50%",
+                                                    "margin-bottom": "30px",
+                                                },
+                                            ),
+                                        ],
+                                    ),
+                                    # 60 day
+                                    html.Div(
+                                        [
+                                            html.P(
+                                                "What will the price be 60 days after the last candle bars close price?"
+                                            ),
+                                            html.Div(
+                                                [
+                                                    dcc.Slider(
+                                                        id="60daybounds-slider",
+                                                        step=0.5,
+                                                        marks={
+                                                            -100: {
+                                                                "label": "-100%",
+                                                                "style": {
+                                                                    "color": "#f50"
+                                                                },
+                                                            },
+                                                            0: {
+                                                                "label": "0%",
+                                                                "style": {
+                                                                    "color": "#FFFFFF"
+                                                                },
+                                                            },
+                                                            100: {
+                                                                "label": "+100%",
+                                                                "style": {
+                                                                    "color": "#77b0b1"
+                                                                },
+                                                            },
+                                                        },
+                                                        min=-100,
+                                                        max=100,
+                                                        value=0,  # default value initially chosen
+                                                        dots=True,  # True, False - insert dots, only when step>1
+                                                        disabled=False,  # True,False - disable handle
+                                                        updatemode="mouseup",  # 'mouseup', 'drag' - update value method
+                                                        included=True,  # True, False - highlight handle
+                                                        vertical=False,  # True, False - vertical, horizontal slider
+                                                        verticalHeight=900,  # hight of slider (pixels) when vertical=True
+                                                        className="None",
+                                                        tooltip={
+                                                            "always_visible": False,  # show current slider values
+                                                            "placement": "bottom",
+                                                        },
+                                                    ),
+                                                ],
+                                                style={
+                                                    "width": "50%",
+                                                    "margin-bottom": "30px",
+                                                },
+                                            ),
+                                        ],
+                                    ),
+                                    # Real or Random
+                                    html.Div(
+                                        [
+                                            html.P("Is this graph real or random?"),
+                                            dcc.Dropdown(
+                                                id="realorrandom-dropdown",
+                                                options=["Real", "Random"],
+                                                value="",
+                                            ),
+                                        ],
+                                        style={"width": "25%", "margin-bottom": "30px"},
+                                    ),
+                                    # Candle stick pattern
+                                    html.Div(
+                                        [
+                                            html.P("What pattern do you see?"),
+                                            dcc.Dropdown(
+                                                options=[
+                                                    # Else...
+                                                    "No Pattern",
+                                                    "I Don't Know",
+                                                    # Bullish
+                                                    "Hammer",
+                                                    "Piercing Pattern",
+                                                    "Bullish Engulfing",
+                                                    "The Morning Star",
+                                                    "Three White Soldiers",
+                                                    "White Marubozu",
+                                                    "Three Inside Up",
+                                                    "Bullish Harami",
+                                                    "Tweezer Bottom",
+                                                    "Inverted Hammer",
+                                                    "Three Outside Up",
+                                                    "On-Neck Pattern",
+                                                    "Bullish Counterattack",
+                                                    # Bearish
+                                                    "Hanging man",
+                                                    "Dark cloud cover",
+                                                    "Bearish Engulfing",
+                                                    "The Evening Star",
+                                                    "Three Black Crows",
+                                                    "Black Marubozu",
+                                                    "Three Inside Down",
+                                                    "Bearish Harami",
+                                                    "Shooting Star",
+                                                    "Tweezer Top",
+                                                    "Three Outside Down",
+                                                    "Bearish Counterattack",
+                                                    # Continuation Candlestick Patterns
+                                                    "Doji",
+                                                    "Spinning Top",
+                                                    "Falling Three Methods",
+                                                    "Rising Three Methods",
+                                                    "Upside Tasuki Gap",
+                                                    "Downside Tasuki Gap",
+                                                    "Mat-Hold",
+                                                    "Rising Window",
+                                                    "Falling Window",
+                                                    "High Wave",
+                                                    # N/A
+                                                    "Other",
+                                                ],
+                                                id="pattern-dropdown",
+                                            ),
+                                        ],
+                                        style={"width": "25%", "margin-bottom": "30px"},
+                                    ),
+                                    # Confidence slider
+                                    html.Div(
+                                        [
+                                            html.P(
+                                                "What is your overall confidence in your answers?"
+                                            ),
+                                            html.P(
+                                                "(0: not at all confident, 10: extremely confident)"
+                                            ),
+                                            dcc.Slider(
+                                                id="confidence-slider",
+                                                min=0,
+                                                max=10,
+                                                step=1,
+                                                value=5,
+                                                tooltip={
+                                                    "placement": "bottom",
+                                                    "always_visible": False,
+                                                },
+                                            ),
+                                        ],
+                                        style={"width": "25%", "margin-bottom": "30px"},
+                                    ),
+                                    # Submit button
+                                    html.Div(
+                                        [
+                                            dcc.ConfirmDialogProvider(
+                                                html.Th(
+                                                    html.Button(
+                                                        id="submit-button",
+                                                        children="Submit",
+                                                        type="button",
+                                                    )
+                                                ),
+                                                id="submit-provider",
+                                                message="You will not be able to go back after submitting.\nAre you sure you want to continue?",
+                                            ),
+                                            html.Div(id="submit_output-provider"),
+                                        ],
+                                        style={"width": "25%", "margin-bottom": "30px"},
+                                    ),
+                                ],
+                                style={
+                                    "margin-left": "5%",
+                                    "margin-right": "5%",
+                                    "margin-top": "20px",
+                                    # "margin-bottom": "200px",
+                                },
                             ),
                         ),
                     ],
@@ -332,90 +613,6 @@ app.layout = html.Div(
         ),
     ],
 )
-
-
-#         dcc.Store(id="submit"),
-#         dbc.Row(
-#             [
-#                 # timeframe dropdown
-#                 dbc.Col(FrontEnd.get_timeframe_dropdown()),
-
-#             ]
-#         ),
-#         dbc.Row(),
-#         html.Hr(),
-#         html.Div(id="page-content"),
-#         # Bounds dropdown
-#         html.Div(
-#             dbc.Row(
-#                 [
-#                     # 1 day
-#                     FrontEnd.get_bounds_slider(
-#                         text="What will the price be 1 day after the last candle bars close price?",
-#                         id="1daybounds-slider",
-#                     ),
-#                 ]
-#             ),
-#         ),
-#         html.Div(
-#             dbc.Row(
-#                 [
-#                     # 5 days
-#                     FrontEnd.get_bounds_slider(
-#                         text="What will the price be 5 days after the last candle bars close price?",
-#                         id="5daybounds-slider",
-#                     ),
-#                 ]
-#             ),
-#         ),
-#         html.Div(
-#             dbc.Row(
-#                 [
-#                     # 10 days
-#                     FrontEnd.get_bounds_slider(
-#                         text="What will the price be 10 days after the last candle bars close price?",
-#                         id="10daybounds-slider",
-#                     ),
-#                 ]
-#             ),
-#         ),
-#         html.Div(
-#             dbc.Row(
-#                 [
-#                     # 30 days
-#                     FrontEnd.get_bounds_slider(
-#                         text="What will the price be 30 days after the last candle bars close price?",
-#                         id="30daybounds-slider",
-#                     ),
-#                 ]
-#             ),
-#         ),
-#         html.Div(
-#             dbc.Row(
-#                 [
-#                     # 60 days
-#                     FrontEnd.get_bounds_slider(
-#                         text="What will the price be 60 days after the last candle bars close price?",
-#                         id="60daybounds-slider",
-#                     ),
-#                 ],
-#             ),
-#         ),
-#         # Real or Random
-#         FrontEnd.get_real_or_random_dropdown(),
-#         # pattern
-#         FrontEnd.get_pattern_dropdown(),
-#         # confidence
-#         FrontEnd.get_confidence_slider(),
-#         FrontEnd.submit_button(),
-#     ],
-#     style={
-#         "margin-left": "5%",
-#         "margin-right": "5%",
-#         "margin-top": "20px",
-#         "margin-bottom": "200px",
-#     },
-# )
 
 
 # @app.callback(Output("maingraph-title", "children"), [Input("timeframe-button", "value")])
@@ -429,11 +626,12 @@ def update_map_title(id: int):
     [Input(i, "n_clicks") for i in TIMEFRAMES],
 )
 def display_selected_timeframe(*args) -> go.Figure:
+    # print(args)
     btn_value = "1D" if not any(args) else ctx.triggered_id
 
     df = FrontEnd.half_dataframes[FrontEnd.timeframe_map[btn_value]]
 
-    return go.Figure(
+    fig = go.Figure(
         data=go.Candlestick(
             x=df["Date"],
             open=df["Open"],
@@ -444,114 +642,67 @@ def display_selected_timeframe(*args) -> go.Figure:
         layout={
             "plot_bgcolor": "rgb(37,46,63)",
             "paper_bgcolor": "rgb(37,46,63)",
+            "title": "Graph 00",  # get the current graph id and add one ?
+            "xaxis_title": "Time",
+            "yaxis_title": "Price",
+            "font": {"size": 14, "color": "#7fafdf"},
         },
     )
-
-
-# @app.callback(
-#     Output("main-graph", "config"),
-#     Input("timeframe-button", "value"),
-# )
-# def update_config(timeframe_button: str) -> dict:
-#     print("update config")
-
-#     while FrontEnd.half_dataframes is None:
-#         print("sleeping till half dataframes")
-#         sleep(1)
-
-#     config = {
-#         "doubleClickDelay": 1000,
-#         "scrollZoom": True,
-#         "displayModeBar": True,
-#         "showTips": True,
-#         "displaylogo": True,
-#         "fillFrame": False,
-#         "autosizable": True,
-#         "modeBarButtonsToAdd": [
-#             "drawline",
-#             "drawopenpath",
-#             "drawclosedpath",
-#             "eraseshape",
-#         ],
-#     }
-#     return config
+    return fig
 
 
 #########################################################################################################################################################################
+
+
+# # add a click to the appropriate store.
 # @app.callback(
-#     Output("main-graph", "children"),
-#     Input("timeframe-button", "value"),
+#     Output("submit-button", "value"),
+#     Input("submit-button", "n_clicks"),
+#     State("1daybounds-slider", "value"),
+#     State("5daybounds-slider", "value"),
+#     State("10daybounds-slider", "value"),
+#     State("30daybounds-slider", "value"),
+#     State("60daybounds-slider", "value"),
+#     State("realorrandom-dropdown", "value"),
+#     State("pattern-dropdown", "value"),
+#     State("confidence-slider", "value"),
 # )
-# def update_ohlc_chart(user_timeframe: str):
-#     """A callback function that updates the graph every
-#     time a new timeframe is selected by the user"""
+# def on_submit(
+#     num_clicks: int,
+#     daybounds1: list[float],
+#     daybounds5: list[float],
+#     daybounds10: list[float],
+#     daybounds30: list[float],
+#     daybounds60: list[float],
+#     real_or_random: str,
+#     pattern: str,
+#     confidence: int,
+# ):
+#     global user_answers
+#     global graph_id
+#     global total_graphs
 
-#     if user_timeframe is None:
-#         user_timeframe = "1_Day"
+#     if num_clicks is None:
+#         # prevent the None callbacks is important with the store component.
+#         # you don't want to update the store for nothing.
+#         raise PreventUpdate
 
-#     df = FrontEnd.half_dataframes[FrontEnd.timeframe_map[user_timeframe]]
+#     user_answers[graph_id] = {
+#         "1daybounds-slider": daybounds1,
+#         "5daybounds-slider": daybounds5,
+#         "10daybounds-slider": daybounds10,
+#         "30daybounds-slider": daybounds30,
+#         "60daybounds-slider": daybounds60,
+#         "realorrandom-dropdown": real_or_random,
+#         "pattern-dropdown": pattern,
+#         "confidence-slider": confidence,
+#     }
 
-#     fig = go.Figure(
-#         data=go.Candlestick(
-#             x=df["Date"],
-#             open=df["Open"],
-#             high=df["High"],
-#             low=df["Low"],
-#             close=df["Close"],
-#         )
-#     )
-#     return FrontEnd.get_graph_layout(fig)
+#     # if len(user_answers) == total_graphs:
+#     #     calculate_results()
 
-
-# add a click to the appropriate store.
-@app.callback(
-    Output("submit-button", "value"),
-    Input("submit-button", "n_clicks"),
-    State("1daybounds-slider", "value"),
-    State("5daybounds-slider", "value"),
-    State("10daybounds-slider", "value"),
-    State("30daybounds-slider", "value"),
-    State("60daybounds-slider", "value"),
-    State("realorrandom-dropdown", "value"),
-    State("pattern-dropdown", "value"),
-    State("confidence-slider", "value"),
-)
-def on_submit(
-    num_clicks: int,
-    daybounds1: list[float],
-    daybounds5: list[float],
-    daybounds10: list[float],
-    daybounds30: list[float],
-    daybounds60: list[float],
-    real_or_random: str,
-    pattern: str,
-    confidence: int,
-):
-    global user_answers
-    global graph_id
-    global total_graphs
-
-    if num_clicks is None:
-        # prevent the None callbacks is important with the store component.
-        # you don't want to update the store for nothing.
-        raise PreventUpdate
-
-    user_answers[graph_id] = {
-        "1daybounds-slider": daybounds1,
-        "5daybounds-slider": daybounds5,
-        "10daybounds-slider": daybounds10,
-        "30daybounds-slider": daybounds30,
-        "60daybounds-slider": daybounds60,
-        "realorrandom-dropdown": real_or_random,
-        "pattern-dropdown": pattern,
-        "confidence-slider": confidence,
-    }
-
-    # if len(user_answers) == total_graphs:
-    #     calculate_results()
-
-    graph_id += 1
-    return user_answers
+#     graph_id += 1
+#     return user_answers
 
 
 def create_half_dataframes(
@@ -694,10 +845,6 @@ def calculate_results() -> None:
         ]
 
 
-# 8/31/22
-# After the submit button is pressed, show the results page.
-
-
 def main() -> None:
     Faker.seed(np.random.randint(0, 10_000))
     fake = Faker()
@@ -721,8 +868,6 @@ def main() -> None:
         )
         reset_indices(FrontEnd.dataframes, FrontEnd.half_dataframes)
 
-    # how do we pass the dataframes to the graph to be displayed???????????
-
     # calculate_results()
     pprint(answers)
     print()
@@ -730,4 +875,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-    app.run_server(debug=False, port=8080)
+    app.run_server(debug=True, port=8080)

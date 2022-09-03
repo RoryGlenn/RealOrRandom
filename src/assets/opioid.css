@@ -330,7 +330,7 @@ p {
     margin-bottom: 2rem;
 }
 
-#slider-text, #chart-selector {
+#slider-text, #question-header {
     margin-bottom: 2rem !important;
     font-size: 2rem;
 }
@@ -718,7 +718,7 @@ hr {
 /* Graph
 –––––––––––––––––––––––––––––––––––––––––––––––––– */
 
-#graph-container {
+#question-container {
     background-color: #252e3f;
     padding: 5rem;
     margin: 0;
@@ -730,7 +730,7 @@ hr {
         text-align: center;
     }
 
-    #graph-container {
+    #question-container {
         margin-top: 5rem;
     }
 
@@ -750,7 +750,7 @@ hr {
         font-size: 1.5rem;
     }
 
-    #graph-container {
+    #question-container {
         flex: 4 40%;
         margin: 0;
         display: flex;
@@ -765,7 +765,7 @@ hr {
 }
 
 @media (max-width: 550px) {
-    #graph-container {
+    #question-container {
         padding: 2.5rem;
     }
 
