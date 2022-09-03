@@ -8,7 +8,7 @@ from dash import Dash
 from faker import Faker
 import plotly.graph_objects as go
 
-from dash import Dash, Input, Output, State, html, dcc
+from dash import Dash, Input, Output, State, html, dcc, ctx
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 
@@ -70,6 +70,7 @@ df_full_data["County"] = (
 YEARS = [2003, 2004, 2005, 2006, 2007, 2008, 2009, 2010, 2011, 2012, 2013, 2014, 2015]
 
 TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "3D", "W", "M"]
+
 
 BINS = [
     "0-2",
@@ -155,18 +156,94 @@ app.layout = html.Div(
                                     id="timeframe-text",
                                     children="Select a timeframe:",
                                 ),
-                                dcc.Slider(
-                                    id="timeframe-button",
-                                    min=min(YEARS),
-                                    max=max(YEARS),
-                                    value=min(YEARS),
-                                    marks={
-                                        str(year): {
-                                            "label": str(year),
-                                            "style": {"color": "#7fafdf"},
-                                        }
-                                        for year in YEARS
-                                    },
+                                # dcc.Slider(
+                                #     id="timeframe-button",
+                                #     min=min(YEARS),
+                                #     max=max(YEARS),
+                                #     value=min(YEARS),
+                                #     marks={
+                                #         str(year): {
+                                #             "label": str(year),
+                                #             "style": {"color": "#7fafdf"},
+                                #         }
+                                #         for year in YEARS
+                                #     },
+                                # ),
+                                html.Div(
+                                    id="timeframebuttons-container",
+                                    style={"color": "#7fafdf"},
+                                    children=[
+                                        html.Button(
+                                            "1m",
+                                            id="1m",
+                                            value="1m",
+                                            n_clicks=0,
+                                            style={"color": "#7fafdf"},
+                                        ),
+                                        html.Button(
+                                            "5m",
+                                            id="5m",
+                                            value="5m",
+                                            n_clicks=0,
+                                            style={"color": "#7fafdf"},
+                                        ),
+                                        html.Button(
+                                            "15m",
+                                            id="15m",
+                                            value="15m",
+                                            n_clicks=0,
+                                            style={"color": "#7fafdf"},
+                                        ),
+                                        html.Button(
+                                            "30m",
+                                            id="30m",
+                                            value="30m",
+                                            n_clicks=0,
+                                            style={"color": "#7fafdf"},
+                                        ),
+                                        html.Button(
+                                            "1h",
+                                            id="1h",
+                                            value="1h",
+                                            n_clicks=0,
+                                            style={"color": "#7fafdf"},
+                                        ),
+                                        html.Button(
+                                            "4h",
+                                            id="4h",
+                                            value="4h",
+                                            n_clicks=0,
+                                            style={"color": "#7fafdf"},
+                                        ),
+                                        html.Button(
+                                            "1D",
+                                            id="1D",
+                                            value="1D",
+                                            n_clicks=0,
+                                            style={"color": "#7fafdf"},
+                                        ),
+                                        html.Button(
+                                            "3D",
+                                            id="3D",
+                                            value="3D",
+                                            n_clicks=0,
+                                            style={"color": "#7fafdf"},
+                                        ),
+                                        html.Button(
+                                            "W",
+                                            id="W",
+                                            value="W",
+                                            n_clicks=0,
+                                            style={"color": "#7fafdf"},
+                                        ),
+                                        html.Button(
+                                            "M",
+                                            id="M",
+                                            value="M",
+                                            n_clicks=0,
+                                            style={"color": "#7fafdf"},
+                                        ),
+                                    ],
                                 ),
                             ],
                         ),
@@ -181,21 +258,13 @@ app.layout = html.Div(
                                 ),
                                 dcc.Graph(
                                     id="main-graph",
-                                    # figure=dict(
-                                    #     layout=dict(
-                                    #         mapbox=dict(
-                                    #             layers=[],
-                                    #             accesstoken=mapbox_access_token,
-                                    #             style=mapbox_style,
-                                    #             center=dict(
-                                    #                 lat=38.72490, lon=-95.61446
-                                    #             ),
-                                    #             pitch=0,
-                                    #             zoom=3.5,
-                                    #         ),
-                                    #         autosize=True,
-                                    #     ),
-                                    figure=go.Figure(data=go.Candlestick()),
+                                    figure=go.Figure(
+                                        data=go.Candlestick(),
+                                        layout={
+                                            "plot_bgcolor": "rgb(37,46,63)",
+                                            "paper_bgcolor": "rgb(37,46,63)",
+                                        },
+                                    ),
                                     config={
                                         "doubleClickDelay": 1000,
                                         "scrollZoom": True,
@@ -211,6 +280,7 @@ app.layout = html.Div(
                                             "eraseshape",
                                         ],
                                     },
+                                    style={"width": "120vh", "height": "55vh"},
                                 ),
                             ],
                         ),
@@ -356,70 +426,55 @@ def update_map_title(id: int):
 # ONLY the timeframe button will change the graph!!!
 @app.callback(
     Output("main-graph", "figure"),
-    Input("timeframe-button", "value"),
+    [Input(i, "n_clicks") for i in TIMEFRAMES],
 )
-def display_selected_timeframe(selected_timeframe: int) -> go.Figure:
-    print("display_selected_timeframe")
+def display_selected_timeframe(*args) -> go.Figure:
+    btn_value = "1D" if not any(args) else ctx.triggered_id
 
-    if selected_timeframe == 2003:
-        selected_timeframe = "1D"
+    df = FrontEnd.half_dataframes[FrontEnd.timeframe_map[btn_value]]
 
-    while FrontEnd.half_dataframes is None:
-        print("sleeping till half dataframes")
-        sleep(1)
-
-    df = FrontEnd.half_dataframes[FrontEnd.timeframe_map[selected_timeframe]]
-
-    fig = go.Figure(
+    return go.Figure(
         data=go.Candlestick(
             x=df["Date"],
             open=df["Open"],
             high=df["High"],
             low=df["Low"],
             close=df["Close"],
-        )
+        ),
+        layout={
+            "plot_bgcolor": "rgb(37,46,63)",
+            "paper_bgcolor": "rgb(37,46,63)",
+        },
     )
 
-    # update with dark theme
-    fig.update_layout(
-        plot_bgcolor='rgb(37,46,63)',
-        paper_bgcolor ='rgb(37,46,63)')
-    
-    
-    #252e3f  hsl(219,26%,20%) 
 
-    return fig
+# @app.callback(
+#     Output("main-graph", "config"),
+#     Input("timeframe-button", "value"),
+# )
+# def update_config(timeframe_button: str) -> dict:
+#     print("update config")
 
+#     while FrontEnd.half_dataframes is None:
+#         print("sleeping till half dataframes")
+#         sleep(1)
 
-@app.callback(
-    Output("main-graph", "config"),
-    Input("timeframe-button", "value"),
-)
-def update_config(timeframe_button: str) -> dict:
-    print("update config")
-
-    while FrontEnd.half_dataframes is None:
-        print("sleeping till half dataframes")
-        sleep(1)
-
-    config = {
-        "doubleClickDelay": 1000,
-        "scrollZoom": True,
-        "displayModeBar": True,
-        "showTips": True,
-        "displaylogo": True,
-        "fillFrame": False,
-        "autosizable": True,
-        "modeBarButtonsToAdd": [
-            "drawline",
-            "drawopenpath",
-            "drawclosedpath",
-            "eraseshape",
-        ],
-    }
-    return config
-
-    # style={"width": "155vh", "height": "90vh"},
+#     config = {
+#         "doubleClickDelay": 1000,
+#         "scrollZoom": True,
+#         "displayModeBar": True,
+#         "showTips": True,
+#         "displaylogo": True,
+#         "fillFrame": False,
+#         "autosizable": True,
+#         "modeBarButtonsToAdd": [
+#             "drawline",
+#             "drawopenpath",
+#             "drawclosedpath",
+#             "eraseshape",
+#         ],
+#     }
+#     return config
 
 
 #########################################################################################################################################################################
@@ -675,4 +730,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-    app.run_server(debug=True, port=8080)
+    app.run_server(debug=False, port=8080)

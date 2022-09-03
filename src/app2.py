@@ -456,4 +456,4 @@ if __name__ == "__main__":
         dev_tools_ui=True,
         dev_tools_serve_dev_bundles=True,
     )
-    app.run_server(debug=True)
+    app.run_server(debug=False)
