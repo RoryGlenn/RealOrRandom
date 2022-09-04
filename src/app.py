@@ -949,7 +949,7 @@ def generate_graph(
         if np.random.choice([False])
         else random_case(num_days, faker)
     )
-    
+
     reset_indices(dataframes, half_dataframes)
     print(f"Created graph {current_graph_id}")
     pprint(answers)
