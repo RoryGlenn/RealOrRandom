@@ -1,16 +1,3 @@
 {
     "python.formatting.provider": "black",
-    "cSpell.words": [
-        "arange",
-        "endi",
-        "highcolumn",
-        "lowcolumn",
-        "starti",
-        "timecounter",
-        "vpchance"
-    ],
-
-    "code-runner.executorMap": {
-        "python": "C:\\Users\\glenn\\OneDrive\\Desktop\\RandomDataGenerator\\venv\\Scripts\\python.exe",
-    }    
 }

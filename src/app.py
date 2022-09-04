@@ -15,7 +15,6 @@ from dash import Dash, Input, Output, State, html, dcc, ctx
 import cufflinks as cf
 from dates import Dates
 from download import Download
-from frontend import FrontEnd
 from real_ohlc import RealOHLC
 from random_ohlc import RandomOHLC
 from constants.constants import (
@@ -989,4 +988,4 @@ if __name__ == "__main__":
 
     system("cls")
     main()
-    app.run_server(debug=False, port=8080)
+    app.run_server(debug=True, port=8080)
