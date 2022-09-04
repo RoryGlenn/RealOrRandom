@@ -546,9 +546,6 @@ app.layout = html.Div(
                                             html.P("What pattern do you see?"),
                                             dcc.Dropdown(
                                                 options=[
-                                                    # Else...
-                                                    "No Pattern",
-                                                    "I Don't Know",
                                                     # Bullish
                                                     "Hammer",
                                                     "Piercing Pattern",
@@ -587,7 +584,9 @@ app.layout = html.Div(
                                                     "Rising Window",
                                                     "Falling Window",
                                                     "High Wave",
-                                                    # N/A
+                                                    # Other
+                                                    "I Don't Know",
+                                                    "No Pattern",
                                                     "Other",
                                                 ],
                                                 id="pattern-dropdown",
@@ -604,10 +603,10 @@ app.layout = html.Div(
                                             html.P("(0: very low, 10: very high)"),
                                             dcc.Slider(
                                                 id="confidence-slider",
-                                                min=0,
+                                                min=1,
                                                 max=10,
                                                 step=1,
-                                                value=0,
+                                                value=1,
                                                 tooltip={
                                                     "placement": "bottom",
                                                     "always_visible": False,
@@ -727,9 +726,6 @@ def display_selected_timeframe(*args) -> go.Figure:
     #     ]
     # ),
     return fig
-
-
-#########################################################################################################################################################################
 
 
 @app.callback(
@@ -946,12 +942,14 @@ def generate_graph(
     global dataframes
     global half_dataframes
     global current_graph_id
+    # timeframe_exclusions = ["1min", "5min", "15min", "30min", "1H", "2H", "4H"]
 
     dataframes, half_dataframes, answers["graph_" + str(current_graph_id)] = (
         real_case(num_days, faker)
         if np.random.choice([False])
         else random_case(num_days, faker)
     )
+    
     reset_indices(dataframes, half_dataframes)
     print(f"Created graph {current_graph_id}")
     pprint(answers)
@@ -972,14 +970,12 @@ If this is indeed the case, you should have all state available in the callback 
 def main() -> None:
     Faker.seed(np.random.randint(10_000))
     faker = Faker()
-    timeframe_exclusions = ["1min", "5min", "15min", "30min", "1H", "2H", "4H"]
 
     Download.download_data(
         url=GITHUB_URL,
         files_to_download=Download.get_data_filenames(DATA_FILENAMES),
         download_path=DOWNLOAD_PATH,
     )
-
     generate_graph(num_days=120, faker=faker)
 
 
