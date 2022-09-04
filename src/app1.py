@@ -29,11 +29,27 @@ from constants.constants import (
 user_answers = {}
 results = {}
 current_graph_id = 0
-TOTAL_GRAPHS = 1
+answers = {}
+TOTAL_GRAPHS = 2
+
+TIMEFRAME_MAP = {
+    "1m": "1min",
+    "5m": "5min",
+    "15m": "15min",
+    "30m": "30min",
+    "1h": "1H",
+    "2h": "2H",
+    "4h": "4H",
+    "1D": "1D",
+    "3D": "3D",
+    "W": "1W",
+    "M": "1M",
+}
 
 GRAPH_IDS = [str(i).zfill(2) for i in range(20)]
 TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "3D", "W", "M"]
-
+dataframes = None
+half_dataframes = None
 
 # external_stylesheets = "https://codepen.io/chriddyp/pen/bWLwgP.css"
 # app = Dash(__name__, external_stylesheets=[external_stylesheets])
@@ -58,14 +74,14 @@ app.layout = html.Div(
             id="header",
             children=[
                 html.A(
-                    html.Button("Enterprise Demo", className="link-button"),
-                    href="https://plotly.com/get-demo/",
+                    html.Button("Source Code", className="link-button"),
+                    href="https://github.com/RoryGlenn/RealOrRandom",
                 ),
                 html.A(
-                    html.Button("Source Code", className="link-button"),
-                    href="https://github.com/plotly/dash-sample-apps/tree/main/apps/dash-opioid-epidemic",
+                    html.Button("Refresh Data", className="link-button", id="refresh"),
+                    href="/",
                 ),
-                html.H4(children="Real or Random"),
+                html.H4(children="Real Or Random"),
                 html.P(
                     id="description",
                     children=[
@@ -188,6 +204,7 @@ app.layout = html.Div(
                                             style={"color": "#7fafdf"},
                                         ),
                                     ],
+                                    # style={"color": "#7fafdf", "width": "50%"},
                                 ),
                             ],
                         ),
@@ -203,10 +220,10 @@ app.layout = html.Div(
                                         layout={
                                             "plot_bgcolor": "rgb(37,46,63)",
                                             "paper_bgcolor": "rgb(37,46,63)",
-                                            "title": "Graph 00",
+                                            "title": "Graph 00",  # get the current graph id and add one ?
                                             "xaxis_title": "Time",
                                             "yaxis_title": "Price",
-                                            "font": dict(size=14),
+                                            "font": {"size": 14, "color": "#7fafdf"},
                                         },
                                     ),
                                     config={
@@ -269,7 +286,7 @@ app.layout = html.Div(
                                                             100: {
                                                                 "label": "+100%",
                                                                 "style": {
-                                                                    "color": "#77b0b1"
+                                                                    "color": "#77b181"
                                                                 },
                                                             },
                                                         },
@@ -323,22 +340,22 @@ app.layout = html.Div(
                                                             100: {
                                                                 "label": "+100%",
                                                                 "style": {
-                                                                    "color": "#77b0b1"
+                                                                    "color": "#77b181"
                                                                 },
                                                             },
                                                         },
                                                         min=-100,
                                                         max=100,
-                                                        value=0,  # default value initially chosen
-                                                        dots=True,  # True, False - insert dots, only when step>1
-                                                        disabled=False,  # True,False - disable handle
-                                                        updatemode="mouseup",  # 'mouseup', 'drag' - update value method
-                                                        included=True,  # True, False - highlight handle
-                                                        vertical=False,  # True, False - vertical, horizontal slider
-                                                        verticalHeight=900,  # hight of slider (pixels) when vertical=True
+                                                        value=0,
+                                                        dots=True,
+                                                        disabled=False,
+                                                        updatemode="mouseup",
+                                                        included=True,
+                                                        vertical=False,
+                                                        verticalHeight=900,
                                                         className="None",
                                                         tooltip={
-                                                            "always_visible": False,  # show current slider values
+                                                            "always_visible": False,
                                                             "placement": "bottom",
                                                         },
                                                     ),
@@ -377,22 +394,22 @@ app.layout = html.Div(
                                                             100: {
                                                                 "label": "+100%",
                                                                 "style": {
-                                                                    "color": "#77b0b1"
+                                                                    "color": "#77b181"
                                                                 },
                                                             },
                                                         },
                                                         min=-100,
                                                         max=100,
-                                                        value=0,  # default value initially chosen
-                                                        dots=True,  # True, False - insert dots, only when step>1
-                                                        disabled=False,  # True,False - disable handle
-                                                        updatemode="mouseup",  # 'mouseup', 'drag' - update value method
-                                                        included=True,  # True, False - highlight handle
-                                                        vertical=False,  # True, False - vertical, horizontal slider
-                                                        verticalHeight=900,  # hight of slider (pixels) when vertical=True
+                                                        value=0,
+                                                        dots=True,
+                                                        disabled=False,
+                                                        updatemode="mouseup",
+                                                        included=True,
+                                                        vertical=False,
+                                                        verticalHeight=900,
                                                         className="None",
                                                         tooltip={
-                                                            "always_visible": False,  # show current slider values
+                                                            "always_visible": False,
                                                             "placement": "bottom",
                                                         },
                                                     ),
@@ -431,7 +448,7 @@ app.layout = html.Div(
                                                             100: {
                                                                 "label": "+100%",
                                                                 "style": {
-                                                                    "color": "#77b0b1"
+                                                                    "color": "#77b181"
                                                                 },
                                                             },
                                                         },
@@ -485,22 +502,22 @@ app.layout = html.Div(
                                                             100: {
                                                                 "label": "+100%",
                                                                 "style": {
-                                                                    "color": "#77b0b1"
+                                                                    "color": "#77b181"
                                                                 },
                                                             },
                                                         },
                                                         min=-100,
                                                         max=100,
-                                                        value=0,  # default value initially chosen
-                                                        dots=True,  # True, False - insert dots, only when step>1
-                                                        disabled=False,  # True,False - disable handle
-                                                        updatemode="mouseup",  # 'mouseup', 'drag' - update value method
-                                                        included=True,  # True, False - highlight handle
-                                                        vertical=False,  # True, False - vertical, horizontal slider
-                                                        verticalHeight=900,  # hight of slider (pixels) when vertical=True
+                                                        value=0,
+                                                        dots=True,
+                                                        disabled=False,
+                                                        updatemode="mouseup",
+                                                        included=True,
+                                                        vertical=False,
+                                                        verticalHeight=900,
                                                         className="None",
                                                         tooltip={
-                                                            "always_visible": False,  # show current slider values
+                                                            "always_visible": False,
                                                             "placement": "bottom",
                                                         },
                                                     ),
@@ -585,15 +602,13 @@ app.layout = html.Div(
                                             html.P(
                                                 "What is your overall confidence in your answers?"
                                             ),
-                                            html.P(
-                                                "(0: not at all confident, 10: extremely confident)"
-                                            ),
+                                            html.P("(0: very low, 10: very high)"),
                                             dcc.Slider(
                                                 id="confidence-slider",
                                                 min=0,
                                                 max=10,
                                                 step=1,
-                                                value=5,
+                                                value=0,
                                                 tooltip={
                                                     "placement": "bottom",
                                                     "always_visible": False,
@@ -631,6 +646,7 @@ app.layout = html.Div(
                         ),
                     ],
                 ),
+                # html.Div(id="none"),
             ],
             style={"width": "170vh", "height": "85vh"},
         ),
@@ -649,9 +665,10 @@ def update_map_title(id: int):
     [Input(i, "n_clicks") for i in TIMEFRAMES],
 )
 def display_selected_timeframe(*args) -> go.Figure:
-    btn_value = "1D" if not any(args) else ctx.triggered_id
+    global half_dataframes
 
-    df = FrontEnd.half_dataframes[FrontEnd.timeframe_map[btn_value]]
+    btn_value = "1D" if not any(args) else ctx.triggered_id
+    df = half_dataframes[TIMEFRAME_MAP[btn_value]]
 
     fig = go.Figure(
         data=go.Candlestick(
@@ -664,13 +681,15 @@ def display_selected_timeframe(*args) -> go.Figure:
         layout={
             "plot_bgcolor": "rgb(37,46,63)",
             "paper_bgcolor": "rgb(37,46,63)",
-            "title": "Graph 00",  # get the current graph id and add one ?
+            # "title": "Graph 00",  # get the current graph id
             "xaxis_title": "Time",
             "yaxis_title": "Price",
             "font": {"size": 14, "color": "#7fafdf"},
         },
     )
 
+    ##########################################
+    # Crosshair
     # fig.update_yaxes(
     #     showspikes=True,
     #     spikemode="across",
@@ -690,78 +709,92 @@ def display_selected_timeframe(*args) -> go.Figure:
     # fig.update_traces(xaxis="x")
     # fig.update_traces(yaxis="y")
 
-    buttons = [
-        dict(label=i, method="update", args=[{"visible": [False]}]) for i in TIMEFRAMES
-    ]
+    #################################################################
+    # Buttons inside of Plotly figure object
+    # buttons = [
+    #     dict(label=i, method="update", args=[{"visible": [False]}]) for i in TIMEFRAMES
+    # ]
 
-    fig.update_layout(
-        updatemenus=[
-            dict(
-                type="buttons",
-                direction="right",
-                active=0,
-                x=0.57,
-                y=1.2,
-                buttons=list(buttons),
-            )
-        ]
-    ),
-
+    # fig.update_layout(
+    #     updatemenus=[
+    #         dict(
+    #             type="buttons",
+    #             direction="right",
+    #             active=6,
+    #             x=0.57,
+    #             y=1.2,
+    #             buttons=list(buttons),
+    #         )
+    #     ]
+    # ),
     return fig
 
 
 #########################################################################################################################################################################
 
 
-# # add a click to the appropriate store.
+@app.callback(
+    Output("description", "children"),
+    Input("submit-button", "n_clicks"),
+    [
+        State("1daybounds-slider", "value"),
+        State("5daybounds-slider", "value"),
+        State("10daybounds-slider", "value"),
+        State("30daybounds-slider", "value"),
+        State("60daybounds-slider", "value"),
+        State("realorrandom-dropdown", "value"),
+        State("pattern-dropdown", "value"),
+        State("confidence-slider", "value"),
+        State("description", "children"),
+    ],
+)
+def on_submit(
+    num_clicks: int,
+    daybounds1: list[float],
+    daybounds5: list[float],
+    daybounds10: list[float],
+    daybounds30: list[float],
+    daybounds60: list[float],
+    real_or_random: str,
+    pattern: str,
+    confidence: int,
+    desc_children: dict,
+):
+    global user_answers
+    global current_graph_id
+
+    if num_clicks is None:
+        # prevent the None callbacks is important with the store component.
+        # you don't want to update the store for nothing.
+        raise PreventUpdate
+
+    user_answers[current_graph_id] = {
+        "1daybounds-slider": daybounds1,
+        "5daybounds-slider": daybounds5,
+        "10daybounds-slider": daybounds10,
+        "30daybounds-slider": daybounds30,
+        "60daybounds-slider": daybounds60,
+        "realorrandom-dropdown": real_or_random,
+        "pattern-dropdown": pattern,
+        "confidence-slider": confidence,
+    }
+
+    if len(user_answers) == TOTAL_GRAPHS:
+        calculate_results()
+    else:
+        current_graph_id += 1
+        generate_graph(num_days=120, faker=Faker())
+    return desc_children
+
+
 # @app.callback(
-#     Output("submit-button", "value"),
+#     Output("refresh", "children"),
 #     Input("submit-button", "n_clicks"),
-#     State("1daybounds-slider", "value"),
-#     State("5daybounds-slider", "value"),
-#     State("10daybounds-slider", "value"),
-#     State("30daybounds-slider", "value"),
-#     State("60daybounds-slider", "value"),
-#     State("realorrandom-dropdown", "value"),
-#     State("pattern-dropdown", "value"),
-#     State("confidence-slider", "value"),
+#     State("refresh", 'value')
 # )
-# def on_submit(
-#     num_clicks: int,
-#     daybounds1: list[float],
-#     daybounds5: list[float],
-#     daybounds10: list[float],
-#     daybounds30: list[float],
-#     daybounds60: list[float],
-#     real_or_random: str,
-#     pattern: str,
-#     confidence: int,
-# ):
-#     global user_answers
-#     global graph_id
-#     global total_graphs
-
-#     if num_clicks is None:
-#         # prevent the None callbacks is important with the store component.
-#         # you don't want to update the store for nothing.
-#         raise PreventUpdate
-
-#     user_answers[graph_id] = {
-#         "1daybounds-slider": daybounds1,
-#         "5daybounds-slider": daybounds5,
-#         "10daybounds-slider": daybounds10,
-#         "30daybounds-slider": daybounds30,
-#         "60daybounds-slider": daybounds60,
-#         "realorrandom-dropdown": real_or_random,
-#         "pattern-dropdown": pattern,
-#         "confidence-slider": confidence,
-#     }
-
-#     # if len(user_answers) == total_graphs:
-#     #     calculate_results()
-
-#     graph_id += 1
-#     return user_answers
+# def _refresh(*args) -> None:
+#     print(args)
+#     return None
 
 
 def create_half_dataframes(
@@ -877,17 +910,19 @@ def calculate_results() -> None:
     global user_answers
     global current_graph_id
     global results
+    global dataframes
+    global half_dataframes
 
     # need to iterate over all graphs!!!!
     # right now, this only iterates over 1 graph
     for g_id, usrs_answer in user_answers.items():
-        initial_price = FrontEnd.half_dataframes["1D"].loc[59, "Close"]
+        initial_price = half_dataframes["1D"].loc[59, "Close"]
 
-        future_1day = FrontEnd.dataframes["1D"].loc[60, "Close"]
-        future_5day = FrontEnd.dataframes["1D"].loc[64, "Close"]
-        future_10day = FrontEnd.dataframes["1D"].loc[69, "Close"]
-        future_30day = FrontEnd.dataframes["1D"].loc[89, "Close"]
-        future_60day = FrontEnd.dataframes["1D"].loc[119, "Close"]
+        future_1day = dataframes["1D"].loc[60, "Close"]
+        future_5day = dataframes["1D"].loc[64, "Close"]
+        future_10day = dataframes["1D"].loc[69, "Close"]
+        future_30day = dataframes["1D"].loc[89, "Close"]
+        future_60day = dataframes["1D"].loc[119, "Close"]
 
         relative_change_1day = get_relative_change(initial_price, future_1day) * 100
         relative_change_5day = get_relative_change(initial_price, future_5day) * 100
@@ -904,11 +939,40 @@ def calculate_results() -> None:
         ]
 
 
+def generate_graph(
+    num_days,
+    faker,
+) -> None:
+    global answers
+    global dataframes
+    global half_dataframes
+    global current_graph_id
+
+    dataframes, half_dataframes, answers["graph_" + str(current_graph_id)] = (
+        real_case(num_days, faker)
+        if np.random.choice([False])
+        else random_case(num_days, faker)
+    )
+    reset_indices(dataframes, half_dataframes)
+    print(f"Created graph {current_graph_id}")
+    pprint(answers)
+    print()
+
+
+"""
+
+If I can just redirect the user to the current page once the routine finishes, then the problem is solved.
+
+it seems that all state is stored in the url. 
+If this is indeed the case, you should have all state available in the callback that updates the page content already 
+(i assume that the url is an Input? If not so, you can just add it as a State to get the info).
+
+"""
+
+
 def main() -> None:
-    Faker.seed(np.random.randint(0, 10_000))
-    fake = Faker()
-    answers = {}
-    num_days = 120  # 120 will be the standard
+    Faker.seed(np.random.randint(10_000))
+    faker = Faker()
     timeframe_exclusions = ["1min", "5min", "15min", "30min", "1H", "2H", "4H"]
 
     Download.download_data(
@@ -917,21 +981,12 @@ def main() -> None:
         download_path=DOWNLOAD_PATH,
     )
 
-    print("Starting test...")
-
-    for i in range(TOTAL_GRAPHS):
-        FrontEnd.dataframes, FrontEnd.half_dataframes, answers["graph_" + str(i)] = (
-            real_case(num_days, fake)
-            if np.random.choice([False])
-            else random_case(num_days, fake)
-        )
-        reset_indices(FrontEnd.dataframes, FrontEnd.half_dataframes)
-
-    # calculate_results()
-    pprint(answers)
-    print()
+    generate_graph(num_days=120, faker=faker)
 
 
 if __name__ == "__main__":
+    from os import system
+
+    system("cls")
     main()
-    app.run_server(debug=True, port=8080)
+    app.run_server(debug=False, port=8080)
