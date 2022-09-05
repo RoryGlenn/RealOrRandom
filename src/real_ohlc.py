@@ -1,30 +1,59 @@
+from datetime import datetime, timedelta
+
 import pandas as pd
 import numpy as np
-from datetime import datetime, timedelta
-from typing import Tuple
 
-from constants.constants import MINUTES_IN_1DAY, HOURS_IN_1DAY, DATA_PATH
+from constants.constants import MINUTES_IN_1DAY, HOURS_IN_1DAY, DATA_PATH, DATE_FORMAT
 
 
 class RealOHLC:
     def __init__(
         self, data_choice: str, num_days: int, data_files: list[str] = []
     ) -> None:
-        self.total_days = num_days
+        self.__num_days = num_days
         self.__data_choice = data_choice
+        self.__data_files = data_files
+        self.__resampled_data = {}
+        self.__df = None
+        self.__filename = None
+        self.__start_date_dt = None
+        self.__end_date_dt = None
+        self.__start_date_str = None
+        self.__end_date_str = None
         self.__agg_dict = {
             "Open": "first",
             "High": "max",
             "Low": "min",
             "Close": "last",
         }
-        self.__df = None
-        self.resampled_data = {}
-        self.data_files = data_files
+
+    @property
+    def data_choice(self) -> str:
+        return self.__data_choice
 
     @property
     def df(self) -> pd.DataFrame:
         return self.__df
+
+    @property
+    def resampled_data(self) -> dict:
+        return self.__resampled_data
+
+    @property
+    def start_date_dt(self) -> datetime:
+        return self.__start_date_dt
+
+    @property
+    def end_date_dt(self) -> datetime:
+        return self.__end_date_dt
+
+    @property
+    def start_date_str(self) -> str:
+        return self.__start_date_str
+
+    @property
+    def end_date_str(self) -> str:
+        return self.__end_date_str
 
     def get_filenames(self, path: str) -> list[str]:
         """open the folder containing all the .csv files and return a list containing all the files"""
@@ -37,40 +66,38 @@ class RealOHLC:
             if isfile(join(path, f)) and join(path, f)[-4:] == ".csv"
         ]
 
-    def get_start_end_dates(self) -> dict[str, dict[str]]:
+    def set_file_choice(self) -> None:
+        """randomly choose a file"""
+        self.__filename = np.random.choice(self.__data_files)
+
+    def set_start_end_datelimits(self) -> None:
         """Returns a dictionary containing all of the file names as the key
         and start/end dates as the value.
         The start date is also adjusted 90 days into the future
         to avoid out of bounds issues when a random start date is picked.
         """
 
-        filenames = self.get_filenames(DATA_PATH)
-        date_ranges = {}
+        # protects loop against incorrectly placed files in the data folder
+        if self.__filename not in self.__data_files:
+            from sys import exit as sysexit
 
-        for file in filenames:
-            # protects loop against incorrectly placed files in the data folder
-            if file in self.data_files:
-                df = pd.read_csv(DATA_PATH + "/" + file, skiprows=1)
+            print(f"{self.__filename} was not found in data repository")
+            sysexit(1)
 
-                dt = datetime.strptime(
-                    df.loc[len(df) - 1, "Date"], "%Y-%m-%d %H:%M:%S"
-                ) + timedelta(days=90)
-                date_ranges[file] = {
-                    "start_date": dt.strftime("%Y-%m-%d %H:%M:%S"),
-                    "end_date": df.loc[0, "Date"],
-                }
-        return date_ranges
-
-    def get_start_end_date_strs(
-        self, date_ranges: dict, num_days: int
-    ) -> Tuple[str, str]:
-        from datetime import timedelta
-
-        # get the total number of days we can use
-        start_date_dt = datetime.strptime(
-            date_ranges["start_date"], "%Y-%m-%d %H:%M:%S"
+        df = pd.read_csv(DATA_PATH + "/" + self.__filename, skiprows=1)
+        dt = datetime.strptime(df.loc[len(df) - 1, "Date"], DATE_FORMAT) + timedelta(
+            days=90
         )
-        end_date_dt = datetime.strptime(date_ranges["end_date"], "%Y-%m-%d %H:%M:%S")
+        self.__start_date_dt = dt.strftime(DATE_FORMAT)
+        self.__end_date_dt = df.loc[0, "Date"]
+
+    def randomly_pick_start_end_dates(self) -> None:
+        """Once the start and end date limit have been set,
+        Randomly select what our start date will be.
+        Then add 'num_days' to the start_date, this will be the end_date."""
+
+        start_date_dt = datetime.strptime(self.__start_date_dt, DATE_FORMAT)
+        end_date_dt = datetime.strptime(self.__end_date_dt, DATE_FORMAT)
 
         # get the number of days from the start date to the end date
         diff_dt = end_date_dt - start_date_dt
@@ -80,23 +107,22 @@ class RealOHLC:
         # so the last 'num_days' will be off limits to the start date.
         # By doing this, we protect ourselves from an out of bounds error
         dt_list = [
-            start_date_dt + timedelta(days=x) for x in range(diff_dt.days - num_days)
+            start_date_dt + timedelta(days=x)
+            for x in range(diff_dt.days - self.__num_days)
         ]
 
         if len(dt_list) == 0:
             from sys import exit as sysexit
-
             print("dt_list is empty!")
             sysexit(1)
 
-        # randomly choose a start date, then go 'num_days' into the future to get the end date
+        # # randomly choose a start date, then go 'num_days' into the future to get the end date
         start_date_dt = np.random.choice(dt_list)
-        end_date_dt = start_date_dt + timedelta(days=num_days)
+        end_date_dt = start_date_dt + timedelta(days=self.__num_days)
 
         # create the start and end date strings
-        start_date_str = start_date_dt.strftime("%Y-%m-%d %H:%M:%S")
-        end_date_str = end_date_dt.strftime("%Y-%m-%d %H:%M:%S")
-        return start_date_str, end_date_str
+        self.__start_date_str = start_date_dt.strftime(DATE_FORMAT)
+        self.__end_date_str = end_date_dt.strftime(DATE_FORMAT)
 
     def merge_csv_files(self, symbol_pair: str) -> pd.DataFrame:
         """Returns a merged dataframe given a symbol_pair.
@@ -104,8 +130,7 @@ class RealOHLC:
         For all files in the data directory, look for the csv files containing
         the symbol_pair and combine them all into one dataframe.
         """
-        files = self.get_filenames(DATA_PATH)
-        files = [f for f in files if symbol_pair in f]
+        files = [file for file in self.get_filenames(DATA_PATH) if symbol_pair in file]
 
         # set the first df
         df_master = pd.read_csv(
@@ -125,15 +150,16 @@ class RealOHLC:
                 df_master = pd.concat([df_master, df], ignore_index=True)
         return df_master
 
-    def create_df(
-        self, start_date: str, end_date: str, merge_csvs: bool
-    ) -> pd.DataFrame:
+    def create_df(self, merge_csvs: bool) -> pd.DataFrame:
         """Create a dataframe for real data"""
         df = None
 
+        # if you already pick the start and end dates,
+        # theres no reason to merge all of the csv files together
+
         if merge_csvs:
             symbol_pair = self.__data_choice.split("_")[1]
-            df = self.merge_csv_files(symbol_pair)
+            df = self.merge_csv_files(symbol_pair)  # BOTTLE NECK HERE!
         else:
             df = pd.read_csv(
                 self.__data_choice,
@@ -141,8 +167,8 @@ class RealOHLC:
                 skiprows=1,
             )[::-1]
 
-        df = df.drop(df[df["Date"] < start_date].index)
-        df = df.drop(df[df["Date"] > end_date].index)
+        df = df.drop(df[df["Date"] < self.__start_date_str].index)
+        df = df.drop(df[df["Date"] > self.__end_date_str].index)
 
         df["Date"] = pd.to_datetime(df["Date"]).dt.tz_localize(None)
         df.set_index("Date", inplace=True)
@@ -187,12 +213,12 @@ class RealOHLC:
         resampled dataframe corresponding to that timeframe"""
 
         prev_timeframe = "1min"
-        self.resampled_data["1min"] = self.__df
+        self.__resampled_data["1min"] = self.__df
         bars_table = self.__create_bars_table()
 
         for timeframe in bars_table:
-            self.resampled_data[timeframe] = self.__downsample_ohlc_data(
-                timeframe, self.resampled_data[prev_timeframe]
+            self.__resampled_data[timeframe] = self.__downsample_ohlc_data(
+                timeframe, self.__resampled_data[prev_timeframe]
             )
             prev_timeframe = timeframe
 
@@ -213,17 +239,17 @@ class RealOHLC:
 
     def __create_bars_table(self) -> dict:
         return {
-            "1min": self.total_days * MINUTES_IN_1DAY,
-            "5min": self.total_days * MINUTES_IN_1DAY // 5,
-            "15min": self.total_days * MINUTES_IN_1DAY // 15,
-            "30min": self.total_days * MINUTES_IN_1DAY // 30,
-            "1H": self.total_days * HOURS_IN_1DAY,
-            "2H": self.total_days * HOURS_IN_1DAY // 2,
-            "4H": self.total_days * HOURS_IN_1DAY // 4,
-            "1D": self.total_days,
-            "3D": self.total_days // 3,
-            "1W": self.total_days // 7,
-            "1M": self.total_days // 30,
+            "1min": self.__num_days * MINUTES_IN_1DAY,
+            "5min": self.__num_days * MINUTES_IN_1DAY // 5,
+            "15min": self.__num_days * MINUTES_IN_1DAY // 15,
+            "30min": self.__num_days * MINUTES_IN_1DAY // 30,
+            "1H": self.__num_days * HOURS_IN_1DAY,
+            "2H": self.__num_days * HOURS_IN_1DAY // 2,
+            "4H": self.__num_days * HOURS_IN_1DAY // 4,
+            "1D": self.__num_days,
+            "3D": self.__num_days // 3,
+            "1W": self.__num_days // 7,
+            "1M": self.__num_days // 30,
         }
 
     def abstract_dates(self) -> None:

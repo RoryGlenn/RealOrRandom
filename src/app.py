@@ -25,11 +25,17 @@ from constants.constants import (
     DATA_FILENAMES,
 )
 
+from os import system
+
+system("cls")
+
 user_answers = {}
 results = {}
 current_graph_id = 0
 answers = {}
 TOTAL_GRAPHS = 2
+NUM_DAYS = 120
+FAKER = Faker()
 
 TIMEFRAME_MAP = {
     "1m": "1min",
@@ -68,7 +74,7 @@ server = app.server
 app.layout = html.Div(
     id="root",
     children=[
-        dcc.Location(id="url", refresh=False),
+        dcc.Location(id="url", children=[], refresh=False),
         html.Div(
             id="header",
             children=[
@@ -616,36 +622,34 @@ app.layout = html.Div(
                                         ],
                                         style={"width": "75%", "margin-bottom": "30px"},
                                     ),
-                                    # Submit button
                                     html.Div(
-                                        [
+                                        id="submit_output-provider",
+                                        children=[
                                             dcc.ConfirmDialogProvider(
-                                                html.Th(
+                                                message="You will not be able to go back after submitting.\nAre you sure you want to continue?",
+                                                id="dialog-confirm",
+                                                children=[
                                                     html.Button(
                                                         id="submit-button",
                                                         children="Submit",
                                                         type="button",
+                                                        className="link-button",
                                                         style={
-                                                            "color": "rgb(44,254,193)"
+                                                            "color": "rgb(44,254,193)",
+                                                            "margin-right": "75%",
+                                                            "margin-top": "5%",
                                                         },
                                                     )
-                                                ),
-                                                id="submit-provider",
-                                                message="You will not be able to go back after submitting.\nAre you sure you want to continue?",
+                                                ],
                                             ),
-                                            html.Div(id="submit_output-provider"),
                                         ],
-                                        style={"width": "25%", "margin-bottom": "10px"},
                                     ),
                                 ],
-                                style={
-                                    "margin-left": "5%",
-                                },
+                                style={"margin-left": "5%"},
                             ),
                         ),
                     ],
                 ),
-                # html.Div(id="none"),
             ],
             style={"width": "170vh", "height": "85vh"},
         ),
@@ -658,6 +662,24 @@ def update_map_title(id: int):
     return "Graph ID: {0}".format(id)
 
 
+@app.callback(Output("main-graph", "children"), Input("url", "children"))
+def generate_graph(*args) -> None:
+    global answers
+    global dataframes
+    global half_dataframes
+    global current_graph_id
+
+    dataframes, half_dataframes, answers["graph_" + str(current_graph_id)] = (
+        real_case(num_days=NUM_DAYS, faker=FAKER)
+        if np.random.choice([True])
+        else random_case(num_days=NUM_DAYS, faker=FAKER)
+    )
+    reset_indices(dataframes, half_dataframes)
+    print(f"Created graph {current_graph_id}")
+    pprint(answers)
+    print()
+
+
 # connect this call back with the new buttons placed inside the graph
 @app.callback(
     Output("main-graph", "figure"),
@@ -665,6 +687,9 @@ def update_map_title(id: int):
 )
 def display_selected_timeframe(*args) -> go.Figure:
     global half_dataframes
+
+    # if half_dataframes is None:
+    #     generate_graph()
 
     btn_value = "1D" if not any(args) else ctx.triggered_id
     df = half_dataframes[TIMEFRAME_MAP[btn_value]]
@@ -729,9 +754,6 @@ def display_selected_timeframe(*args) -> go.Figure:
     return fig
 
 
-#########################################################################################################################################################################
-
-
 @app.callback(
     Output("description", "children"),
     Input("submit-button", "n_clicks"),
@@ -782,18 +804,8 @@ def on_submit(
         calculate_results()
     else:
         current_graph_id += 1
-        generate_graph(num_days=120, faker=Faker())
+        generate_graph(num_days=NUM_DAYS, faker=FAKER)
     return desc_children
-
-
-# @app.callback(
-#     Output("refresh", "children"),
-#     Input("submit-button", "n_clicks"),
-#     State("refresh", 'value')
-# )
-# def _refresh(*args) -> None:
-#     print(args)
-#     return None
 
 
 def create_half_dataframes(
@@ -818,7 +830,7 @@ def reset_indices(
 
 
 def real_case(
-    num_days: int, fake: Faker, exclusions: list[str] = []
+    num_days: int, faker: Faker, exclusions: list[str] = []
 ) -> Tuple[dict, dict, str]:
     """Creates the real case scenario"""
 
@@ -832,12 +844,10 @@ def real_case(
         data_files=Download.get_data_filenames(DATA_FILENAMES),
     )
 
-    date_ranges = real_ohlc.get_start_end_dates()[data_choice]
-    start_date_str, end_date_str = real_ohlc.get_start_end_date_strs(
-        date_ranges, num_days
-    )
-
-    real_ohlc.create_df(start_date_str, end_date_str, merge_csvs=True)
+    real_ohlc.set_file_choice()
+    real_ohlc.set_start_end_datelimits()
+    real_ohlc.randomly_pick_start_end_dates()
+    real_ohlc.create_df(merge_csvs=False)
     real_ohlc.normalize_ohlc_data()
     real_ohlc.abstract_dates()
     real_ohlc.resample_timeframes()
@@ -846,21 +856,21 @@ def real_case(
 
     answer = {
         "Real_Or_Random": "Real",
-        "Name": fake.name(),
-        "Start_Date": start_date_str,
-        "End_Date": end_date_str,
-        "File": data_choice,
+        "Name": faker.name(),
+        "Start_Date": real_ohlc.start_date_str,
+        "End_Date": real_ohlc.end_date_str,
+        "File": real_ohlc.data_choice,
     }
     return real_ohlc.resampled_data, half_dataframes, answer
 
 
 def random_case(
-    num_days: int, fake: Faker, exclusions: list[str] = []
+    num_days: int, faker: Faker, exclusions: list[str] = []
 ) -> Tuple[dict, dict, str]:
     random_ohlc = RandomOHLC(
         total_days=num_days,
         start_price=100_000,
-        name=fake.name(),
+        name=faker.name(),
         volatility=np.random.uniform(1, 2),
     )
     random_ohlc.generate_random_df(
@@ -876,7 +886,7 @@ def random_case(
     half_dataframes = create_half_dataframes(random_ohlc.resampled_data, exclusions)
     answer = {
         "Real_Or_Random": "Random",
-        "Name": fake.name(),
+        "Name": faker.name(),
         "Start_Date": "None",
         "End_Date": "None",
         "File": "None",
@@ -938,26 +948,6 @@ def calculate_results() -> None:
         ]
 
 
-def generate_graph(
-    num_days,
-    faker,
-) -> None:
-    global answers
-    global dataframes
-    global half_dataframes
-    global current_graph_id
-
-    dataframes, half_dataframes, answers["graph_" + str(current_graph_id)] = (
-        real_case(num_days, faker)
-        if np.random.choice([False])
-        else random_case(num_days, faker)
-    )
-    reset_indices(dataframes, half_dataframes)
-    print(f"Created graph {current_graph_id}")
-    pprint(answers)
-    print()
-
-
 """
 
 If I can just redirect the user to the current page once the routine finishes, then the problem is solved.
@@ -969,10 +959,8 @@ If this is indeed the case, you should have all state available in the callback 
 """
 
 
-def main() -> None:
+def init() -> None:
     Faker.seed(np.random.randint(10_000))
-    faker = Faker()
-    timeframe_exclusions = ["1min", "5min", "15min", "30min", "1H", "2H", "4H"]
 
     Download.download_data(
         url=GITHUB_URL,
@@ -980,12 +968,9 @@ def main() -> None:
         download_path=DOWNLOAD_PATH,
     )
 
-    generate_graph(num_days=120, faker=faker)
+    generate_graph()
 
 
 if __name__ == "__main__":
-    from os import system
-
-    system("cls")
-    main()
-    app.run_server(debug=True, port=8080)
+    init()
+    app.run_server(debug=False, port=8080)
