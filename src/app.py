@@ -1,8 +1,3 @@
-from os import system
-from typing import Tuple
-
-system("cls")
-
 from pprint import pprint
 
 from dash import Dash
@@ -16,7 +11,6 @@ from case_handler import CaseHandler
 
 case_hand = CaseHandler(num_days=120)
 case_hand.init()
-
 
 # Initialize app
 app = Dash(
@@ -33,7 +27,7 @@ server = app.server
 app.layout = html.Div(
     id="root",
     children=[
-        dcc.Location(id="url", children=[], refresh=False),
+        dcc.Location(id="dummyurl", refresh=False),
         html.Div(
             id="header",
             children=[
@@ -500,7 +494,7 @@ app.layout = html.Div(
                                             dcc.Dropdown(
                                                 id="realorrandom-dropdown",
                                                 options=["Real", "Random"],
-                                                value="",
+                                                value="Real",
                                             ),
                                         ],
                                         style={"width": "75%", "margin-bottom": "30px"},
@@ -556,6 +550,7 @@ app.layout = html.Div(
                                                     "Other",
                                                 ],
                                                 id="pattern-dropdown",
+                                                value="No Pattern",
                                             ),
                                         ],
                                         style={"width": "75%", "margin-bottom": "30px"},
@@ -569,10 +564,10 @@ app.layout = html.Div(
                                             html.P("(0: very low, 10: very high)"),
                                             dcc.Slider(
                                                 id="confidence-slider",
-                                                min=0,
+                                                min=1,
                                                 max=10,
                                                 step=1,
-                                                value=0,
+                                                value=1,
                                                 tooltip={
                                                     "placement": "bottom",
                                                     "always_visible": False,
@@ -584,23 +579,36 @@ app.layout = html.Div(
                                     html.Div(
                                         id="submit_output-provider",
                                         children=[
-                                            dcc.ConfirmDialogProvider(
-                                                message="You will not be able to go back after submitting.\nAre you sure you want to continue?",
-                                                id="dialog-confirm",
-                                                children=[
-                                                    html.Button(
-                                                        id="submit-button",
-                                                        children="Submit",
-                                                        type="button",
-                                                        className="link-button",
-                                                        style={
-                                                            "color": "rgb(44,254,193)",
-                                                            "margin-right": "75%",
-                                                            "margin-top": "5%",
-                                                        },
-                                                    )
-                                                ],
-                                            ),
+                                            # dcc.ConfirmDialogProvider(
+                                            #     message="You will not be able to go back after submitting.\nAre you sure you want to continue?",
+                                            #     id="dialog-confirm",
+                                            #     children=[
+                                            #         html.Button(
+                                            #             id="submit-button",
+                                            #             children="Submit",
+                                            #             type="button",
+                                            #             className="link-button",
+                                            #             n_clicks=0,
+                                            #             style={
+                                            #                 "color": "rgb(44,254,193)",
+                                            #                 "margin-right": "75%",
+                                            #                 "margin-top": "5%",
+                                            #             },
+                                            #         )
+                                            #     ],
+                                            # ),
+                                            html.Button(
+                                                id="submit-button",
+                                                children="Submit",
+                                                type="button",
+                                                className="link-button",
+                                                n_clicks=0,
+                                                style={
+                                                    "color": "rgb(44,254,193)",
+                                                    "margin-right": "75%",
+                                                    "margin-top": "5%",
+                                                },
+                                            )
                                         ],
                                     ),
                                 ],
@@ -625,9 +633,9 @@ def update_map_title(id: int):
 @app.callback(
     # Output("main-graph", "children"),
     Output("dummy", "children"),
-    Input("url", "children"),
+    Input("dummyurl", "refresh"),
 )
-def generate_graph(*args) -> tuple[int, int]:
+def generate_graph(*args, **kwargs) -> tuple[int, int]:
     global case_hand
 
     case_hand.real_case(
@@ -694,27 +702,6 @@ def display_selected_timeframe(children: dict, *buttons: tuple[int]) -> go.Figur
         },
     )
 
-    ##########################################
-    # Crosshair
-    # fig.update_yaxes(
-    #     showspikes=True,
-    #     spikemode="across",
-    #     spikesnap="cursor",
-    #     spikethickness=0.5,
-    # )
-
-    # fig.update_xaxes(
-    #     showspikes=True,
-    #     spikemode="across",
-    #     spikesnap="cursor",
-    #     spikethickness=0.5,
-
-    # )
-
-    # fig.update_layout(hoverdistance=0)
-    # fig.update_traces(xaxis="x")
-    # fig.update_traces(yaxis="y")
-
     #################################################################
     # Buttons inside of Plotly figure object
     # buttons = [
@@ -737,19 +724,17 @@ def display_selected_timeframe(children: dict, *buttons: tuple[int]) -> go.Figur
 
 
 @app.callback(
-    Output("description", "children"),
+    Output("dummyurl", "refresh"),
     Input("submit-button", "n_clicks"),
-    [
-        State("1daybounds-slider", "value"),
-        State("5daybounds-slider", "value"),
-        State("10daybounds-slider", "value"),
-        State("30daybounds-slider", "value"),
-        State("60daybounds-slider", "value"),
-        State("realorrandom-dropdown", "value"),
-        State("pattern-dropdown", "value"),
-        State("confidence-slider", "value"),
-        State("description", "children"),
-    ],
+    State("1daybounds-slider", "value"),
+    State("5daybounds-slider", "value"),
+    State("10daybounds-slider", "value"),
+    State("30daybounds-slider", "value"),
+    State("60daybounds-slider", "value"),
+    State("realorrandom-dropdown", "value"),
+    State("pattern-dropdown", "value"),
+    State("confidence-slider", "value"),
+    State("app-container", "children"),
 )
 def on_submit(
     num_clicks: int,
@@ -762,12 +747,10 @@ def on_submit(
     pattern: str,
     confidence: int,
     desc_children: dict,
-):
+) -> dict:
     global case_hand
 
-    if num_clicks is None:
-        # prevent the None callbacks is important with the store component.
-        # you don't want to update the store for nothing.
+    if num_clicks is None or num_clicks == 0:
         raise PreventUpdate
 
     case_hand.user_answers[case_hand.curr_graph_id] = {
@@ -782,8 +765,13 @@ def on_submit(
     }
 
     if len(case_hand.user_answers) == TOTAL_GRAPHS:
+        if len(case_hand.dataframes) != case_hand.num_days:
+            # real case sometimes generates 1 extra df row
+            print(f"{len(case_hand.dataframes['1D'])} != {case_hand.num_days}")
+            
+            
         case_hand.calculate_results()
-        # show results page
+        # ---> show results page here <---
     else:
         case_hand.curr_graph_id += 1
         generate_graph(num_days=case_hand.num_days, faker=case_hand.faker)

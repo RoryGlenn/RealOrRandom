@@ -28,9 +28,10 @@ class CaseHandler:
         self.user_answers = {}
         self.faker = Faker()
         self.curr_graph_id = 0
+        self.check_days = [1, 5, 10, 30, 60]
 
     def choose(self) -> bool:
-        return np.random.choice([True])  # FALSE
+        return np.random.choice([True, False])
 
     def __create_half_dataframes(
         self, dataframes: dict[str, pd.DataFrame], exclusions=[]
@@ -132,42 +133,67 @@ class CaseHandler:
             "user_confidence": users_answers["confidence-slider"],
         }
 
-    @classmethod
     def calculate_results(self) -> None:
         """Compare the users guessed price to the actual price in the full dataframe"""
         # need to iterate over all graphs!!!!
         # right now, this only iterates over 1 graph
-        for g_id, usrs_answer in self.user_answers.items():
-            initial_price = self.half_dataframes["1D"].loc[59, "Close"]
+        
+        for key, value in self.user_answers.items():
+            print(key)
+            print(value)
+        
+        for id, u_answer in self.user_answers.items():
+            initial_index = len(self.half_dataframes["1D"]) - 1
 
-            future_1day = self.dataframes["1D"].loc[60, "Close"]
-            future_5day = self.dataframes["1D"].loc[64, "Close"]
-            future_10day = self.dataframes["1D"].loc[69, "Close"]
-            future_30day = self.dataframes["1D"].loc[89, "Close"]
-            future_60day = self.dataframes["1D"].loc[119, "Close"]
+            initial_price = self.half_dataframes["1D"].loc[
+                len(self.half_dataframes["1D"]) - 1, "Close"
+            ]
 
-            relative_change_1day = (
-                self.get_relative_change(initial_price, future_1day) * 100
-            )
-            relative_change_5day = (
-                self.get_relative_change(initial_price, future_5day) * 100
-            )
-            relative_change_10day = (
-                self.get_relative_change(initial_price, future_10day) * 100
-            )
-            relative_change_30day = (
-                self.get_relative_change(initial_price, future_30day) * 100
-            )
-            relative_change_60day = (
-                self.get_relative_change(initial_price, future_60day) * 100
-            )
+            # future_1day = self.dataframes["1D"].loc[initial_index+1, "Close"]
+            # future_5day = self.dataframes["1D"].loc[initial_index+5, "Close"]
+            # future_10day = self.dataframes["1D"].loc[initial_index+10, "Close"]
+            # future_30day = self.dataframes["1D"].loc[initial_index+30, "Close"]
+            # future_60day = self.dataframes["1D"].loc[initial_index+60, "Close"]
 
-            self.results[g_id] = [
-                self.get_results(usrs_answer, relative_change_1day, 1),
-                self.get_results(usrs_answer, relative_change_5day, 5),
-                self.get_results(usrs_answer, relative_change_10day, 10),
-                self.get_results(usrs_answer, relative_change_30day, 30),
-                self.get_results(usrs_answer, relative_change_60day, 60),
+            print(self.dataframes["1D"])
+
+            future_days = [
+                self.dataframes["1D"].loc[initial_index + t, "Close"]
+                for t in self.check_days
+            ]
+
+            # relative_change_1day = (
+            #     self.get_relative_change(initial_price, future_1day) * 100
+            # )
+            # relative_change_5day = (
+            #     self.get_relative_change(initial_price, future_5day) * 100
+            # )
+            # relative_change_10day = (
+            #     self.get_relative_change(initial_price, future_10day) * 100
+            # )
+            # relative_change_30day = (
+            #     self.get_relative_change(initial_price, future_30day) * 100
+            # )
+            # relative_change_60day = (
+            #     self.get_relative_change(initial_price, future_60day) * 100
+            # )
+
+            relative_changes = [
+                self.get_relative_change(initial_price, f_day) * 100
+                for f_day in future_days
+            ]
+
+            # self.results[id] = [
+            #     self.get_results(u_answer, relative_change_1day, 1),
+            #     self.get_results(u_answer, relative_change_5day, 5),
+            #     self.get_results(u_answer, relative_change_10day, 10),
+            #     self.get_results(u_answer, relative_change_30day, 30),
+            #     self.get_results(u_answer, relative_change_60day, 60),
+            # ]
+            
+            self.results[id] = [
+                self.get_results(u_answer, rc, f_day)
+                for rc, f_day in zip(relative_changes, future_days)
             ]
 
     """
@@ -183,10 +209,8 @@ class CaseHandler:
     def init(self) -> None:
         Faker.seed(np.random.randint(10_000))
 
-        Download.download_data(
-            url=GITHUB_URL,
-            files_to_download=Download.get_data_filenames(DATA_FILENAMES),
-            download_path=DOWNLOAD_PATH,
-        )
-
-        # self.generate_graph()
+        # Download.download_data(
+        #     url=GITHUB_URL,
+        #     files_to_download=Download.get_data_filenames(DATA_FILENAMES),
+        #     download_path=DOWNLOAD_PATH,
+        # )
