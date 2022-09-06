@@ -1,4 +1,3 @@
-gemini_BTCUSD_2015_1min.csv
 gemini_BTCUSD_2016_1min.csv
 gemini_BTCUSD_2017_1min.csv
 gemini_BTCUSD_2018_1min.csv
@@ -11,14 +10,12 @@ gemini_ETHBTC_2019_1min.csv
 gemini_ETHBTC_2020_1min.csv
 gemini_ETHBTC_2021_1min.csv
 gemini_ETHBTC_2022_1min.csv
-gemini_ETHUSD_2016_1min.csv
 gemini_ETHUSD_2017_1min.csv
 gemini_ETHUSD_2018_1min.csv
 gemini_ETHUSD_2019_1min.csv
 gemini_ETHUSD_2020_1min.csv
 gemini_ETHUSD_2021_1min.csv
 gemini_ETHUSD_2022_1min.csv
-gemini_LTCUSD_2018_1min.csv
 gemini_LTCUSD_2019_1min.csv
 gemini_LTCUSD_2020_1min.csv
 gemini_LTCUSD_2021_1min.csv
