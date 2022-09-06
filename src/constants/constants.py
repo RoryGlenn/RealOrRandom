@@ -32,3 +32,23 @@ DATA_PATH = "data"
 DATA_FILENAMES = "data_filenames.txt"
 GITHUB_URL = "https://raw.githubusercontent.com/RoryGlenn/RealOrRandom/main/data/"
 DOWNLOAD_PATH = "data"
+START_PRICE_RANDOM_CASE = 100_000
+
+TOTAL_GRAPHS = 2
+NUM_DAYS = 120
+
+TIMEFRAME_MAP = {
+    "1m": "1min",
+    "5m": "5min",
+    "15m": "15min",
+    "30m": "30min",
+    "1h": "1H",
+    "2h": "2H",
+    "4h": "4H",
+    "1D": "1D",
+    "3D": "3D",
+    "W": "1W",
+    "M": "1M",
+}
+TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "3D", "W", "M"]
+GRAPH_IDS = [str(i).zfill(2) for i in range(20)]

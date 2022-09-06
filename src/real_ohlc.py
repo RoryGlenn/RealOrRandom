@@ -15,9 +15,8 @@ class RealOHLC:
         self.__data_files = data_files
         self.__resampled_data = {}
         self.__df = None
-        self.__filename = None
-        self.__start_date_dt = None
-        self.__end_date_dt = None
+        self.__start_date_limit = None
+        self.__end_date_limit = None
         self.__start_date_str = None
         self.__end_date_str = None
         self.__agg_dict = {
@@ -41,11 +40,11 @@ class RealOHLC:
 
     @property
     def start_date_dt(self) -> datetime:
-        return self.__start_date_dt
+        return self.__start_date_limit
 
     @property
     def end_date_dt(self) -> datetime:
-        return self.__end_date_dt
+        return self.__end_date_limit
 
     @property
     def start_date_str(self) -> str:
@@ -66,10 +65,6 @@ class RealOHLC:
             if isfile(join(path, f)) and join(path, f)[-4:] == ".csv"
         ]
 
-    def set_file_choice(self) -> None:
-        """randomly choose a file"""
-        self.__filename = np.random.choice(self.__data_files)
-
     def set_start_end_datelimits(self) -> None:
         """Returns a dictionary containing all of the file names as the key
         and start/end dates as the value.
@@ -78,32 +73,36 @@ class RealOHLC:
         """
 
         # protects loop against incorrectly placed files in the data folder
-        if self.__filename not in self.__data_files:
+        if self.__data_choice not in self.__data_files:
             from sys import exit as sysexit
 
-            print(f"{self.__filename} was not found in data repository")
+            print(f"{self.__data_choice} was not found in data repository")
             sysexit(1)
 
-        df = pd.read_csv(DATA_PATH + "/" + self.__filename, skiprows=1)
-        dt = datetime.strptime(df.loc[len(df) - 1, "Date"], DATE_FORMAT) + timedelta(
-            days=90
-        )
-        self.__start_date_dt = dt.strftime(DATE_FORMAT)
-        self.__end_date_dt = df.loc[0, "Date"]
+        df = pd.read_csv(DATA_PATH + "/" + self.__data_choice, skiprows=1)
 
-    def randomly_pick_start_end_dates(self) -> None:
+        #############################################################################
+        # ERROR HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+        _dt = datetime.strptime(df.loc[len(df) - 1, "Date"], DATE_FORMAT)
+        dt = _dt + timedelta(days=90)
+        #############################################################################
+
+        self.__start_date_limit = dt.strftime(DATE_FORMAT)
+        self.__end_date_limit = df.loc[0, "Date"]
+
+    def pick_start_end_dates(self) -> None:
         """Once the start and end date limit have been set,
         Randomly select what our start date will be.
         Then add 'num_days' to the start_date, this will be the end_date."""
 
-        start_date_dt = datetime.strptime(self.__start_date_dt, DATE_FORMAT)
-        end_date_dt = datetime.strptime(self.__end_date_dt, DATE_FORMAT)
+        start_date_dt = datetime.strptime(self.__start_date_limit, DATE_FORMAT)
+        end_date_dt = datetime.strptime(self.__end_date_limit, DATE_FORMAT)
 
         # get the number of days from the start date to the end date
         diff_dt = end_date_dt - start_date_dt
 
         # Create a list of all the dates within the given date bounds.
-        # Limit the total number of days we can use to diff_dt.days-num_days
+        # Limit the total number of days we can use to diff_dt.days - num_days
         # so the last 'num_days' will be off limits to the start date.
         # By doing this, we protect ourselves from an out of bounds error
         dt_list = [
@@ -112,7 +111,9 @@ class RealOHLC:
         ]
 
         if len(dt_list) == 0:
+            # dt_list is set incorrectly when self._start_date_limit is out of bounds!!!!
             from sys import exit as sysexit
+
             print("dt_list is empty!")
             sysexit(1)
 
@@ -162,14 +163,19 @@ class RealOHLC:
             df = self.merge_csv_files(symbol_pair)  # BOTTLE NECK HERE!
         else:
             df = pd.read_csv(
-                self.__data_choice,
+                DATA_PATH + "/" + self.__data_choice,
                 usecols=["Date", "Open", "High", "Low", "Close"],
                 skiprows=1,
             )[::-1]
 
+        # the chosen year does not correspond with the dropped dates!!!!!
+        # BAD START DATE!!!
+        # print(self.__start_date_str)
+        # print(self.__end_date_str)
+        # print(df)
+
         df = df.drop(df[df["Date"] < self.__start_date_str].index)
         df = df.drop(df[df["Date"] > self.__end_date_str].index)
-
         df["Date"] = pd.to_datetime(df["Date"]).dt.tz_localize(None)
         df.set_index("Date", inplace=True)
         self.__df = df
@@ -222,7 +228,7 @@ class RealOHLC:
             )
             prev_timeframe = timeframe
 
-    def __downsample_ohlc_data(self, timeframe: str, df: pd.DataFrame) -> None:
+    def __downsample_ohlc_data(self, timeframe: str, df: pd.DataFrame) -> pd.DataFrame:
         """
         Converts a higher resolution dataframe into a lower one.
 

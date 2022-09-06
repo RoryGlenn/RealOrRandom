@@ -1,63 +1,22 @@
-from time import sleep
+from os import system
 from typing import Tuple
+
+system("cls")
+
 from pprint import pprint
 
-import numpy as np
-import pandas as pd
 from dash import Dash
-from faker import Faker
 import plotly.graph_objects as go
-
 import dash_bootstrap_components as dbc
 from dash.exceptions import PreventUpdate
 from dash import Dash, Input, Output, State, html, dcc, ctx
 
-import cufflinks as cf
-from dates import Dates
-from download import Download
-from real_ohlc import RealOHLC
-from random_ohlc import RandomOHLC
-from constants.constants import (
-    DATA_PATH,
-    DOWNLOAD_PATH,
-    GITHUB_URL,
-    SECONDS_IN_1DAY,
-    DATA_FILENAMES,
-)
+from constants.constants import TIMEFRAME_MAP, TIMEFRAMES, TOTAL_GRAPHS
+from case_handler import CaseHandler
 
-from os import system
+case_hand = CaseHandler(num_days=120)
+case_hand.init()
 
-system("cls")
-
-user_answers = {}
-results = {}
-current_graph_id = 0
-answers = {}
-TOTAL_GRAPHS = 2
-NUM_DAYS = 120
-FAKER = Faker()
-
-TIMEFRAME_MAP = {
-    "1m": "1min",
-    "5m": "5min",
-    "15m": "15min",
-    "30m": "30min",
-    "1h": "1H",
-    "2h": "2H",
-    "4h": "4H",
-    "1D": "1D",
-    "3D": "3D",
-    "W": "1W",
-    "M": "1M",
-}
-
-GRAPH_IDS = [str(i).zfill(2) for i in range(20)]
-TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "3D", "W", "M"]
-dataframes = None
-half_dataframes = None
-
-# external_stylesheets = "https://codepen.io/chriddyp/pen/bWLwgP.css"
-# app = Dash(__name__, external_stylesheets=[external_stylesheets])
 
 # Initialize app
 app = Dash(
@@ -653,6 +612,7 @@ app.layout = html.Div(
             ],
             style={"width": "170vh", "height": "85vh"},
         ),
+        html.Div(id="dummy", children=[]),
     ],
 )
 
@@ -662,37 +622,59 @@ def update_map_title(id: int):
     return "Graph ID: {0}".format(id)
 
 
-@app.callback(Output("main-graph", "children"), Input("url", "children"))
-def generate_graph(*args) -> None:
-    global answers
-    global dataframes
-    global half_dataframes
-    global current_graph_id
+@app.callback(
+    # Output("main-graph", "children"),
+    Output("dummy", "children"),
+    Input("url", "children"),
+)
+def generate_graph(*args) -> tuple[int, int]:
+    global case_hand
 
-    dataframes, half_dataframes, answers["graph_" + str(current_graph_id)] = (
-        real_case(num_days=NUM_DAYS, faker=FAKER)
-        if np.random.choice([True])
-        else random_case(num_days=NUM_DAYS, faker=FAKER)
-    )
-    reset_indices(dataframes, half_dataframes)
-    print(f"Created graph {current_graph_id}")
-    pprint(answers)
+    case_hand.real_case(
+        num_days=case_hand.num_days
+    ) if case_hand.choose() else case_hand.random_case(num_days=case_hand.num_days)
+
+    case_hand.reset_indices()
+    print(f"Created graph {case_hand.curr_graph_id}")
+    pprint(case_hand.answer)
     print()
+
+    fig = go.Figure(
+        data=go.Candlestick(
+            x=case_hand.half_dataframes["1D"]["Date"],
+            open=case_hand.half_dataframes["1D"]["Open"],
+            high=case_hand.half_dataframes["1D"]["High"],
+            low=case_hand.half_dataframes["1D"]["Low"],
+            close=case_hand.half_dataframes["1D"]["Close"],
+        ),
+        layout={
+            "plot_bgcolor": "rgb(37,46,63)",
+            "paper_bgcolor": "rgb(37,46,63)",
+            # "title": "Graph 00",  # get the current graph id
+            "xaxis_title": "Time",
+            "yaxis_title": "Price",
+            "font": {"size": 14, "color": "#7fafdf"},
+        },
+    )
+    return fig
 
 
 # connect this call back with the new buttons placed inside the graph
 @app.callback(
     Output("main-graph", "figure"),
+    Input("dummy", "children"),
     [Input(i, "n_clicks") for i in TIMEFRAMES],
 )
-def display_selected_timeframe(*args) -> go.Figure:
-    global half_dataframes
+def display_selected_timeframe(children: dict, *buttons: tuple[int]) -> go.Figure:
+    global case_hand
 
-    # if half_dataframes is None:
-    #     generate_graph()
+    if case_hand.half_dataframes is None:
+        generate_graph()
 
-    btn_value = "1D" if not any(args) else ctx.triggered_id
-    df = half_dataframes[TIMEFRAME_MAP[btn_value]]
+    btn_value = (
+        "1D" if not any(buttons) or ctx.triggered_id == "dummy" else ctx.triggered_id
+    )
+    df = case_hand.half_dataframes[TIMEFRAME_MAP[btn_value]]
 
     fig = go.Figure(
         data=go.Candlestick(
@@ -781,15 +763,14 @@ def on_submit(
     confidence: int,
     desc_children: dict,
 ):
-    global user_answers
-    global current_graph_id
+    global case_hand
 
     if num_clicks is None:
         # prevent the None callbacks is important with the store component.
         # you don't want to update the store for nothing.
         raise PreventUpdate
 
-    user_answers[current_graph_id] = {
+    case_hand.user_answers[case_hand.curr_graph_id] = {
         "1daybounds-slider": daybounds1,
         "5daybounds-slider": daybounds5,
         "10daybounds-slider": daybounds10,
@@ -800,177 +781,14 @@ def on_submit(
         "confidence-slider": confidence,
     }
 
-    if len(user_answers) == TOTAL_GRAPHS:
-        calculate_results()
+    if len(case_hand.user_answers) == TOTAL_GRAPHS:
+        case_hand.calculate_results()
+        # show results page
     else:
-        current_graph_id += 1
-        generate_graph(num_days=NUM_DAYS, faker=FAKER)
+        case_hand.curr_graph_id += 1
+        generate_graph(num_days=case_hand.num_days, faker=case_hand.faker)
     return desc_children
 
 
-def create_half_dataframes(
-    dataframes: dict[str, pd.DataFrame], exclusions=[]
-) -> dict[str, pd.DataFrame]:
-    """Creates a new dict that contains only the first half the data in the dataframes"""
-    return {
-        timeframe: df.iloc[: len(df) // 2]
-        for timeframe, df in dataframes.items()
-        if timeframe not in exclusions
-    }
-
-
-def reset_indices(
-    dataframes: dict[str, pd.DataFrame], half_dataframes: dict[str, pd.DataFrame]
-) -> None:
-    """Resets the index for every dataframe in dataframes and half_dataframes"""
-    {
-        df.reset_index(inplace=True): hdf.reset_index(inplace=True)
-        for df, hdf in zip(dataframes.values(), half_dataframes.values())
-    }
-
-
-def real_case(
-    num_days: int, faker: Faker, exclusions: list[str] = []
-) -> Tuple[dict, dict, str]:
-    """Creates the real case scenario"""
-
-    # get the files and randomly decide which data to use
-    files = Dates.get_filenames(DATA_PATH)
-    data_choice = np.random.choice(files)
-
-    real_ohlc = RealOHLC(
-        DATA_PATH + "/" + data_choice,
-        num_days,
-        data_files=Download.get_data_filenames(DATA_FILENAMES),
-    )
-
-    real_ohlc.set_file_choice()
-    real_ohlc.set_start_end_datelimits()
-    real_ohlc.randomly_pick_start_end_dates()
-    real_ohlc.create_df(merge_csvs=False)
-    real_ohlc.normalize_ohlc_data()
-    real_ohlc.abstract_dates()
-    real_ohlc.resample_timeframes()
-
-    half_dataframes = create_half_dataframes(real_ohlc.resampled_data, exclusions)
-
-    answer = {
-        "Real_Or_Random": "Real",
-        "Name": faker.name(),
-        "Start_Date": real_ohlc.start_date_str,
-        "End_Date": real_ohlc.end_date_str,
-        "File": real_ohlc.data_choice,
-    }
-    return real_ohlc.resampled_data, half_dataframes, answer
-
-
-def random_case(
-    num_days: int, faker: Faker, exclusions: list[str] = []
-) -> Tuple[dict, dict, str]:
-    random_ohlc = RandomOHLC(
-        total_days=num_days,
-        start_price=100_000,
-        name=faker.name(),
-        volatility=np.random.uniform(1, 2),
-    )
-    random_ohlc.generate_random_df(
-        random_ohlc.total_days * SECONDS_IN_1DAY,
-        "1S",
-        random_ohlc.start_price,
-        random_ohlc.volatility,
-    )
-    random_ohlc.create_realistic_ohlc()
-    random_ohlc.normalize_ohlc_data()
-    random_ohlc.resample_timeframes()
-
-    half_dataframes = create_half_dataframes(random_ohlc.resampled_data, exclusions)
-    answer = {
-        "Real_Or_Random": "Random",
-        "Name": faker.name(),
-        "Start_Date": "None",
-        "End_Date": "None",
-        "File": "None",
-    }
-    return random_ohlc.resampled_data, half_dataframes, answer
-
-
-def get_relative_change(initial_value: float, final_value: float) -> float:
-    """Returns the relative change.
-    Formula = (x2 - x1) / x1"""
-    return (final_value - initial_value) / initial_value
-
-
-def get_results(users_answers: dict, relative_change: float, day_number: int) -> dict:
-    return {
-        f"relative_change_{day_number}day": relative_change,
-        "user_1day": users_answers[f"{day_number}daybounds-slider"],
-        "user_off_by_1day": abs(relative_change)
-        - abs(users_answers[f"{day_number}daybounds-slider"]),
-        "user_real_or_random": users_answers["realorrandom-dropdown"],
-        "user_pattern": users_answers["pattern-dropdown"],
-        "user_confidence": users_answers["confidence-slider"],
-    }
-
-
-def calculate_results() -> None:
-    """Compare the users guessed price to the actual price in the full dataframe"""
-    from pprint import pprint
-
-    global user_answers
-    global current_graph_id
-    global results
-    global dataframes
-    global half_dataframes
-
-    # need to iterate over all graphs!!!!
-    # right now, this only iterates over 1 graph
-    for g_id, usrs_answer in user_answers.items():
-        initial_price = half_dataframes["1D"].loc[59, "Close"]
-
-        future_1day = dataframes["1D"].loc[60, "Close"]
-        future_5day = dataframes["1D"].loc[64, "Close"]
-        future_10day = dataframes["1D"].loc[69, "Close"]
-        future_30day = dataframes["1D"].loc[89, "Close"]
-        future_60day = dataframes["1D"].loc[119, "Close"]
-
-        relative_change_1day = get_relative_change(initial_price, future_1day) * 100
-        relative_change_5day = get_relative_change(initial_price, future_5day) * 100
-        relative_change_10day = get_relative_change(initial_price, future_10day) * 100
-        relative_change_30day = get_relative_change(initial_price, future_30day) * 100
-        relative_change_60day = get_relative_change(initial_price, future_60day) * 100
-
-        results[g_id] = [
-            get_results(usrs_answer, relative_change_1day, 1),
-            get_results(usrs_answer, relative_change_5day, 5),
-            get_results(usrs_answer, relative_change_10day, 10),
-            get_results(usrs_answer, relative_change_30day, 30),
-            get_results(usrs_answer, relative_change_60day, 60),
-        ]
-
-
-"""
-
-If I can just redirect the user to the current page once the routine finishes, then the problem is solved.
-
-it seems that all state is stored in the url. 
-If this is indeed the case, you should have all state available in the callback that updates the page content already 
-(i assume that the url is an Input? If not so, you can just add it as a State to get the info).
-
-"""
-
-
-def init() -> None:
-    Faker.seed(np.random.randint(10_000))
-
-    Download.download_data(
-        url=GITHUB_URL,
-        files_to_download=Download.get_data_filenames(DATA_FILENAMES),
-        download_path=DOWNLOAD_PATH,
-    )
-
-    generate_graph()
-
-
 if __name__ == "__main__":
-    init()
     app.run_server(debug=False, port=8080)
