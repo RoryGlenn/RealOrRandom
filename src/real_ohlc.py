@@ -1,3 +1,4 @@
+from sys import exit as sysexit
 from datetime import datetime, timedelta
 
 import pandas as pd
@@ -84,11 +85,18 @@ class RealOHLC:
         #############################################################################
         # ERROR HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         _dt = datetime.strptime(df.loc[len(df) - 1, "Date"], DATE_FORMAT)
-        dt = _dt + timedelta(days=90)
+        print("_dt: ", _dt)
+        dt = _dt + timedelta(
+            days=90
+        )  # why are we moving the start date 90 days forward? I thought we were only supposed to do this with the end date
+        print("adjusted dt", dt)
         #############################################################################
 
         self.__start_date_limit = dt.strftime(DATE_FORMAT)
         self.__end_date_limit = df.loc[0, "Date"]
+
+        print("__start_date_limit:", self.__start_date_limit)
+        print("__end_date_limit:  ", self.__end_date_limit)
 
     def pick_start_end_dates(self) -> None:
         """Once the start and end date limit have been set,
@@ -112,7 +120,6 @@ class RealOHLC:
 
         if len(dt_list) == 0:
             # dt_list is set incorrectly when self._start_date_limit is out of bounds!!!!
-            from sys import exit as sysexit
 
             print("dt_list is empty!")
             sysexit(1)
@@ -120,6 +127,18 @@ class RealOHLC:
         # # randomly choose a start date, then go 'num_days' into the future to get the end date
         start_date_dt = np.random.choice(dt_list)
         end_date_dt = start_date_dt + timedelta(days=self.__num_days)
+
+        # TEST
+        start_day = start_date_dt
+        total_days = 0
+        while start_day != end_date_dt:
+            start_day += timedelta(days=1)
+            total_days += 1
+
+        if total_days != self.__num_days:
+            print(
+                f"pick_start_end_dates -> total_days: {total_days}, num_days: {self.__num_days}"
+            )
 
         # create the start and end date strings
         self.__start_date_str = start_date_dt.strftime(DATE_FORMAT)

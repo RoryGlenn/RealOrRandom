@@ -1,3 +1,4 @@
+from typing import final
 import numpy as np
 import pandas as pd
 import cufflinks as cf
@@ -31,7 +32,8 @@ class CaseHandler:
         self.check_days = [1, 5, 10, 30, 60]
 
     def choose(self) -> bool:
-        return np.random.choice([True, False])
+        # return np.random.choice([True, False])
+        return np.random.choice([True])
 
     def __create_half_dataframes(
         self, dataframes: dict[str, pd.DataFrame], exclusions=[]
@@ -123,78 +125,71 @@ class CaseHandler:
     def get_results(
         users_answers: dict, relative_change: float, day_number: int
     ) -> dict:
-        return {
-            f"relative_change_{day_number}day": relative_change,
-            "user_1day": users_answers[f"{day_number}daybounds-slider"],
-            "user_off_by_1day": abs(relative_change)
-            - abs(users_answers[f"{day_number}daybounds-slider"]),
-            "user_real_or_random": users_answers["realorrandom-dropdown"],
-            "user_pattern": users_answers["pattern-dropdown"],
-            "user_confidence": users_answers["confidence-slider"],
-        }
+        perror_perc = round(
+            abs(relative_change) - abs(users_answers[f"{day_number}daybounds-slider"]),
+            4,
+        )
+        prediction_perc = users_answers[f"{day_number}daybounds-slider"]
+        prediction_rr = users_answers["realorrandom-dropdown"]
+        pattern = users_answers["pattern-dropdown"]
+        confidence = users_answers["confidence-slider"]
+
+        try:
+            d = {
+                f"prediction": prediction_perc,
+                f"prediction_error_percent": perror_perc,
+                "prediction_real_or_random": prediction_rr,
+                "pattern": pattern,
+                "confidence": confidence,
+            }
+            return d
+        except ValueError as ve:
+            print(ve)
+        return
 
     def calculate_results(self) -> None:
         """Compare the users guessed price to the actual price in the full dataframe"""
         # need to iterate over all graphs!!!!
         # right now, this only iterates over 1 graph
-        
-        for key, value in self.user_answers.items():
-            print(key)
-            print(value)
-        
-        for id, u_answer in self.user_answers.items():
+        from pprint import pprint
+
+        for graph_id, usr_answr in self.user_answers.items():
             initial_index = len(self.half_dataframes["1D"]) - 1
 
             initial_price = self.half_dataframes["1D"].loc[
                 len(self.half_dataframes["1D"]) - 1, "Close"
             ]
 
-            # future_1day = self.dataframes["1D"].loc[initial_index+1, "Close"]
-            # future_5day = self.dataframes["1D"].loc[initial_index+5, "Close"]
-            # future_10day = self.dataframes["1D"].loc[initial_index+10, "Close"]
-            # future_30day = self.dataframes["1D"].loc[initial_index+30, "Close"]
-            # future_60day = self.dataframes["1D"].loc[initial_index+60, "Close"]
-
-            print(self.dataframes["1D"])
-
-            future_days = [
-                self.dataframes["1D"].loc[initial_index + t, "Close"]
-                for t in self.check_days
-            ]
-
-            # relative_change_1day = (
-            #     self.get_relative_change(initial_price, future_1day) * 100
-            # )
-            # relative_change_5day = (
-            #     self.get_relative_change(initial_price, future_5day) * 100
-            # )
-            # relative_change_10day = (
-            #     self.get_relative_change(initial_price, future_10day) * 100
-            # )
-            # relative_change_30day = (
-            #     self.get_relative_change(initial_price, future_30day) * 100
-            # )
-            # relative_change_60day = (
-            #     self.get_relative_change(initial_price, future_60day) * 100
-            # )
+            try:
+                future_prices = [
+                    self.dataframes["1D"].loc[initial_index + t, "Close"]
+                    for t in self.check_days
+                ]
+            except ValueError as ve:
+                print(ve)
+            except KeyError as ke:
+                # why don't we generate 120 days? We are usually below this target amount
+                print(ke)
+            finally:
+                print()
 
             relative_changes = [
                 self.get_relative_change(initial_price, f_day) * 100
-                for f_day in future_days
+                for f_day in future_prices
             ]
 
-            # self.results[id] = [
-            #     self.get_results(u_answer, relative_change_1day, 1),
-            #     self.get_results(u_answer, relative_change_5day, 5),
-            #     self.get_results(u_answer, relative_change_10day, 10),
-            #     self.get_results(u_answer, relative_change_30day, 30),
-            #     self.get_results(u_answer, relative_change_60day, 60),
-            # ]
-            
-            self.results[id] = [
-                self.get_results(u_answer, rc, f_day)
-                for rc, f_day in zip(relative_changes, future_days)
-            ]
+            print("initial_index:", initial_index)
+            print("initial_price:", initial_price)
+            print("future_prices:", future_prices)
+            print("relative_changes:", relative_changes)
+            pprint(usr_answr)
+
+            _result = {
+                day_number: self.get_results(usr_answr, rel_chge, day_number)
+                for rel_chge, day_number in zip(relative_changes, self.check_days)
+            }
+            pprint(_result)
+            print()
 
     """
 
@@ -209,8 +204,8 @@ class CaseHandler:
     def init(self) -> None:
         Faker.seed(np.random.randint(10_000))
 
-        # Download.download_data(
-        #     url=GITHUB_URL,
-        #     files_to_download=Download.get_data_filenames(DATA_FILENAMES),
-        #     download_path=DOWNLOAD_PATH,
-        # )
+        Download.download_data(
+            url=GITHUB_URL,
+            files_to_download=Download.get_data_filenames(DATA_FILENAMES),
+            download_path=DOWNLOAD_PATH,
+        )

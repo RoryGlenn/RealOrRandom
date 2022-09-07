@@ -597,18 +597,25 @@ app.layout = html.Div(
                                             #         )
                                             #     ],
                                             # ),
-                                            html.Button(
-                                                id="submit-button",
-                                                children="Submit",
-                                                type="button",
-                                                className="link-button",
-                                                n_clicks=0,
-                                                style={
-                                                    "color": "rgb(44,254,193)",
-                                                    "margin-right": "75%",
-                                                    "margin-top": "5%",
-                                                },
-                                            )
+                                            # NEW!
+                                            dcc.ConfirmDialogProvider(
+                                                message="You will not be able to go back after submitting.\nAre you sure you want to continue?",
+                                                id="submit-confirm",
+                                                children=[
+                                                    html.Button(
+                                                        id="submit-button",
+                                                        children="Submit",
+                                                        type="button",
+                                                        className="link-button",
+                                                        n_clicks=0,
+                                                        style={
+                                                            "color": "rgb(44,254,193)",
+                                                            "margin-right": "75%",
+                                                            "margin-top": "5%",
+                                                        },
+                                                    ),
+                                                ],
+                                            ),
                                         ],
                                     ),
                                 ],
@@ -620,19 +627,22 @@ app.layout = html.Div(
             ],
             style={"width": "170vh", "height": "85vh"},
         ),
-        html.Div(id="dummy", children=[]),
+        html.Div(id="display_selected_timeframe", children=[]),
+        html.Div(id="update_map_title", children=[]),
     ],
 )
 
 
-# @app.callback(Output("maingraph-title", "children"), [Input("timeframe-button", "value")])
-def update_map_title(id: int):
+@app.callback(Output("update_map_title", "children"),
+              Input("submit-confirm", "n_clicks"),
+)
+def update_map_title(*args):
+    print('args', args)
     return "Graph ID: {0}".format(id)
 
 
 @app.callback(
-    # Output("main-graph", "children"),
-    Output("dummy", "children"),
+    Output("display_selected_timeframe", "children"),
     Input("dummyurl", "refresh"),
 )
 def generate_graph(*args, **kwargs) -> tuple[int, int]:
@@ -641,7 +651,6 @@ def generate_graph(*args, **kwargs) -> tuple[int, int]:
     case_hand.real_case(
         num_days=case_hand.num_days
     ) if case_hand.choose() else case_hand.random_case(num_days=case_hand.num_days)
-
     case_hand.reset_indices()
     print(f"Created graph {case_hand.curr_graph_id}")
     pprint(case_hand.answer)
@@ -667,10 +676,9 @@ def generate_graph(*args, **kwargs) -> tuple[int, int]:
     return fig
 
 
-# connect this call back with the new buttons placed inside the graph
 @app.callback(
     Output("main-graph", "figure"),
-    Input("dummy", "children"),
+    Input("display_selected_timeframe", "children"),
     [Input(i, "n_clicks") for i in TIMEFRAMES],
 )
 def display_selected_timeframe(children: dict, *buttons: tuple[int]) -> go.Figure:
@@ -680,7 +688,9 @@ def display_selected_timeframe(children: dict, *buttons: tuple[int]) -> go.Figur
         generate_graph()
 
     btn_value = (
-        "1D" if not any(buttons) or ctx.triggered_id == "dummy" else ctx.triggered_id
+        "1D"
+        if not any(buttons) or ctx.triggered_id == "display_selected_timeframe"
+        else ctx.triggered_id
     )
     df = case_hand.half_dataframes[TIMEFRAME_MAP[btn_value]]
 
@@ -707,7 +717,6 @@ def display_selected_timeframe(children: dict, *buttons: tuple[int]) -> go.Figur
     # buttons = [
     #     dict(label=i, method="update", args=[{"visible": [False]}]) for i in TIMEFRAMES
     # ]
-
     # fig.update_layout(
     #     updatemenus=[
     #         dict(
@@ -719,7 +728,7 @@ def display_selected_timeframe(children: dict, *buttons: tuple[int]) -> go.Figur
     #             buttons=list(buttons),
     #         )
     #     ]
-    # ),
+    # )
     return fig
 
 
@@ -765,16 +774,16 @@ def on_submit(
     }
 
     if len(case_hand.user_answers) == TOTAL_GRAPHS:
-        if len(case_hand.dataframes) != case_hand.num_days:
-            # real case sometimes generates 1 extra df row
+        if len(case_hand.dataframes["1D"]) != case_hand.num_days:
+            # real case sometimes generates less than case_hand.num_days
             print(f"{len(case_hand.dataframes['1D'])} != {case_hand.num_days}")
-            
-            
+            from sys import exit as sys_exit
+
+            sys_exit(1)
+
         case_hand.calculate_results()
+
         # ---> show results page here <---
-    else:
-        case_hand.curr_graph_id += 1
-        generate_graph(num_days=case_hand.num_days, faker=case_hand.faker)
     return desc_children
 
 
