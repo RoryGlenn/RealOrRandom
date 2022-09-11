@@ -8,7 +8,7 @@ app = Dash(__name__, external_stylesheets=[dbc.themes.LUMEN])
 df = pd.read_csv(
     "https://raw.githubusercontent.com/Coding-with-Adam/Dash-by-Plotly/master/Dash_Interactive_Graphs/Candle_OHLC/oil_prices.csv"
 )
-df["Date"] = pd.to_datetime(df["Date"])
+df["date"] = pd.to_datetime(df["date"])
 
 app.layout = dbc.Container(
     [
@@ -68,7 +68,7 @@ def build_graphs(
 
     fig_candle = go.Figure(
         go.Candlestick(
-            x=dff["Date"],
+            x=dff["date"],
             open=dff["Open"],
             high=dff["High"],
             low=dff["Low"],
@@ -82,7 +82,7 @@ def build_graphs(
 
     fig_ohlc = go.Figure(
         go.Ohlc(
-            x=dff["Date"],
+            x=dff["date"],
             open=dff["Open"],
             high=dff["High"],
             low=dff["Low"],

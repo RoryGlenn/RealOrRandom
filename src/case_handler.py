@@ -1,7 +1,8 @@
-from typing import final
 import numpy as np
 import pandas as pd
-import cufflinks as cf
+from sys import exit as sys_exit
+
+# import cufflinks as cf
 from faker import Faker
 
 from dates import Dates
@@ -68,14 +69,22 @@ class CaseHandler:
         real_ohlc.set_start_end_datelimits()
         real_ohlc.pick_start_end_dates()
         real_ohlc.create_df(merge_csvs=False)
-
         real_ohlc.normalize_ohlc_data()
+        
         real_ohlc.abstract_dates()
+        # real_ohlc.drop_first_day()
+        
         real_ohlc.resample_timeframes()
+        self.dataframes = real_ohlc.resampled_data.copy()
 
-        self.dataframes = real_ohlc.resampled_data
+        if len(self.dataframes["1D"]) != self.num_days:
+            print(
+                f"len(self.dataframes['1D']): {len(self.dataframes['1D'])} != self.num_days: {self.num_days}"
+            )
+            # sys_exit(1)
+
         self.half_dataframes = self.__create_half_dataframes(
-            real_ohlc.resampled_data, exclusions
+            real_ohlc.resampled_data.copy(), exclusions
         )
 
         self.answer = {
@@ -101,9 +110,19 @@ class CaseHandler:
         )
         random_ohlc.create_realistic_ohlc()
         random_ohlc.normalize_ohlc_data()
-        random_ohlc.resample_timeframes()
 
+        print(self.dataframes)
+        random_ohlc.resample_timeframes()
         self.dataframes = random_ohlc.resampled_data
+
+        if len(self.dataframes["1D"]) != self.num_days:
+            print(
+                f"len(self.dataframes['1D']): {len(self.dataframes['1D'])} != self.num_days: {self.num_days}"
+            )
+            from sys import exit as sys_exit
+
+            sys_exit(1)
+
         self.half_dataframes = self.__create_half_dataframes(
             random_ohlc.resampled_data, exclusions
         )
@@ -204,8 +223,8 @@ class CaseHandler:
     def init(self) -> None:
         Faker.seed(np.random.randint(10_000))
 
-        Download.download_data(
-            url=GITHUB_URL,
-            files_to_download=Download.get_data_filenames(DATA_FILENAMES),
-            download_path=DOWNLOAD_PATH,
-        )
+        # Download.download_data(
+        #     url=GITHUB_URL,
+        #     files_to_download=Download.get_data_filenames(DATA_FILENAMES),
+        #     download_path=DOWNLOAD_PATH,
+        # )

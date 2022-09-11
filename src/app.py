@@ -1,4 +1,5 @@
 from pprint import pprint
+from sys import exit as sys_exit
 
 from dash import Dash
 import plotly.graph_objects as go
@@ -576,47 +577,17 @@ app.layout = html.Div(
                                         ],
                                         style={"width": "75%", "margin-bottom": "30px"},
                                     ),
-                                    html.Div(
-                                        id="submit_output-provider",
-                                        children=[
-                                            # dcc.ConfirmDialogProvider(
-                                            #     message="You will not be able to go back after submitting.\nAre you sure you want to continue?",
-                                            #     id="dialog-confirm",
-                                            #     children=[
-                                            #         html.Button(
-                                            #             id="submit-button",
-                                            #             children="Submit",
-                                            #             type="button",
-                                            #             className="link-button",
-                                            #             n_clicks=0,
-                                            #             style={
-                                            #                 "color": "rgb(44,254,193)",
-                                            #                 "margin-right": "75%",
-                                            #                 "margin-top": "5%",
-                                            #             },
-                                            #         )
-                                            #     ],
-                                            # ),
-                                            # NEW!
-                                            dcc.ConfirmDialogProvider(
-                                                message="You will not be able to go back after submitting.\nAre you sure you want to continue?",
-                                                id="submit-confirm",
-                                                children=[
-                                                    html.Button(
-                                                        id="submit-button",
-                                                        children="Submit",
-                                                        type="button",
-                                                        className="link-button",
-                                                        n_clicks=0,
-                                                        style={
-                                                            "color": "rgb(44,254,193)",
-                                                            "margin-right": "75%",
-                                                            "margin-top": "5%",
-                                                        },
-                                                    ),
-                                                ],
-                                            ),
-                                        ],
+                                    html.Button(
+                                        id="submit-button",
+                                        children="Submit",
+                                        type="button",
+                                        className="link-button",
+                                        n_clicks=0,
+                                        style={
+                                            "color": "rgb(44,254,193)",
+                                            "margin-right": "75%",
+                                            "margin-top": "5%",
+                                        },
                                     ),
                                 ],
                                 style={"margin-left": "5%"},
@@ -633,11 +604,12 @@ app.layout = html.Div(
 )
 
 
-@app.callback(Output("update_map_title", "children"),
-              Input("submit-confirm", "n_clicks"),
+@app.callback(
+    Output("update_map_title", "children"),
+    Input("submit-confirm", "n_clicks"),
 )
 def update_map_title(*args):
-    print('args', args)
+    print("args", args)
     return "Graph ID: {0}".format(id)
 
 
@@ -658,16 +630,16 @@ def generate_graph(*args, **kwargs) -> tuple[int, int]:
 
     fig = go.Figure(
         data=go.Candlestick(
-            x=case_hand.half_dataframes["1D"]["Date"],
-            open=case_hand.half_dataframes["1D"]["Open"],
-            high=case_hand.half_dataframes["1D"]["High"],
-            low=case_hand.half_dataframes["1D"]["Low"],
-            close=case_hand.half_dataframes["1D"]["Close"],
+            x=case_hand.half_dataframes["1D"]["date"],
+            open=case_hand.half_dataframes["1D"]["open"],
+            high=case_hand.half_dataframes["1D"]["high"],
+            low=case_hand.half_dataframes["1D"]["low"],
+            close=case_hand.half_dataframes["1D"]["close"],
         ),
         layout={
             "plot_bgcolor": "rgb(37,46,63)",
             "paper_bgcolor": "rgb(37,46,63)",
-            # "title": "Graph 00",  # get the current graph id
+            "title": "Graph 00",  # get the current graph id
             "xaxis_title": "Time",
             "yaxis_title": "Price",
             "font": {"size": 14, "color": "#7fafdf"},
@@ -694,42 +666,23 @@ def display_selected_timeframe(children: dict, *buttons: tuple[int]) -> go.Figur
     )
     df = case_hand.half_dataframes[TIMEFRAME_MAP[btn_value]]
 
-    fig = go.Figure(
+    return go.Figure(
         data=go.Candlestick(
-            x=df["Date"],
-            open=df["Open"],
-            high=df["High"],
-            low=df["Low"],
-            close=df["Close"],
+            x=df["date"],
+            open=df["open"],
+            high=df["high"],
+            low=df["low"],
+            close=df["close"],
         ),
         layout={
             "plot_bgcolor": "rgb(37,46,63)",
             "paper_bgcolor": "rgb(37,46,63)",
-            # "title": "Graph 00",  # get the current graph id
+            "title": f"Graph 0{case_hand.curr_graph_id}",
             "xaxis_title": "Time",
             "yaxis_title": "Price",
             "font": {"size": 14, "color": "#7fafdf"},
         },
     )
-
-    #################################################################
-    # Buttons inside of Plotly figure object
-    # buttons = [
-    #     dict(label=i, method="update", args=[{"visible": [False]}]) for i in TIMEFRAMES
-    # ]
-    # fig.update_layout(
-    #     updatemenus=[
-    #         dict(
-    #             type="buttons",
-    #             direction="right",
-    #             active=6,
-    #             x=0.57,
-    #             y=1.2,
-    #             buttons=list(buttons),
-    #         )
-    #     ]
-    # )
-    return fig
 
 
 @app.callback(
@@ -776,12 +729,13 @@ def on_submit(
     if len(case_hand.user_answers) == TOTAL_GRAPHS:
         if len(case_hand.dataframes["1D"]) != case_hand.num_days:
             # real case sometimes generates less than case_hand.num_days
-            print(f"{len(case_hand.dataframes['1D'])} != {case_hand.num_days}")
-            from sys import exit as sys_exit
-
+            print(
+                f"len(case_hand.dataframes['1D']): {len(case_hand.dataframes['1D'])} != case_hand.num_days: {case_hand.num_days}"
+            )
             sys_exit(1)
-
         case_hand.calculate_results()
+    else:
+        case_hand.curr_graph_id += 1
 
         # ---> show results page here <---
     return desc_children

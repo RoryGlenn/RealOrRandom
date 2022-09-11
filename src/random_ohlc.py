@@ -129,7 +129,7 @@ class RandomOHLC:
     ):
         return pd.DataFrame(
             {
-                "Date": np.tile(
+                "date": np.tile(
                     pd.date_range(
                         start=start_date,
                         periods=num_bars,
@@ -168,7 +168,7 @@ class RandomOHLC:
         prices = np.abs(prices.round(decimals=6))
 
         df = self.__create_dataframe(num_bars, frequency, prices)
-        df.set_index("Date", inplace=True)
+        df.set_index("date", inplace=True)
 
         # THE BIGGEST BOTTLE NECK IS HERE!!!
         ##################################
@@ -302,7 +302,7 @@ class RandomOHLC:
         """Process for creating slightly more realistic candles"""
         # self.__create_volatile_periods()
         self.__connect_open_close_candles()
-        self.__df_1min.set_index("Date", inplace=True)
+        self.__df_1min.set_index("date", inplace=True)
 
     def __downsample_ohlc_data(self, timeframe: str, df: pd.DataFrame) -> None:
         """
