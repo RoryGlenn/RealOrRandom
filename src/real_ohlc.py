@@ -107,7 +107,7 @@ class RealOHLC:
 
         # get the number of days from the start date to the end date
         diff_dt = end_date_dt - start_date_dt
-        
+
         # Create a list of all the dates within the given date bounds.
         # Limit the total number of days we can use to diff_dt.days - num_days
         # so the last 'num_days' will be off limits to the start date.
@@ -121,10 +121,9 @@ class RealOHLC:
             # dt_list is set incorrectly when self._start_date_limit is out of bounds!!!!
             # start_date_dt      2016-12-16 13:34:00
             # end_date_dt        2016-12-31 23:59:00
-            
+
             # __start_date_limit 2016-12-16 13:34:00
             # __end_date_limit   2016-12-31 23:59:00
-
 
             print("dt_list is empty!")
             print("start_date_dt", self.start_date_dt)
@@ -135,7 +134,9 @@ class RealOHLC:
 
         # # randomly choose a start date, then go 'num_days' into the future to get the end date
         start_date_dt = np.random.choice(dt_list)
-        end_date_dt = start_date_dt + timedelta(days=self.__num_days) - timedelta(minutes=1)
+        end_date_dt = (
+            start_date_dt + timedelta(days=self.__num_days) - timedelta(minutes=1)
+        )
 
         # create the start and end date strings
         self.__start_date_str = start_date_dt.strftime(DATE_FORMAT)
@@ -295,7 +296,7 @@ class RealOHLC:
     def drop_first_day(self) -> None:
         """For an unknown reason, the first days data is does not show properly in the graph.
         It always generates a very small bar no matter which data set is loaded.
-        
+
         If we drop the data for the data, the problem goes away, the million dollar question is "why"?
         """
         self.__df.reset_index(inplace=True)
@@ -357,3 +358,6 @@ class RealOHLC:
             file_count += 1
 
         pprint(failed_list) if failed_list else print("All files passed")
+
+
+# DOES PIHOLE ONLY WORK FOR ETHERNET AND NOT WIFI?

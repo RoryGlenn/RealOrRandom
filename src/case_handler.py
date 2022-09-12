@@ -70,10 +70,10 @@ class CaseHandler:
         real_ohlc.pick_start_end_dates()
         real_ohlc.create_df(merge_csvs=False)
         real_ohlc.normalize_ohlc_data()
-        
+
         real_ohlc.abstract_dates()
         # real_ohlc.drop_first_day()
-        
+
         real_ohlc.resample_timeframes()
         self.dataframes = real_ohlc.resampled_data.copy()
 
