@@ -1,5 +1,6 @@
 from datetime import date
 from time import perf_counter
+from logging import getLogger
 
 import numpy as np
 import pandas as pd
@@ -10,6 +11,7 @@ from constants.constants import *
 
 pd.options.display.float_format = "{:.4f}".format
 
+logger = getLogger('root')
 
 class RandomOHLC:
     def __init__(
@@ -185,7 +187,7 @@ class RandomOHLC:
 
     def __create_volatile_periods(self) -> None:
         """Create more volatile periods and replace the normal ones with them"""
-        print("Creating volatile periods...")
+        logger.debug("Creating volatile periods...")
 
         length = len(self.__df_1min)
         random_chance = np.random.randint(1, 100)
@@ -347,6 +349,3 @@ class RandomOHLC:
                 timeframe, self.__resampled_data[prev_timeframe]
             )
             prev_timeframe = timeframe
-
-    def print_resampled_data(self) -> None:
-        {print(tf + "\n", df) for tf, df in self.resampled_data.items()}

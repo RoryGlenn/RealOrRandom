@@ -16,7 +16,7 @@ SHOW = "show"
 MULTI = "multi"
 LONG = "long"
 HTML = ".html"
-QTY_MAX_DEC = 6
+MAX_DEC = 4
 FORMAT_STR = "%Y-%m-%d"
 
 SECONDS_IN_1DAY = 86400
@@ -52,3 +52,5 @@ TIMEFRAME_MAP = {
 }
 TIMEFRAMES = ["1m", "5m", "15m", "30m", "1h", "4h", "1D", "3D", "W", "M"]
 GRAPH_IDS = [str(i).zfill(2) for i in range(20)]
+
+LOGS = "logs"

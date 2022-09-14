@@ -1,6 +1,9 @@
+import copy
+from sys import exit as sys_exit
+from pprint import pprint
+
 import numpy as np
 import pandas as pd
-from sys import exit as sys_exit
 
 # import cufflinks as cf
 from faker import Faker
@@ -16,8 +19,12 @@ from constants.constants import (
     SECONDS_IN_1DAY,
     DATA_FILENAMES,
     START_PRICE_RANDOM_CASE,
+    MAX_DEC,
 )
 
+from logging import getLogger
+
+logger = getLogger('root')
 
 class CaseHandler:
     def __init__(self, num_days: int = 120) -> None:
@@ -70,21 +77,19 @@ class CaseHandler:
         real_ohlc.pick_start_end_dates()
         real_ohlc.create_df(merge_csvs=False)
         real_ohlc.normalize_ohlc_data()
-
         real_ohlc.abstract_dates()
-        # real_ohlc.drop_first_day()
-
         real_ohlc.resample_timeframes()
-        self.dataframes = real_ohlc.resampled_data.copy()
+
+        self.dataframes = copy.deepcopy(real_ohlc.resampled_data)
 
         if len(self.dataframes["1D"]) != self.num_days:
-            print(
+            logger.debug(
                 f"len(self.dataframes['1D']): {len(self.dataframes['1D'])} != self.num_days: {self.num_days}"
             )
-            # sys_exit(1)
+            sys_exit(1)
 
         self.half_dataframes = self.__create_half_dataframes(
-            real_ohlc.resampled_data.copy(), exclusions
+            real_ohlc.resampled_data, exclusions
         )
 
         self.answer = {
@@ -111,16 +116,14 @@ class CaseHandler:
         random_ohlc.create_realistic_ohlc()
         random_ohlc.normalize_ohlc_data()
 
-        print(self.dataframes)
+        logger.debug(self.dataframes)
         random_ohlc.resample_timeframes()
-        self.dataframes = random_ohlc.resampled_data
+        self.dataframes = copy.deepcopy(random_ohlc.resampled_data)
 
         if len(self.dataframes["1D"]) != self.num_days:
-            print(
+            logger.debug(
                 f"len(self.dataframes['1D']): {len(self.dataframes['1D'])} != self.num_days: {self.num_days}"
             )
-            from sys import exit as sys_exit
-
             sys_exit(1)
 
         self.half_dataframes = self.__create_half_dataframes(
@@ -146,7 +149,7 @@ class CaseHandler:
     ) -> dict:
         perror_perc = round(
             abs(relative_change) - abs(users_answers[f"{day_number}daybounds-slider"]),
-            4,
+            MAX_DEC,
         )
         prediction_perc = users_answers[f"{day_number}daybounds-slider"]
         prediction_rr = users_answers["realorrandom-dropdown"]
@@ -158,57 +161,64 @@ class CaseHandler:
                 f"prediction": prediction_perc,
                 f"prediction_error_percent": perror_perc,
                 "prediction_real_or_random": prediction_rr,
+                # was the real or random prediction correct?
+                # ---> <---
                 "pattern": pattern,
                 "confidence": confidence,
             }
             return d
         except ValueError as ve:
-            print(ve)
+            logger.debug(ve)
         return
 
     def calculate_results(self) -> None:
         """Compare the users guessed price to the actual price in the full dataframe"""
         # need to iterate over all graphs!!!!
         # right now, this only iterates over 1 graph
-        from pprint import pprint
+
+        # plogger.debug(self.answers)
+        # plogger.debug(self.answer)
 
         for graph_id, usr_answr in self.user_answers.items():
             initial_index = len(self.half_dataframes["1D"]) - 1
 
             initial_price = self.half_dataframes["1D"].loc[
-                len(self.half_dataframes["1D"]) - 1, "Close"
+                len(self.half_dataframes["1D"]) - 1, "close"
             ]
 
             try:
                 future_prices = [
-                    self.dataframes["1D"].loc[initial_index + t, "Close"]
+                    self.dataframes["1D"].loc[initial_index + t, "close"]
                     for t in self.check_days
                 ]
             except ValueError as ve:
-                print(ve)
+                logger.debug(ve)
             except KeyError as ke:
                 # why don't we generate 120 days? We are usually below this target amount
-                print(ke)
+                logger.debug(ke)
             finally:
-                print()
+                logger.debug()
 
             relative_changes = [
-                self.get_relative_change(initial_price, f_day) * 100
+                round(self.get_relative_change(initial_price, f_day) * 100, MAX_DEC)
                 for f_day in future_prices
             ]
 
-            print("initial_index:", initial_index)
-            print("initial_price:", initial_price)
-            print("future_prices:", future_prices)
-            print("relative_changes:", relative_changes)
-            pprint(usr_answr)
+            logger.debug()
+            logger.debug("initial_index:", initial_index)
+            logger.debug("initial_price:", initial_price)
+            logger.debug("future_prices:", future_prices)
+            logger.debug("relative_changes:", relative_changes)
+            logger.debug(usr_answr)
 
             _result = {
                 day_number: self.get_results(usr_answr, rel_chge, day_number)
                 for rel_chge, day_number in zip(relative_changes, self.check_days)
             }
-            pprint(_result)
-            print()
+
+            logger.debug()
+            logger.debug(_result)
+            logger.debug()
 
     """
 

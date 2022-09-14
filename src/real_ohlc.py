@@ -2,11 +2,14 @@ from os import listdir
 from os.path import isfile, join
 from sys import exit as sys_exit
 from datetime import datetime, timedelta
+from logging import getLogger
 
 import pandas as pd
 import numpy as np
 
 from constants.constants import MINUTES_IN_1DAY, HOURS_IN_1DAY, DATA_PATH, DATE_FORMAT
+
+logger = getLogger('root')
 
 
 class RealOHLC:
@@ -63,7 +66,6 @@ class RealOHLC:
 
     def get_filenames(self, path: str) -> list[str]:
         """open the folder containing all the .csv files and return a list containing all the files"""
-
         return [
             f
             for f in listdir(path)
@@ -79,20 +81,14 @@ class RealOHLC:
 
         # protects loop against incorrectly placed files in the data folder
         if self.__data_choice not in self.__data_files:
-            print(f"{self.__data_choice} was not found in data repository")
+            logger.debug(f"{self.__data_choice} was not found in data repository")
             sys_exit(1)
 
         df = pd.read_csv(DATA_PATH + "/" + self.__data_choice, skiprows=1)
-
-        #############################################################################
-        # ERROR HERE!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
         dt = datetime.strptime(df.loc[len(df) - 1, "date"], DATE_FORMAT)
-        # print(dt)
-        # dt = dt + timedelta(
-        #     days=90
-        # )  # why are we moving the start date 90 days forward? I thought we were only supposed to do this with the end date
-        # print("adjusted dt", dt)
-        #############################################################################
+        # why are we moving the start date 90 days forward?
+        # I thought we were only supposed to do this with the end date
+        # dt += timedelta(days=90)
 
         self.__start_date_limit: str = dt.strftime(DATE_FORMAT)
         self.__end_date_limit: str = df.loc[0, "date"]
@@ -119,17 +115,11 @@ class RealOHLC:
 
         if len(dt_list) == 0:
             # dt_list is set incorrectly when self._start_date_limit is out of bounds!!!!
-            # start_date_dt      2016-12-16 13:34:00
-            # end_date_dt        2016-12-31 23:59:00
-
-            # __start_date_limit 2016-12-16 13:34:00
-            # __end_date_limit   2016-12-31 23:59:00
-
-            print("dt_list is empty!")
-            print("start_date_dt", self.start_date_dt)
-            print("end_date_dt", self.end_date_dt)
-            print("__start_date_limit", self.__start_date_limit)
-            print("__end_date_limit", self.__end_date_limit)
+            logger.debug("dt_list is empty!")
+            logger.debug("start_date_dt", self.start_date_dt)
+            logger.debug("end_date_dt", self.end_date_dt)
+            logger.debug("__start_date_limit", self.__start_date_limit)
+            logger.debug("__end_date_limit", self.__end_date_limit)
             sys_exit(1)
 
         # # randomly choose a start date, then go 'num_days' into the future to get the end date
@@ -182,7 +172,7 @@ class RealOHLC:
                 skiprows=1,
             )[::-1]
 
-        print(df)
+        logger.debug(df)
 
         df = df.drop(df[df["date"] < self.__start_date_str].index)
         df: pd.DataFrame = df.drop(df[df["date"] > self.__end_date_str].index)
@@ -192,7 +182,7 @@ class RealOHLC:
         self.__df = df
 
         if len(self.__df) != 172_800:
-            print(f"create_df: {len(self.__df)} != : 172_800")
+            logger.debug(f"create_df: {len(self.__df)} != : 172_800")
             sys_exit(1)
 
     def normalize_ohlc_data(self) -> pd.DataFrame:
@@ -299,39 +289,10 @@ class RealOHLC:
 
         If we drop the data for the data, the problem goes away, the million dollar question is "why"?
         """
+
         self.__df.reset_index(inplace=True)
-        self.__df.drop([0, 1439], axis=0, inplace=True)
+        self.__df.drop([0, MINUTES_IN_1DAY - 1], axis=0, inplace=True)
         self.__df.set_index("date", inplace=True)
-
-    def fix_nonsequential_data(self) -> None:
-        """Check that we have sequential 1 minute dates.
-        If we don't generate it by grabbing the last bars ohlc and copy it to the new bar."""
-        from tqdm import tqdm
-
-        # Forward fill / interpolation
-        # df = self.__df.interpolate(method="time")
-
-        self.__df.reset_index(inplace=True)
-        df = self.__df.copy()
-
-        start_dt = df["date"].iloc[0]
-
-        for i, d in enumerate(tqdm(df["date"])):
-            curr_dt = datetime.strptime(str(d), DATE_FORMAT)
-
-            if curr_dt != start_dt:
-                print(f"{curr_dt} ?= {start_dt}")
-                # curr_ohlc = df.loc[i]
-
-                # get the previous date and time and insert it into the new position
-                self.__df.at[i, "date"] = ohlc_prev["date"]
-                self.__df.at[i, "open"] = ohlc_prev["open"]
-                self.__df.at[i, "high"] = ohlc_prev["high"]
-                self.__df.at[i, "low"] = ohlc_prev["low"]
-                self.__df.at[i, "close"] = ohlc_prev["close"]
-            ohlc_prev = self.__df.loc[i]
-            start_dt += timedelta(minutes=1)
-        return
 
     def validate_data(self) -> bool:
         """Confirms whether all data files in data repository have sequential dates"""
@@ -340,24 +301,21 @@ class RealOHLC:
 
         failed_list = []
         file_count = 1
-        print()
+        logger.debug()
 
         for dfile in self.__data_files:
             df = pd.read_csv(DATA_PATH + "/" + dfile, skiprows=1)[::-1]
-            print(f"Checking {dfile} {file_count}\\{len(self.__data_files)}")
+            logger.debug(f"Checking {dfile} {file_count}\\{len(self.__data_files)}")
             start_dt = datetime.strptime(df["date"].iloc[0], DATE_FORMAT)
 
             for date in tqdm(df["date"]):
                 curr_dt = datetime.strptime(str(date), DATE_FORMAT)
 
                 if curr_dt != start_dt:
-                    print(f"{dfile}: {curr_dt} ?= {start_dt}")
+                    logger.debug(f"{dfile}: {curr_dt} ?= {start_dt}")
                     failed_list.append(f"{dfile}: {curr_dt} ?= {start_dt}")
                     break
                 start_dt += timedelta(minutes=1)
             file_count += 1
 
-        pprint(failed_list) if failed_list else print("All files passed")
-
-
-# DOES PIHOLE ONLY WORK FOR ETHERNET AND NOT WIFI?
+        pprint(failed_list) if failed_list else logger.debug("All files passed")

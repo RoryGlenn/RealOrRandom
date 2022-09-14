@@ -10,6 +10,13 @@ from dash import Dash, Input, Output, State, html, dcc, ctx
 from constants.constants import TIMEFRAME_MAP, TIMEFRAMES, TOTAL_GRAPHS
 from case_handler import CaseHandler
 
+from logr import Logr
+
+# setup the logging
+logr = Logr()
+logger = logr.setup_logger("root")
+logger.debug("Starting Real or Random...")
+
 case_hand = CaseHandler(num_days=120)
 case_hand.init()
 
@@ -24,7 +31,10 @@ app.title = "RealorRandom"
 server = app.server
 
 
-# App layout
+#######################################################################
+# App Layout
+#######################################################################
+
 app.layout = html.Div(
     id="root",
     children=[
@@ -251,16 +261,16 @@ app.layout = html.Div(
                                                         },
                                                         min=-100,
                                                         max=100,
-                                                        value=0,  # default value initially chosen
-                                                        dots=True,  # True, False - insert dots, only when step>1
-                                                        disabled=False,  # True,False - disable handle
-                                                        updatemode="mouseup",  # 'mouseup', 'drag' - update value method
-                                                        included=True,  # True, False - highlight handle
-                                                        vertical=False,  # True, False - vertical, horizontal slider
-                                                        verticalHeight=900,  # hight of slider (pixels) when vertical=True
+                                                        value=0,
+                                                        dots=True,
+                                                        disabled=False,
+                                                        updatemode="mouseup",
+                                                        included=True,
+                                                        vertical=False,
+                                                        verticalHeight=900,
                                                         className="None",
                                                         tooltip={
-                                                            "always_visible": False,  # show current slider values
+                                                            "always_visible": False,
                                                             "placement": "bottom",
                                                         },
                                                     ),
@@ -604,12 +614,17 @@ app.layout = html.Div(
 )
 
 
+#######################################################################
+# CallBacks
+#######################################################################
+
+
 @app.callback(
     Output("update_map_title", "children"),
     Input("submit-confirm", "n_clicks"),
 )
 def update_map_title(*args):
-    print("args", args)
+    
     return "Graph ID: {0}".format(id)
 
 
@@ -624,9 +639,9 @@ def generate_graph(*args, **kwargs) -> tuple[int, int]:
         num_days=case_hand.num_days
     ) if case_hand.choose() else case_hand.random_case(num_days=case_hand.num_days)
     case_hand.reset_indices()
-    print(f"Created graph {case_hand.curr_graph_id}")
-    pprint(case_hand.answer)
-    print()
+    
+    logger.debug(f"Created graph {case_hand.curr_graph_id}")
+    logger.debug(case_hand.answer)
 
     fig = go.Figure(
         data=go.Candlestick(
@@ -728,15 +743,15 @@ def on_submit(
 
     if len(case_hand.user_answers) == TOTAL_GRAPHS:
         if len(case_hand.dataframes["1D"]) != case_hand.num_days:
-            # real case sometimes generates less than case_hand.num_days
-            print(
+            logger.debug(
                 f"len(case_hand.dataframes['1D']): {len(case_hand.dataframes['1D'])} != case_hand.num_days: {case_hand.num_days}"
             )
             sys_exit(1)
         case_hand.calculate_results()
     else:
         case_hand.curr_graph_id += 1
-
+        # ---> show results page here <---
+        # ---> show results page here <---
         # ---> show results page here <---
     return desc_children
 
