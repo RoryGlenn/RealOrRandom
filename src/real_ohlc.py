@@ -1,6 +1,7 @@
 from os import listdir
 from os.path import isfile, join
-from sys import exit as sys_exit
+
+# from sys import exit as sys_exit
 from datetime import datetime, timedelta
 from logging import getLogger
 
@@ -9,7 +10,7 @@ import numpy as np
 
 from constants.constants import MINUTES_IN_1DAY, HOURS_IN_1DAY, DATA_PATH, DATE_FORMAT
 
-logger = getLogger('root')
+logger = getLogger("root")
 
 
 class RealOHLC:
@@ -82,7 +83,8 @@ class RealOHLC:
         # protects loop against incorrectly placed files in the data folder
         if self.__data_choice not in self.__data_files:
             logger.debug(f"{self.__data_choice} was not found in data repository")
-            sys_exit(1)
+            # sys_exit(1)
+            raise ValueError()
 
         df = pd.read_csv(DATA_PATH + "/" + self.__data_choice, skiprows=1)
         dt = datetime.strptime(df.loc[len(df) - 1, "date"], DATE_FORMAT)
@@ -120,7 +122,8 @@ class RealOHLC:
             logger.debug("end_date_dt", self.end_date_dt)
             logger.debug("__start_date_limit", self.__start_date_limit)
             logger.debug("__end_date_limit", self.__end_date_limit)
-            sys_exit(1)
+            # sys_exit(1)
+            raise ValueError()
 
         # # randomly choose a start date, then go 'num_days' into the future to get the end date
         start_date_dt = np.random.choice(dt_list)
@@ -183,7 +186,8 @@ class RealOHLC:
 
         if len(self.__df) != 172_800:
             logger.debug(f"create_df: {len(self.__df)} != : 172_800")
-            sys_exit(1)
+            # sys_exit(1)
+            raise ValueError()
 
     def normalize_ohlc_data(self) -> pd.DataFrame:
         """Normalize OHLC data with random multiplier

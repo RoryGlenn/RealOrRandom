@@ -11,7 +11,8 @@ from constants.constants import *
 
 pd.options.display.float_format = "{:.4f}".format
 
-logger = getLogger('root')
+logger = getLogger("root")
+
 
 class RandomOHLC:
     def __init__(

@@ -1,9 +1,11 @@
 from requests import get
 from os import path, mkdir, listdir
-from sys import exit as sysexit
+
+# from sys import exit as sysexit
 from logging import getLogger
 
-logger = getLogger('root')
+logger = getLogger("root")
+
 
 class Download:
     @staticmethod
@@ -29,7 +31,9 @@ class Download:
                     with open(download_path + "/" + file, "wb") as file:
                         for chunk in response.iter_content(chunk_size=256):
                             file.write(chunk)
-                    logger.debug(f"File {file.name.split('/')[1]} downloaded succesfully")
+                    logger.debug(
+                        f"File {file.name.split('/')[1]} downloaded succesfully"
+                    )
                 else:
                     logger.debug(
                         f"Error: status code: {response.status_code} can't download file {file}"

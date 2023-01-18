@@ -1,5 +1,6 @@
 import copy
-from sys import exit as sys_exit
+
+# from sys import exit as sys_exit
 from pprint import pprint
 
 import numpy as np
@@ -24,7 +25,8 @@ from constants.constants import (
 
 from logging import getLogger
 
-logger = getLogger('root')
+logger = getLogger("root")
+
 
 class CaseHandler:
     def __init__(self, num_days: int = 120) -> None:
@@ -86,7 +88,8 @@ class CaseHandler:
             logger.debug(
                 f"len(self.dataframes['1D']): {len(self.dataframes['1D'])} != self.num_days: {self.num_days}"
             )
-            sys_exit(1)
+            # sys_exit(1)
+            raise ValueError()
 
         self.half_dataframes = self.__create_half_dataframes(
             real_ohlc.resampled_data, exclusions
@@ -124,7 +127,8 @@ class CaseHandler:
             logger.debug(
                 f"len(self.dataframes['1D']): {len(self.dataframes['1D'])} != self.num_days: {self.num_days}"
             )
-            sys_exit(1)
+            # sys_exit(1)
+            raise ValueError()
 
         self.half_dataframes = self.__create_half_dataframes(
             random_ohlc.resampled_data, exclusions

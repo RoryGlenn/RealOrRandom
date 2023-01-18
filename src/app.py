@@ -1,15 +1,14 @@
 from pprint import pprint
-from sys import exit as sys_exit
 
-from dash import Dash
-import plotly.graph_objects as go
+# from sys import exit as sys_exit
+
 import dash_bootstrap_components as dbc
+import plotly.graph_objects as go
+from dash import Dash, Input, Output, State, ctx, dcc, html
 from dash.exceptions import PreventUpdate
-from dash import Dash, Input, Output, State, html, dcc, ctx
 
-from constants.constants import TIMEFRAME_MAP, TIMEFRAMES, TOTAL_GRAPHS
 from case_handler import CaseHandler
-
+from constants.constants import TIMEFRAME_MAP, TIMEFRAMES, TOTAL_GRAPHS
 from logr import Logr
 
 # setup the logging
@@ -624,7 +623,6 @@ app.layout = html.Div(
     Input("submit-confirm", "n_clicks"),
 )
 def update_map_title(*args):
-    
     return "Graph ID: {0}".format(id)
 
 
@@ -639,7 +637,7 @@ def generate_graph(*args, **kwargs) -> tuple[int, int]:
         num_days=case_hand.num_days
     ) if case_hand.choose() else case_hand.random_case(num_days=case_hand.num_days)
     case_hand.reset_indices()
-    
+
     logger.debug(f"Created graph {case_hand.curr_graph_id}")
     logger.debug(case_hand.answer)
 
@@ -746,7 +744,7 @@ def on_submit(
             logger.debug(
                 f"len(case_hand.dataframes['1D']): {len(case_hand.dataframes['1D'])} != case_hand.num_days: {case_hand.num_days}"
             )
-            sys_exit(1)
+            raise ValueError()
         case_hand.calculate_results()
     else:
         case_hand.curr_graph_id += 1
