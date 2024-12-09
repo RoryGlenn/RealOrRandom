@@ -1,9 +1,6 @@
-from datetime import date, datetime
-from time import perf_counter
+from datetime import datetime
 import numpy as np
 import pandas as pd
-from faker import Faker
-
 import logging
 
 logging.basicConfig(

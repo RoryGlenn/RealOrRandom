@@ -42,7 +42,6 @@ def initialize_session_state() -> None:
     if "difficulty" not in st.session_state:
         st.session_state.difficulty = "Easy"
     if "guesses" not in st.session_state:
-        # Store tuples of (attempt_number, user_guess, actual_price)
         st.session_state.guesses = []
 
 
@@ -85,11 +84,12 @@ def prepare_new_round() -> None:
     display_days = 90
     last_displayed_day = display_days - 1
 
+    # Determine future day based on difficulty
     if st.session_state.difficulty == "Easy":
         future_day_index = last_displayed_day + 1
     elif st.session_state.difficulty == "Medium":
         future_day_index = last_displayed_day + 7
-    else:
+    else:  # Hard
         future_day_index = last_displayed_day + 30
 
     future_price = df["Close"].iloc[future_day_index]
@@ -143,7 +143,6 @@ def submit_callback():
     total_attempts = (
         st.session_state.score["right"] + st.session_state.score["wrong"] + 1
     )
-    # Record the guess
     st.session_state.guesses.append((total_attempts, user_choice, future_price))
 
     # Evaluate result
@@ -173,12 +172,10 @@ def start_callback():
 
 
 def show_results_page():
-    st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
     st.markdown("## Final Results")
     st.write("You have completed 5 attempts.")
     display_score()
 
-    # Compute additional metrics
     guesses_df = pd.DataFrame(
         st.session_state.guesses, columns=["Attempt", "Your Guess", "Actual Price"]
     )
@@ -191,11 +188,9 @@ def show_results_page():
     st.write(f"**Accuracy:** {accuracy:.2f}%")
     st.write(f"**Average Absolute Error:** {avg_error:.2f}")
 
-    # Show a summary table of attempts
     st.write("### Your Attempts")
     st.dataframe(guesses_df)
 
-    # Add a chart to visualize guesses vs. actual prices
     fig = go.Figure()
     fig.add_trace(
         go.Scatter(
@@ -222,7 +217,6 @@ def show_results_page():
 
     st.plotly_chart(fig, use_container_width=True)
 
-    # Provide a final message based on performance
     if st.session_state.score["right"] > 3:
         st.write(
             "**Great job!** You got most of them right. Consider trying a harder difficulty next time!"
@@ -234,32 +228,44 @@ def show_results_page():
     else:
         st.write("You did okay! With a bit more practice, you might do even better.")
 
-    # Restart option
-    st.write("### Play Again?")
     if st.button("Go Back to Start"):
-        # Reset relevant states
         st.session_state.score = {"right": 0, "wrong": 0}
         st.session_state.game_state = GameState.START
         st.session_state.guesses = []
-
-    st.markdown("</div>", unsafe_allow_html=True)
 
 
 def main():
     initialize_session_state()
 
     if st.session_state.game_state == GameState.START:
-        st.markdown("<div style='text-align: center;'>", unsafe_allow_html=True)
-        st.markdown("## Welcome to the Stock Prediction Game!")
-        st.write("You will be shown a chart of the past 90 days' prices.")
-        st.write("Your goal is to guess the future closing price:")
-        st.write("- **Easy:** Next day's closing price")
-        st.write("- **Medium:** 7 days in the future")
-        st.write("- **Hard:** 30 days in the future")
-        difficulty = st.radio("Select Difficulty:", ["Easy", "Medium", "Hard"], index=0)
-        st.session_state.difficulty = difficulty
-        st.button("Start Game", on_click=start_callback)
-        st.markdown("</div>", unsafe_allow_html=True)
+        col1, col2, col3 = st.columns([1, 2, 1])
+        with col2:
+            # Add a thematic image (replace URL with your own image if needed)
+            # st.image('/workspaces/ubuntu/RealOrRandom/images/stock.jpg', use_container_width=True)
+            st.markdown("## Welcome to the **Ultimate Stock Prediction Challenge**!")
+            st.write(
+                "You’ve just joined the analytics team at a top trading firm. "
+                "To prove your skills, you’ll be shown the last 90 days of a stock’s prices. "
+                "Your mission? **Predict the future closing price!**"
+            )
+
+            st.markdown(
+                """
+                **Difficulty Levels:**
+                - **Easy:** Predict the **next day's** closing price
+                - **Medium:** Predict the **closing price 7 days** from now
+                - **Hard:** Predict the **closing price 30 days** from now
+                """
+            )
+
+            st.write(
+                "Can you outsmart the market and achieve the highest accuracy possible? Select a difficulty and press **Start Game** to find out!"
+            )
+
+            st.session_state.difficulty = st.radio(
+                "Choose your difficulty:", ["Easy", "Medium", "Hard"], index=0
+            )
+            st.button("Start Game", on_click=start_callback)
         return
 
     if st.session_state.game_state == GameState.FINISHED:
