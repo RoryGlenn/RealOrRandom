@@ -8,12 +8,13 @@ import uuid
 # Set Streamlit layout to wide
 st.set_page_config(layout="wide", page_title="Stock Prediction Game")
 
+
 def initialize_session_state() -> None:
     if "score" not in st.session_state:
         st.session_state.score = {"right": 0, "wrong": 0}
     if "game_state" not in st.session_state:
         # States:
-        # 0: Before user presses submit (initial)
+        # 0: Before user presses submit
         # 1: After user presses submit (show result and next button)
         st.session_state.game_state = 0
     if "uuid" not in st.session_state:
@@ -24,10 +25,11 @@ def initialize_session_state() -> None:
         st.session_state.future_price = None
     if "choices" not in st.session_state:
         st.session_state.choices = None
-    if "user_choice" not in st.session_state:
-        st.session_state.user_choice = None
 
-def get_ohlc_generator(num_days: int, start_price: int, volatility: float, drift: float) -> RandomOHLC:
+
+def get_ohlc_generator(
+    num_days: int, start_price: int, volatility: float, drift: float
+) -> RandomOHLC:
     return RandomOHLC(
         total_days=num_days,
         start_price=start_price,
@@ -36,6 +38,7 @@ def get_ohlc_generator(num_days: int, start_price: int, volatility: float, drift
         drift=drift,
     )
 
+
 def generate_ohlc_data(num_days: int = 90) -> pd.DataFrame:
     start_price = 100
     volatility = random.uniform(0.1, 5)
@@ -43,9 +46,12 @@ def generate_ohlc_data(num_days: int = 90) -> pd.DataFrame:
 
     ohlc_generator = get_ohlc_generator(num_days, start_price, volatility, drift)
     minutes_in_day = 1440
-    ohlc_generator.create_realistic_ohlc(num_bars=minutes_in_day * num_days, frequency="1min")
+    ohlc_generator.create_realistic_ohlc(
+        num_bars=minutes_in_day * num_days, frequency="1min"
+    )
     ohlc_generator.resample_timeframes()
     return ohlc_generator.resampled_data["1D"].round(2)
+
 
 def prepare_new_round() -> None:
     df = generate_ohlc_data(90)
@@ -58,7 +64,7 @@ def prepare_new_round() -> None:
     st.session_state.data = df.iloc[:-1]
     st.session_state.future_price = future_price
     st.session_state.choices = choices
-    st.session_state.user_choice = None
+
 
 def create_candlestick_chart(data: pd.DataFrame) -> go.Figure:
     fig = go.Figure(
@@ -82,41 +88,20 @@ def create_candlestick_chart(data: pd.DataFrame) -> go.Figure:
     )
     return fig
 
+
 def display_score() -> None:
     st.subheader("Score")
     st.write(f"Correct: {st.session_state.score['right']}")
     st.write(f"Wrong: {st.session_state.score['wrong']}")
 
-def submit_callback():
-    # Called when user clicks Submit
-    user_choice = st.session_state.user_choice
-    future_price = st.session_state.future_price
-    if user_choice is None:
-        st.warning("Please select a price before submitting.")
-        return
-
-    # Evaluate result
-    if user_choice == future_price:
-        st.session_state.score["right"] += 1
-        st.success("Correct!")
-    else:
-        st.session_state.score["wrong"] += 1
-        st.error(f"Wrong! The correct answer was {future_price:.2f}.")
-
-    # Move to state 1
-    st.session_state.game_state = 1
-
-def next_callback():
-    # Called when user clicks Next
-    st.session_state.uuid = str(uuid.uuid4())  # Not strictly needed now since no caching, but kept for future use
-    st.session_state.game_state = 0
-    prepare_new_round()
 
 def main():
     initialize_session_state()
 
-    # Prepare a new round if needed
-    if st.session_state.data is None or (st.session_state.game_state == 0 and st.session_state.user_choice is None):
+    # If no data or we just reset the game_state, prepare a new round
+    if st.session_state.data is None or (
+        st.session_state.game_state == 0 and "user_choice" not in st.session_state
+    ):
         prepare_new_round()
 
     st.title("Stock Price Prediction Game (90-Day Period)")
@@ -128,17 +113,39 @@ def main():
     # Display score
     display_score()
 
-    # Display radio for user choice
-    st.subheader("What do you think the next day's closing price will be?")
-    st.radio("Choose a price:", st.session_state.choices, key="user_choice")
-
     if st.session_state.game_state == 0:
-        # Show Submit button with a callback
-        st.button("Submit", on_click=submit_callback)
+        # User hasn't submitted yet
+        with st.form("prediction_form"):
+            st.subheader("What do you think the next day's closing price will be?")
+            user_choice = st.radio(
+                "Choose a price:", st.session_state.choices, key="user_choice"
+            )
+            submitted = st.form_submit_button("Submit")
+
+            if submitted:
+                # Evaluate result
+                if user_choice == st.session_state.future_price:
+                    st.session_state.score["right"] += 1
+                    st.success("Correct!")
+                else:
+                    st.session_state.score["wrong"] += 1
+                    st.error(
+                        f"Wrong! The correct answer was {st.session_state.future_price:.2f}."
+                    )
+
+                st.session_state.game_state = 1
+
     elif st.session_state.game_state == 1:
-        # Show Next button with a callback
+        # Submission done, show Next button
         st.info("Press Next to continue")
-        st.button("Next", on_click=next_callback)
+        if st.button("Next"):
+            # Reset game state and regenerate data
+            st.session_state.uuid = str(uuid.uuid4())
+            st.session_state.game_state = 0
+            if "user_choice" in st.session_state:
+                del st.session_state["user_choice"]
+            # No need to manually rerun; Streamlit reruns automatically after button click
+
 
 if __name__ == "__main__":
     main()

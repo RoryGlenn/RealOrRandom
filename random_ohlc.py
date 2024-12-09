@@ -1,13 +1,10 @@
-from datetime import date, timedelta, datetime
+from datetime import date, datetime
 from time import perf_counter
-from logging import getLogger
 import numpy as np
 import pandas as pd
-from tqdm import tqdm
 from faker import Faker
 
 pd.options.display.float_format = "{:.4f}".format
-logger = getLogger("root")
 
 
 class RandomOHLC:
