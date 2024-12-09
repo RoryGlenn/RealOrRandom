@@ -1,3 +1,0 @@
-COMPLETE:
-    Dataframes create 121 instead of 120 days (off by 1) (THE FIRST CANDLE BAR IS BROKEN!)
-    Turn timeframe dropdown into trading view buttons instead
