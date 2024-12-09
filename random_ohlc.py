@@ -74,20 +74,22 @@ class RandomOHLC:
         if lowest_val < 0:
             prices = [price + lowest_val for price in prices]
         return np.array(prices)
-    
-    
-    def geometric_brownian_motion(
-            self, start_price: float, num_steps: int, drift: float, volatility: float
-        ) -> np.ndarray:
-            """Simulate prices using Geometric Brownian Motion"""
-            dt = 1 / num_steps
-            prices = [start_price]
 
-            for _ in range(num_steps - 1):
-                shock = np.random.normal(0, 1) * np.sqrt(dt)
-                prices.append( prices[-1] * np.exp((drift - 0.5 * volatility**2) * dt + volatility * shock) )
-                
-            return np.array(prices)
+    def geometric_brownian_motion(
+        self, start_price: float, num_steps: int, drift: float, volatility: float
+    ) -> np.ndarray:
+        """Simulate prices using Geometric Brownian Motion"""
+        dt = 1 / num_steps
+        prices = [start_price]
+
+        for _ in range(num_steps - 1):
+            shock = np.random.normal(0, 1) * np.sqrt(dt)
+            prices.append(
+                prices[-1]
+                * np.exp((drift - 0.5 * volatility**2) * dt + volatility * shock)
+            )
+
+        return np.array(prices)
 
     def generate_random_df(
         self, num_bars: int, frequency: str, start_price: float, volatility: float
