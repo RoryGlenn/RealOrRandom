@@ -2,15 +2,12 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Streamlit Debug",
-      "type": "python",
+      "name": "Debug Streamlit",
+      "type": "debugpy",
       "request": "launch",
-      "program": "python",
-      "args": [
-        "-m", "streamlit", "run",
-        "${file}",          // or the path to your app file: "streamlit_app.py"
-        "--server.port=8501"
-      ],
+      "program": ".venv/lib/python3.12/site-packages/streamlit",
+      "args": [ "run", "${file}"],
+
       "console": "integratedTerminal",
       "justMyCode": true
     }
