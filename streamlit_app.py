@@ -55,33 +55,33 @@ def initialize_session_state() -> None:
         st.session_state.guesses = []
 
 
-def get_ohlc_generator(num_days: int, start_price: int, volatility: float, drift: float) -> RandomOHLC:
-    """
-    Create and return a RandomOHLC generator instance.
+# def get_ohlc_generator(num_days: int, start_price: int, volatility: float, drift: float) -> RandomOHLC:
+#     """
+#     Create and return a RandomOHLC generator instance.
 
-    Parameters
-    ----------
-    num_days : int
-        Number of days of historical data to simulate.
-    start_price : int
-        Starting price of the stock.
-    volatility : float
-        Volatility factor applied to price changes.
-    drift : float
-        Drift factor applied to price changes.
+#     Parameters
+#     ----------
+#     num_days : int
+#         Number of days of historical data to simulate.
+#     start_price : int
+#         Starting price of the stock.
+#     volatility : float
+#         Volatility factor applied to price changes.
+#     drift : float
+#         Drift factor applied to price changes.
 
-    Returns
-    -------
-    RandomOHLC
-        An instance of the RandomOHLC data generator.
-    """
-    return RandomOHLC(
-        total_days=num_days,
-        start_price=start_price,
-        name="StockA",
-        volatility=volatility,
-        drift=drift,
-    )
+#     Returns
+#     -------
+#     RandomOHLC
+#         An instance of the RandomOHLC data generator.
+#     """
+#     return RandomOHLC(
+#         total_days=num_days,
+#         start_price=start_price,
+#         name="StockA",
+#         volatility=volatility,
+#         drift=drift,
+#     )
 
 
 def generate_ohlc_data(num_days: int = 150) -> pd.DataFrame:
@@ -99,9 +99,9 @@ def generate_ohlc_data(num_days: int = 150) -> pd.DataFrame:
     Returns
     -------
     pd.DataFrame
-        A DataFrame containing daily OHLC data with columns: "Open", "High", "Low", "Close".
+        A DataFrame containing daily OHLC data with columns: "open", "high", "low", "close".
     """
-    start_price = 10000
+    start_price = 10_000
     volatility = random.uniform(1, 3)
     drift = random.uniform(1, 3)
 
@@ -112,14 +112,18 @@ def generate_ohlc_data(num_days: int = 150) -> pd.DataFrame:
         volatility,
         drift,
     )
+    rand_ohlc = RandomOHLC(
+        total_days=num_days,
+        start_price=start_price,
+        name="StockA",
+        volatility=volatility,
+        drift=drift,
+    )
 
-    ohlc_generator = get_ohlc_generator(num_days, start_price, volatility, drift)
-    minutes_in_day = 1440
-    ohlc_generator.create_realistic_ohlc(num_bars=minutes_in_day * num_days, frequency="1min")
-    ohlc_generator.resample_timeframes()
-    df = ohlc_generator.resampled_data["1D"].round(2)
+    rand_ohlc.create_ohlc(num_bars=num_days, frequency="1D")
+    df = rand_ohlc._df.round(2)
 
-    for col in ["Open", "High", "Low", "Close"]:
+    for col in df.columns:
         df[col] = df[col].clip(lower=1.0)
     return df
 
@@ -143,7 +147,7 @@ def prepare_new_round() -> None:
     else:  # Hard
         future_day_index = last_displayed_day + 30
 
-    future_price = df["Close"].iloc[future_day_index]
+    future_price = df["close"].iloc[future_day_index]
     st.session_state.data = df.iloc[:display_days]
     st.session_state.future_price = future_price
 
@@ -162,7 +166,7 @@ def create_candlestick_chart(data: pd.DataFrame) -> go.Figure:
     Parameters
     ----------
     data : pd.DataFrame
-        DataFrame containing columns "Open", "High", "Low", "Close",
+        DataFrame containing columns "open", "high", "low", "close",
         indexed by date or time.
 
     Returns
@@ -174,10 +178,10 @@ def create_candlestick_chart(data: pd.DataFrame) -> go.Figure:
         data=[
             go.Candlestick(
                 x=data.index,
-                open=data["Open"],
-                high=data["High"],
-                low=data["Low"],
-                close=data["Close"],
+                open=data["open"],
+                high=data["high"],
+                low=data["low"],
+                close=data["close"],
             )
         ]
     )

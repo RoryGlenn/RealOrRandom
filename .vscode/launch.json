@@ -6,7 +6,7 @@
       "type": "debugpy",
       "request": "launch",
       "program": ".venv/lib/python3.12/site-packages/streamlit",
-      "args": [ "run", "${file}"],
+      "args": [ "run", "streamlit_app.py"],
 
       "console": "integratedTerminal",
       "justMyCode": true
