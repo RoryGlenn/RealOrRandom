@@ -55,7 +55,6 @@ def initialize_session_state() -> None:
         st.session_state.guesses = []
 
 
-
 def create_ohlc_df(num_bars: int = 150) -> pd.DataFrame:
     """
     Generate a realistic OHLC dataset for a given number of days.
@@ -92,9 +91,11 @@ def create_ohlc_df(num_bars: int = 150) -> pd.DataFrame:
         volatility=volatility,
         drift=drift,
     )
-    
-    df = rand_ohlc.generate_random_df(num_bars=num_bars, start_price=start_price, volatility=volatility)
-    
+
+    df = rand_ohlc.generate_random_df(
+        num_bars=num_bars, start_price=start_price, volatility=volatility
+    )
+
     for col in df.columns:
         df[col] = df[col].clip(lower=1.0)
     return df
