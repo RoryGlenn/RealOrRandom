@@ -153,6 +153,23 @@ def create_ohlc_df(num_bars: int = 150) -> pd.DataFrame:
         df[col] = df[col].clip(lower=1.0)
     return df
 
+def money_to_float(money_str: str) -> float:
+    """
+    Convert a money-formatted string into a float.
+
+    Parameters
+    ----------
+    money_str : str
+        The money-formatted string (e.g., "$1,234.56").
+
+    Returns
+    -------
+    float
+        The original float value (e.g., 1234.56).
+    """
+    # Remove "$" and "," then convert to float
+    return float(money_str.replace("$", "").replace(",", ""))
+
 
 def prepare_new_round() -> None:
     """
@@ -174,16 +191,18 @@ def prepare_new_round() -> None:
         future_day_index = last_displayed_day + 30
 
     future_price = df["close"].iloc[future_day_index]
+    
     st.session_state.data = df.iloc[:display_days]
-    st.session_state.future_price = future_price
-
+    
     choices = sorted(
         [future_price]
         + [round(future_price * (1 + random.uniform(-0.1, 0.1)), 2) for _ in range(3)]
     )
 
-    # choices = [f"${c:,.2f}" for c in choices]
+    choices = [f"${c:,.2f}" for c in choices]
+    future_price = f"${future_price:,.2f}"
 
+    st.session_state.future_price = future_price
     st.session_state.choices = choices
     st.session_state.user_choice = None
 
@@ -256,16 +275,10 @@ def submit_callback() -> None:
     # Evaluate result
     if user_choice == future_price:
         st.session_state.score["right"] += 1
-        # FIXME: make sure this message is shown at the bottom of the page
-        # st.success("Correct!")
         st.session_state.msg = "Correct!"
-        logger.info("Correct!")
     else:
         st.session_state.score["wrong"] += 1
-        # FIXME: make sure this message is shown at the bottom of the page
-        # st.error(f"Wrong! The correct answer was {future_price:.2f}.")
-        st.session_state.msg = f"Wrong! The correct answer was {future_price:.2f}."
-        logger.info("Wrong! The correct answer was %.2f.", future_price)
+        st.session_state.msg = f"Wrong! The correct answer was {future_price}."
 
     total_attempts = st.session_state.score["right"] + st.session_state.score["wrong"]
     if total_attempts >= 5:
@@ -292,7 +305,8 @@ def start_callback() -> None:
     """
     st.session_state.game_state = GameState.WAITING_FOR_GUESS
     prepare_new_round()
-    
+
+
 def pregame_callback() -> None:
     """
     Callback for the back to start button.
@@ -317,6 +331,10 @@ def show_results_page() -> None:
     guesses_df = pd.DataFrame(
         st.session_state.guesses, columns=["Attempt", "Your Guess", "Actual Price"]
     )
+    
+    guesses_df["Your Guess"] = guesses_df["Your Guess"].apply(money_to_float)
+    guesses_df["Actual Price"] = guesses_df["Actual Price"].apply(money_to_float)
+    
     guesses_df["Absolute Error"] = (
         guesses_df["Your Guess"] - guesses_df["Actual Price"]
     ).abs()
@@ -367,7 +385,6 @@ def show_results_page() -> None:
         st.write("You did okay! With a bit more practice, you might do even better.")
 
     st.button("Go Back to Start", on_click=pregame_callback)
-
 
 
 def main() -> None:
@@ -443,5 +460,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-
-
