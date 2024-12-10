@@ -21,7 +21,6 @@ import pandas as pd
 
 pd.options.display.float_format = "{:.2f}".format
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -64,57 +63,31 @@ class RandomOHLC:
         self._volatility = volatility
         self._drift = drift
 
-        self._resampled_data = {
-            "1min": None,
-            "5min": None,
-            "15min": None,
-            "30min": None,
-            "1H": None,
-            "2H": None,
-            "4H": None,
-            "1D": None,
-            "3D": None,
-            "1W": None,
-            "1M": None,
-        }
-
-        self._agg_dict = {
-            "open": "first",
-            "high": "max",
-            "low": "min",
-            "close": "last",
-        }
-
-    def random_prices(
-        self, start_price: float, num_steps: int, drift: float, volatility: float
-    ) -> np.ndarray:
+    def generate_random_prices(self, num_bars: int) -> np.ndarray:
         """
         Simulate prices using Geometric Brownian Motion (GBM).
 
         Parameters
         ----------
-        start_price : float
-            The initial price of the simulation.
-        num_steps : int
-            The number of time steps to simulate.
-        drift : float
-            The drift factor influencing the trend of the price.
-        volatility : float
-            The volatility factor influencing the randomness of price changes.
+        num_bars : int
+            The number of candle bars to simulate.
 
         Returns
         -------
         np.ndarray
             An array of simulated prices following a GBM process.
         """
-        dt = 1 / num_steps
-        prices = [start_price]
+        dt = 1 / num_bars
+        prices = [self._start_price]
 
-        for _ in range(num_steps - 1):
+        for _ in range(num_bars - 1):
             shock = np.random.normal(0, 1) * np.sqrt(dt)
             prices.append(
                 prices[-1]
-                * np.exp((drift - 0.5 * (volatility**2)) * dt + volatility * shock)
+                * np.exp(
+                    (self._drift - 0.5 * (self._volatility**2)) * dt
+                    + self._volatility * shock
+                )
             )
 
         return np.array(prices)
@@ -143,12 +116,7 @@ class RandomOHLC:
         num_minutes = self._num_bars * 1440
 
         # Generate random prices using GBM
-        rand_prices = self.random_prices(
-            start_price=self._start_price,
-            num_steps=num_minutes,
-            drift=self._drift,
-            volatility=self._volatility,
-        )
+        rand_prices = self.generate_random_prices(num_bars=num_minutes)
 
         # Create a DataFrame with per-minute prices
         dates = pd.date_range(start=datetime.now(), periods=num_minutes, freq="1min")
@@ -160,47 +128,13 @@ class RandomOHLC:
         # Adjust open prices to the previous candle's close to create continuity
         result["open"] = result["close"].shift(1).fillna(self._start_price)
 
+        agg = {
+            "open": "first",
+            "high": "max",
+            "low": "min",
+            "close": "last",
+        }
+
         # Finally, resample to daily (1D) OHLC data
-        result = result.resample("1D").aggregate(self._agg_dict).round(2)
+        result = result.resample("1D").aggregate(agg).round(2)
         return result
-
-    def _downsample_ohlc_data(self, timeframe: str, df: pd.DataFrame) -> pd.DataFrame:
-        """
-        Resample OHLC data to a lower timeframe.
-
-        Parameters
-        ----------
-        timeframe : str
-            The target timeframe for resampling (e.g., "5min", "15min", "1H").
-        df : pd.DataFrame
-            A DataFrame containing OHLC data at a higher frequency (e.g., 1min).
-
-        Returns
-        -------
-        pd.DataFrame
-            A DataFrame containing the OHLC data resampled to the specified timeframe.
-        """
-        return df.resample(timeframe).aggregate(self._agg_dict)
-
-    def _resample_timeframes(self, df: pd.DataFrame) -> None:
-        """
-        Resample the initial OHLC data into multiple timeframes.
-
-        This method takes the base 1min OHLC data and resamples it to a variety of
-        common timeframes, such as 5min, 15min, 30min, 1H, and 1D.
-
-        Parameters
-        ----------
-        df : pd.DataFrame
-            The base OHLC DataFrame at 1min frequency.
-
-        Returns
-        -------
-        None
-        """
-        self._resampled_data["1min"] = df
-        timeframes = ["5min", "15min", "30min", "1h", "4h", "1D"]
-        for timeframe in timeframes:
-            self._resampled_data[timeframe] = self._downsample_ohlc_data(
-                timeframe, self._resampled_data["1min"]
-            )

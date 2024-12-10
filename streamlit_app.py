@@ -125,7 +125,7 @@ def create_ohlc_df(num_bars: int = 150) -> pd.DataFrame:
     pd.DataFrame
         A DataFrame containing daily OHLC data with columns: "open", "high", "low", "close".
     """
-    start_price = 10000
+    start_price = 10_000
     volatility = random.uniform(1, 3)
     drift = random.uniform(1, 3)
 
@@ -179,6 +179,9 @@ def prepare_new_round() -> None:
         [future_price]
         + [round(future_price * (1 + random.uniform(-0.1, 0.1)), 2) for _ in range(3)]
     )
+
+    # choices = [f"${c:,.2f}" for c in choices]
+
     st.session_state.choices = choices
     st.session_state.user_choice = None
 
@@ -364,12 +367,12 @@ def main() -> None:
     initialize_session_state()
 
     if st.session_state.game_state == GameState.START:
-        col1, col2, col3 = st.columns([1, 2, 1])
+        _, col2, _ = st.columns([1, 2, 1])
         with col2:
             st.markdown("## Welcome to the **Ultimate Stock Prediction Challenge**!")
             st.write(
-                "You’ve just joined the analytics team at a top trading firm. "
-                "To prove your skills, you’ll be shown the last 90 days of a stock’s prices. "
+                "You've just joined the analytics team at a top trading firm. "
+                "To prove your skills, you'll be shown the last 90 days of a stock's prices. "
                 "Your mission? **Predict the future closing price!**"
             )
 
