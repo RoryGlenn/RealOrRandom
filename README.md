@@ -1,4 +1,3 @@
-```markdown
 # Stock Price Prediction Game
 
 This Streamlit-based application challenges users to predict future stock closing prices after reviewing the last 90 days of generated OHLC (Open-High-Low-Close) data. By simulating realistic price movements and volatility via Geometric Brownian Motion (GBM), the app provides a fun and educational environment to test your market intuition.
@@ -89,4 +88,3 @@ Contributions are welcome! Please open an issue or submit a pull request with im
 ## License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
-```
