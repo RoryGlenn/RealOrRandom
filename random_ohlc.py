@@ -5,15 +5,10 @@ from typing import Dict, Optional
 import numpy as np
 import pandas as pd
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] - %(message)s",
-    datefmt="%H:%M:%S",
-)
+pd.options.display.float_format = "{:.2f}".format
+
 
 logger = logging.getLogger(__name__)
-
-pd.options.display.float_format = "{:.4f}".format
 
 
 class RandomOHLC:
@@ -27,7 +22,7 @@ class RandomOHLC:
 
     def __init__(
         self,
-        total_days: int,
+        num_bars: int,
         start_price: float,
         name: str,
         volatility: float,
@@ -38,8 +33,8 @@ class RandomOHLC:
 
         Parameters
         ----------
-        total_days : int
-            The total number of days for which to generate data.
+        num_bars : int
+            The total number of bars for which to generate data.
         start_price : float
             The initial starting price for the simulation.
         name : str
@@ -49,13 +44,13 @@ class RandomOHLC:
         drift : float
             The drift factor applied to the price simulation.
         """
-        self._total_days: int = total_days
-        self._start_price: float = start_price
-        self._name: str = name
-        self._volatility: float = volatility
-        self._drift: float = drift
+        self._num_bars = num_bars
+        self._start_price = start_price
+        self._name = name
+        self._volatility = volatility
+        self._drift = drift
 
-        self._resampled_data: Dict[str, Optional[pd.DataFrame]] = {
+        self._resampled_data = {
             "1min": None,
             "5min": None,
             "15min": None,
@@ -76,7 +71,7 @@ class RandomOHLC:
             "close": "last",
         }
 
-    def geometric_brownian_motion(
+    def random_prices(
         self, start_price: float, num_steps: int, drift: float, volatility: float
     ) -> np.ndarray:
         """
@@ -110,9 +105,7 @@ class RandomOHLC:
 
         return np.array(prices)
 
-    def generate_random_df(
-        self, num_bars: int, start_price: float, volatility: float
-    ) -> pd.DataFrame:
+    def generate_ohlc_df(self) -> pd.DataFrame:
         """
         Generate daily OHLC price data using GBM.
 
@@ -120,36 +113,32 @@ class RandomOHLC:
         per-minute generated prices. The per-minute data is resampled to 1D, providing
         daily open, high, low, and close values.
 
-        Parameters
-        ----------
-        num_bars : int
-            The number of daily bars (days) to generate.
-        start_price : float
-            The initial price to start the simulation.
-        volatility : float
-            The volatility factor for the GBM simulation.
-
         Returns
         -------
         pd.DataFrame
             A DataFrame indexed by date (daily) with columns: open, high, low, close.
         """
-        # Convert days to minutes for simulation
-        num_minutes = num_bars * 1440
 
-        prices = self.geometric_brownian_motion(
-            start_price=start_price,
+        # NOTE: Why are we converting days to minutes only to resample to 1D?
+        # The function first simulates prices at a minute-level resolution to create a realistic intraday price structure, and then resamples that data back into daily bars.
+        # This approach is taken because directly generating daily bars from a model like GBM would yield only one price per day, lacking the daily high-low variation.
+        # By starting at the minute level, the code can capture intraday volatility and price extremes (opening levels, highest high, lowest low, and closing levels) in a more authentic manner.
+        # Once these finer-grained price movements are modeled, the data is resampled to daily intervals, preserving the realistic daily OHLC patterns derived from the high-frequency (minute-level) simulation.
+
+        # Convert days to minutes for simulation
+        num_minutes = self._num_bars * 1440
+
+        # Generate random prices using GBM
+        rand_prices = self.random_prices(
+            start_price=self._start_price,
             num_steps=num_minutes,
             drift=self._drift,
-            volatility=volatility,
+            volatility=self._volatility,
         )
 
-        df = pd.DataFrame(
-            {
-                "date": pd.date_range(start=datetime.now(), periods=num_minutes, freq="1min"),
-                "price": prices,
-            }
-        ).set_index("date")
+        # Create a DataFrame with per-minute prices
+        dates = pd.date_range(start=datetime.now(), periods=num_minutes, freq="1min")
+        df = pd.DataFrame({"date": dates, "price": rand_prices}).set_index("date")
 
         # Resample to 1min OHLC from the per-minute prices
         result = df["price"].resample("1min").ohlc()

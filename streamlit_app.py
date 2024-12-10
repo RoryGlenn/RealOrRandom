@@ -20,7 +20,21 @@ logger = logging.getLogger(__name__)
 
 
 class GameState:
-    """Enumeration of the game's possible states."""
+    """
+    Enumeration of the game's possible states.
+
+    Attributes
+    ----------
+    START : int
+        The starting state of the game, before the player begins making guesses.
+    INITIAL : int
+        The state where the game is active and waiting for the user's first guess.
+    SHOW_RESULT : int
+        The state after the user has submitted a guess, showing whether it was correct
+        or wrong, and allowing the user to proceed to the next round.
+    FINISHED : int
+        The state after all attempts have been made, presenting the final results page.
+    """
 
     START: int = -1
     INITIAL: int = 0
@@ -85,16 +99,14 @@ def create_ohlc_df(num_bars: int = 150) -> pd.DataFrame:
     )
 
     rand_ohlc = RandomOHLC(
-        total_days=num_bars,
+        num_bars=num_bars,
         start_price=start_price,
         name="StockA",
         volatility=volatility,
         drift=drift,
     )
 
-    df = rand_ohlc.generate_random_df(
-        num_bars=num_bars, start_price=start_price, volatility=volatility
-    )
+    df = rand_ohlc.generate_ohlc_df()
 
     for col in df.columns:
         df[col] = df[col].clip(lower=1.0)
