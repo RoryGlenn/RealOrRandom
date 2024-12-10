@@ -66,21 +66,21 @@ class GameState:
 
     Attributes
     ----------
-    START : int
+    READY_TO_PLAY : int
         The starting state of the game, before the player begins making guesses.
-    INITIAL : int
+    WAITING_FOR_GUESS : int
         The state where the game is active and waiting for the user's first guess.
-    SHOW_RESULT : int
+    REVEAL_GUESS_RESULT : int
         The state after the user has submitted a guess, showing whether it was correct
         or wrong, and allowing the user to proceed to the next round.
-    FINISHED : int
+    GAME_OVER : int
         The state after all attempts have been made, presenting the final results page.
     """
 
-    START: int = -1
-    INITIAL: int = 0
-    SHOW_RESULT: int = 1
-    FINISHED: int = 2
+    READY_TO_PLAY: int = -1
+    WAITING_FOR_GUESS: int = 0
+    REVEAL_GUESS_RESULT: int = 1
+    GAME_OVER: int = 2
 
 
 def initialize_session_state() -> None:
@@ -93,7 +93,7 @@ def initialize_session_state() -> None:
     if "score" not in st.session_state:
         st.session_state.score = {"right": 0, "wrong": 0}
     if "game_state" not in st.session_state:
-        st.session_state.game_state = GameState.START
+        st.session_state.game_state = GameState.READY_TO_PLAY
     if "data" not in st.session_state:
         st.session_state.data = None
     if "future_price" not in st.session_state:
@@ -269,18 +269,18 @@ def submit_callback() -> None:
 
     total_attempts = st.session_state.score["right"] + st.session_state.score["wrong"]
     if total_attempts >= 5:
-        st.session_state.game_state = GameState.FINISHED
+        st.session_state.game_state = GameState.GAME_OVER
     else:
-        st.session_state.game_state = GameState.SHOW_RESULT
+        st.session_state.game_state = GameState.REVEAL_GUESS_RESULT
 
 
 def next_callback() -> None:
     """
     Callback function for the "Next" button.
 
-    Sets the game state to INITIAL, and prepares a new round of data.
+    Sets the game state to WAITING_FOR_GUESS, and prepares a new round of data.
     """
-    st.session_state.game_state = GameState.INITIAL
+    st.session_state.game_state = GameState.WAITING_FOR_GUESS
     prepare_new_round()
 
 
@@ -288,10 +288,19 @@ def start_callback() -> None:
     """
     Callback for the start game button.
 
+    Moves the game to the WAITING_FOR_GUESS state and prepares a new round.
+    """
+    st.session_state.game_state = GameState.WAITING_FOR_GUESS
+    prepare_new_round()
+    
+def pregame_callback() -> None:
+    """
+    Callback for the back to start button.
+
     Moves the game to the INITIAL state and prepares a new round.
     """
-    st.session_state.game_state = GameState.INITIAL
-    prepare_new_round()
+    st.session_state.clear()
+    initialize_session_state()
 
 
 def show_results_page() -> None:
@@ -357,10 +366,8 @@ def show_results_page() -> None:
     else:
         st.write("You did okay! With a bit more practice, you might do even better.")
 
-    if st.button("Go Back to Start"):
-        st.session_state.score = {"right": 0, "wrong": 0}
-        st.session_state.game_state = GameState.START
-        st.session_state.guesses = []
+    st.button("Go Back to Start", on_click=pregame_callback)
+
 
 
 def main() -> None:
@@ -374,7 +381,7 @@ def main() -> None:
     """
     initialize_session_state()
 
-    if st.session_state.game_state == GameState.START:
+    if st.session_state.game_state == GameState.READY_TO_PLAY:
         _, col2, _ = st.columns([1, 2, 1])
         with col2:
             st.markdown("## Welcome to the **Ultimate Stock Prediction Challenge**!")
@@ -403,12 +410,12 @@ def main() -> None:
             st.button("Start Game", on_click=start_callback)
         return
 
-    if st.session_state.game_state == GameState.FINISHED:
+    if st.session_state.game_state == GameState.GAME_OVER:
         show_results_page()
         return
 
     if st.session_state.data is None or (
-        st.session_state.game_state == GameState.INITIAL
+        st.session_state.game_state == GameState.WAITING_FOR_GUESS
         and st.session_state.user_choice is None
     ):
         prepare_new_round()
@@ -421,9 +428,9 @@ def main() -> None:
     st.subheader("What do you think the future closing price will be?")
     st.radio("Choose a price:", st.session_state.choices, key="user_choice")
 
-    if st.session_state.game_state == GameState.INITIAL:
+    if st.session_state.game_state == GameState.WAITING_FOR_GUESS:
         st.button("Submit", on_click=submit_callback)
-    elif st.session_state.game_state == GameState.SHOW_RESULT:
+    elif st.session_state.game_state == GameState.REVEAL_GUESS_RESULT:
         if st.session_state.msg:
             if "Correct" in st.session_state.msg:
                 st.success(st.session_state.msg)
