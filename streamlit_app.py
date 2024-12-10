@@ -106,6 +106,8 @@ def initialize_session_state() -> None:
         st.session_state.difficulty = "Easy"
     if "guesses" not in st.session_state:
         st.session_state.guesses = []
+    if "msg" not in st.session_state:
+        st.session_state.msg = None
 
 
 def create_ohlc_df(num_bars: int = 150) -> pd.DataFrame:
@@ -254,10 +256,16 @@ def submit_callback() -> None:
     # Evaluate result
     if user_choice == future_price:
         st.session_state.score["right"] += 1
-        st.success("Correct!")
+        # FIXME: make sure this message is shown at the bottom of the page
+        # st.success("Correct!")
+        st.session_state.msg = "Correct!"
+        logger.info("Correct!")
     else:
         st.session_state.score["wrong"] += 1
-        st.error(f"Wrong! The correct answer was {future_price:.2f}.")
+        # FIXME: make sure this message is shown at the bottom of the page
+        # st.error(f"Wrong! The correct answer was {future_price:.2f}.")
+        st.session_state.msg = f"Wrong! The correct answer was {future_price:.2f}."
+        logger.info("Wrong! The correct answer was %.2f.", future_price)
 
     total_attempts = st.session_state.score["right"] + st.session_state.score["wrong"]
     if total_attempts >= 5:
@@ -416,6 +424,12 @@ def main() -> None:
     if st.session_state.game_state == GameState.INITIAL:
         st.button("Submit", on_click=submit_callback)
     elif st.session_state.game_state == GameState.SHOW_RESULT:
+        if st.session_state.msg:
+            if "Correct" in st.session_state.msg:
+                st.success(st.session_state.msg)
+            else:
+                st.error(st.session_state.msg)
+
         st.info("Press Next to continue")
         st.button("Next", on_click=next_callback)
 
