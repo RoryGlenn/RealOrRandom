@@ -1,3 +1,18 @@
+"""
+This module provides a RandomOHLC class to simulate realistic OHLC (Open-High-Low-Close)
+stock data over a specified period using Geometric Brownian Motion (GBM). By generating 
+per-minute price data and resampling it to daily and other timeframes, the module can 
+produce more authentic intraday volatility and daily OHLC patterns.
+
+Classes
+-------
+RandomOHLC
+    Generates random OHLC data for a specified number of bars using GBM. Supports 
+    resampling into multiple timeframes (1min, 5min, 15min, 30min, 1H, 2H, 4H, 1D, 
+    3D, 1W, 1M) and provides methods for simulating price series, converting minute-level 
+    data into daily bars, and further downsampling into various intervals.
+"""
+
 import logging
 from datetime import datetime
 

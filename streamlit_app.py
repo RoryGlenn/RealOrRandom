@@ -1,7 +1,47 @@
+"""
+This module implements a Streamlit-based stock prediction game that challenges the user 
+to guess future stock closing prices after reviewing the past 90 days of simulated OHLC data.
+
+The application:
+- Generates realistic daily OHLC data using a random simulation (via the RandomOHLC class).
+- Offers three difficulty levels (Easy, Medium, Hard), affecting how far into the future
+  the user must predict.
+- Manages the game state (start, initial, show result, finished) and user interactions 
+  through session state variables.
+- Displays charts, provides options for guess submissions, and shows final results 
+  including score and accuracy.
+
+Classes
+-------
+GameState
+    Enumeration of the game's possible states.
+    
+Functions
+---------
+initialize_session_state()
+    Initialize required session state variables if they do not exist.
+create_ohlc_df(num_bars: int = 150) -> pd.DataFrame
+    Generate a realistic OHLC dataset for a given number of days.
+prepare_new_round()
+    Prepare data and state for a new prediction round.
+create_candlestick_chart(data: pd.DataFrame) -> go.Figure
+    Create a candlestick chart from the given OHLC data.
+display_score()
+    Display the current user score.
+submit_callback()
+    Callback for the Submit button to check the user's guess.
+next_callback()
+    Callback for the Next button to proceed to the next round.
+start_callback()
+    Callback for the Start Game button to begin the game.
+show_results_page()
+    Display the final results page after all attempts are made.
+main()
+    Main entry point of the Streamlit app.
+"""
+
 import logging
 import random
-
-# import uuid
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -54,8 +94,6 @@ def initialize_session_state() -> None:
         st.session_state.score = {"right": 0, "wrong": 0}
     if "game_state" not in st.session_state:
         st.session_state.game_state = GameState.START
-    # if "uuid" not in st.session_state:
-    #     st.session_state.uuid = str(uuid.uuid4())
     if "data" not in st.session_state:
         st.session_state.data = None
     if "future_price" not in st.session_state:
@@ -229,9 +267,8 @@ def next_callback() -> None:
     """
     Callback function for the "Next" button.
 
-    Resets the UUID, sets the game state to INITIAL, and prepares a new round of data.
+    Sets the game state to INITIAL, and prepares a new round of data.
     """
-    # st.session_state.uuid = str(uuid.uuid4())
     st.session_state.game_state = GameState.INITIAL
     prepare_new_round()
 
