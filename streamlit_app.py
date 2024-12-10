@@ -55,38 +55,8 @@ def initialize_session_state() -> None:
         st.session_state.guesses = []
 
 
-def get_ohlc_generator(
-    num_days: int, start_price: int, volatility: float, drift: float
-) -> RandomOHLC:
-    """
-    Create and return a RandomOHLC generator instance.
 
-    Parameters
-    ----------
-    num_days : int
-        Number of days of historical data to simulate.
-    start_price : int
-        Starting price of the stock.
-    volatility : float
-        Volatility factor applied to price changes.
-    drift : float
-        Drift factor applied to price changes.
-
-    Returns
-    -------
-    RandomOHLC
-        An instance of the RandomOHLC data generator.
-    """
-    return RandomOHLC(
-        total_days=num_days,
-        start_price=start_price,
-        name="StockA",
-        volatility=volatility,
-        drift=drift,
-    )
-
-
-def generate_ohlc_data(num_days: int = 150) -> pd.DataFrame:
+def create_ohlc_df(num_bars: int = 150) -> pd.DataFrame:
     """
     Generate a realistic OHLC dataset for a given number of days.
 
@@ -95,7 +65,7 @@ def generate_ohlc_data(num_days: int = 150) -> pd.DataFrame:
 
     Parameters
     ----------
-    num_days : int, optional
+    num_bars : int, optional
         Number of days to generate data for, by default 150.
 
     Returns
@@ -109,21 +79,23 @@ def generate_ohlc_data(num_days: int = 150) -> pd.DataFrame:
 
     logger.info(
         "Num Days: %d, Start Price: %d, Volatility: %.2f, Drift: %.2f",
-        num_days,
+        num_bars,
         start_price,
         volatility,
         drift,
     )
 
-    ohlc_generator = get_ohlc_generator(num_days, start_price, volatility, drift)
-    minutes_in_day = 1440
-    ohlc_generator.create_realistic_ohlc(
-        num_bars=minutes_in_day * num_days, frequency="1min"
+    rand_ohlc = RandomOHLC(
+        total_days=num_bars,
+        start_price=start_price,
+        name="StockA",
+        volatility=volatility,
+        drift=drift,
     )
-    ohlc_generator.resample_timeframes()
-    df = ohlc_generator.resampled_data["1D"].round(2)
-
-    for col in ["open", "high", "low", "close"]:
+    
+    df = rand_ohlc.generate_random_df(num_bars=num_bars, start_price=start_price, volatility=volatility)
+    
+    for col in df.columns:
         df[col] = df[col].clip(lower=1.0)
     return df
 
@@ -135,7 +107,7 @@ def prepare_new_round() -> None:
     Generates new OHLC data, selects a future price based on the chosen difficulty,
     and creates a set of possible choices for the user to guess from.
     """
-    df = generate_ohlc_data()
+    df = create_ohlc_df()
     display_days = 90
     last_displayed_day = display_days - 1
 
