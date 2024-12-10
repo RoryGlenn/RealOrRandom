@@ -63,7 +63,7 @@ class RandomOHLC:
         self._volatility = volatility
         self._drift = drift
 
-    def generate_random_prices(self, num_bars: int) -> np.ndarray:
+    def _generate_random_prices(self, num_bars: int) -> np.ndarray:
         """
         Simulate prices using Geometric Brownian Motion (GBM).
 
@@ -116,7 +116,7 @@ class RandomOHLC:
         num_minutes = self._num_bars * 1440
 
         # Generate random prices using GBM
-        rand_prices = self.generate_random_prices(num_bars=num_minutes)
+        rand_prices = self._generate_random_prices(num_bars=num_minutes)
 
         # Create a DataFrame with per-minute prices
         dates = pd.date_range(start=datetime.now(), periods=num_minutes, freq="1min")
