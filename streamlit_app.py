@@ -1,6 +1,7 @@
 import logging
 import random
-import uuid
+
+# import uuid
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -53,8 +54,8 @@ def initialize_session_state() -> None:
         st.session_state.score = {"right": 0, "wrong": 0}
     if "game_state" not in st.session_state:
         st.session_state.game_state = GameState.START
-    if "uuid" not in st.session_state:
-        st.session_state.uuid = str(uuid.uuid4())
+    # if "uuid" not in st.session_state:
+    #     st.session_state.uuid = str(uuid.uuid4())
     if "data" not in st.session_state:
         st.session_state.data = None
     if "future_price" not in st.session_state:
@@ -230,7 +231,7 @@ def next_callback() -> None:
 
     Resets the UUID, sets the game state to INITIAL, and prepares a new round of data.
     """
-    st.session_state.uuid = str(uuid.uuid4())
+    # st.session_state.uuid = str(uuid.uuid4())
     st.session_state.game_state = GameState.INITIAL
     prepare_new_round()
 
