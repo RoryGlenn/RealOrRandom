@@ -55,33 +55,35 @@ def initialize_session_state() -> None:
         st.session_state.guesses = []
 
 
-# def get_ohlc_generator(num_days: int, start_price: int, volatility: float, drift: float) -> RandomOHLC:
-#     """
-#     Create and return a RandomOHLC generator instance.
+def get_ohlc_generator(
+    num_days: int, start_price: int, volatility: float, drift: float
+) -> RandomOHLC:
+    """
+    Create and return a RandomOHLC generator instance.
 
-#     Parameters
-#     ----------
-#     num_days : int
-#         Number of days of historical data to simulate.
-#     start_price : int
-#         Starting price of the stock.
-#     volatility : float
-#         Volatility factor applied to price changes.
-#     drift : float
-#         Drift factor applied to price changes.
+    Parameters
+    ----------
+    num_days : int
+        Number of days of historical data to simulate.
+    start_price : int
+        Starting price of the stock.
+    volatility : float
+        Volatility factor applied to price changes.
+    drift : float
+        Drift factor applied to price changes.
 
-#     Returns
-#     -------
-#     RandomOHLC
-#         An instance of the RandomOHLC data generator.
-#     """
-#     return RandomOHLC(
-#         total_days=num_days,
-#         start_price=start_price,
-#         name="StockA",
-#         volatility=volatility,
-#         drift=drift,
-#     )
+    Returns
+    -------
+    RandomOHLC
+        An instance of the RandomOHLC data generator.
+    """
+    return RandomOHLC(
+        total_days=num_days,
+        start_price=start_price,
+        name="StockA",
+        volatility=volatility,
+        drift=drift,
+    )
 
 
 def generate_ohlc_data(num_days: int = 150) -> pd.DataFrame:
@@ -101,7 +103,7 @@ def generate_ohlc_data(num_days: int = 150) -> pd.DataFrame:
     pd.DataFrame
         A DataFrame containing daily OHLC data with columns: "open", "high", "low", "close".
     """
-    start_price = 10_000
+    start_price = 10000
     volatility = random.uniform(1, 3)
     drift = random.uniform(1, 3)
 
@@ -112,18 +114,16 @@ def generate_ohlc_data(num_days: int = 150) -> pd.DataFrame:
         volatility,
         drift,
     )
-    rand_ohlc = RandomOHLC(
-        total_days=num_days,
-        start_price=start_price,
-        name="StockA",
-        volatility=volatility,
-        drift=drift,
+
+    ohlc_generator = get_ohlc_generator(num_days, start_price, volatility, drift)
+    minutes_in_day = 1440
+    ohlc_generator.create_realistic_ohlc(
+        num_bars=minutes_in_day * num_days, frequency="1min"
     )
+    ohlc_generator.resample_timeframes()
+    df = ohlc_generator.resampled_data["1D"].round(2)
 
-    rand_ohlc.create_ohlc(num_bars=num_days, frequency="1D")
-    df = rand_ohlc._df.round(2)
-
-    for col in df.columns:
+    for col in ["open", "high", "low", "close"]:
         df[col] = df[col].clip(lower=1.0)
     return df
 
@@ -219,7 +219,9 @@ def submit_callback() -> None:
         st.warning("Please select a price before submitting.")
         return
 
-    total_attempts = st.session_state.score["right"] + st.session_state.score["wrong"] + 1
+    total_attempts = (
+        st.session_state.score["right"] + st.session_state.score["wrong"] + 1
+    )
     st.session_state.guesses.append((total_attempts, user_choice, future_price))
 
     # Evaluate result
@@ -272,7 +274,9 @@ def show_results_page() -> None:
     guesses_df = pd.DataFrame(
         st.session_state.guesses, columns=["Attempt", "Your Guess", "Actual Price"]
     )
-    guesses_df["Absolute Error"] = (guesses_df["Your Guess"] - guesses_df["Actual Price"]).abs()
+    guesses_df["Absolute Error"] = (
+        guesses_df["Your Guess"] - guesses_df["Actual Price"]
+    ).abs()
     accuracy = (st.session_state.score["right"] / 5) * 100
     avg_error = guesses_df["Absolute Error"].mean()
 
@@ -309,9 +313,13 @@ def show_results_page() -> None:
     st.plotly_chart(fig, use_container_width=True)
 
     if st.session_state.score["right"] > 3:
-        st.write("**Great job!** You got most of them right. Consider trying a harder difficulty next time!")
+        st.write(
+            "**Great job!** You got most of them right. Consider trying a harder difficulty next time!"
+        )
     elif st.session_state.score["right"] == 0:
-        st.write("**Tough luck this time!** Consider trying again to improve your accuracy.")
+        st.write(
+            "**Tough luck this time!** Consider trying again to improve your accuracy."
+        )
     else:
         st.write("You did okay! With a bit more practice, you might do even better.")
 
@@ -366,7 +374,8 @@ def main() -> None:
         return
 
     if st.session_state.data is None or (
-        st.session_state.game_state == GameState.INITIAL and st.session_state.user_choice is None
+        st.session_state.game_state == GameState.INITIAL
+        and st.session_state.user_choice is None
     ):
         prepare_new_round()
 
