@@ -20,7 +20,7 @@ Functions
 ---------
 initialize_session_state()
     Initialize required session state variables if they do not exist.
-create_ohlc_df(num_bars: int = 150) -> pd.DataFrame
+create_ohlc_df(num_bars: int = 90) -> pd.DataFrame
     Generate a realistic OHLC dataset for a given number of days.
 prepare_new_round()
     Prepare data and state for a new prediction round.
@@ -110,7 +110,7 @@ def initialize_session_state() -> None:
         st.session_state.msg = None
 
 
-def create_ohlc_df(num_bars: int = 150) -> pd.DataFrame:
+def create_ohlc_df(num_bars: int = 90) -> pd.DataFrame:
     """
     Generate a realistic OHLC dataset for a given number of days.
 
@@ -120,37 +120,39 @@ def create_ohlc_df(num_bars: int = 150) -> pd.DataFrame:
     Parameters
     ----------
     num_bars : int, optional
-        Number of days to generate data for, by default 150.
+        Number of days to generate data for, by default 90.
 
     Returns
     -------
     pd.DataFrame
         A DataFrame containing daily OHLC data with columns: "open", "high", "low", "close".
     """
+    
+    # FIXME: currently generates num_bars + 1 bars, should generate num_bars bars
+    
     start_price = 10_000
     volatility = random.uniform(1, 3)
     drift = random.uniform(1, 3)
 
-    logger.info(
-        "Num Days: %d, Start Price: %d, Volatility: %.2f, Drift: %.2f",
-        num_bars,
-        start_price,
-        volatility,
-        drift,
-    )
-
     rand_ohlc = RandomOHLC(
         num_bars=num_bars,
         start_price=start_price,
-        name="StockA",
         volatility=volatility,
         drift=drift,
     )
 
     df = rand_ohlc.generate_ohlc_df()
 
-    for col in df.columns:
-        df[col] = df[col].clip(lower=1.0)
+    # for col in df.columns:
+    #     df[col] = df[col].clip(lower=1.0)
+    
+    logger.info(
+        "Num Days: %d, Start Price: %d, Volatility: %.2f, Drift: %.2f",
+        num_bars,
+        start_price,
+        volatility,
+        drift,
+    )    
     return df
 
 def money_to_float(money_str: str) -> float:
@@ -175,36 +177,48 @@ def prepare_new_round() -> None:
     """
     Prepare data and state for a new prediction round.
 
-    Generates new OHLC data, selects a future price based on the chosen difficulty,
-    and creates a set of possible choices for the user to guess from.
+    Dynamically generates OHLC data based on difficulty, selects a future price, and 
+    creates a set of possible choices for the user to guess from.
     """
-    df = create_ohlc_df()
-    display_days = 90
-    last_displayed_day = display_days - 1
+    # Map difficulty to required parameters
+    difficulty_settings = {
+        "Easy": {"extra_bars": 1, "future_offset": 1},
+        "Medium": {"extra_bars": 7, "future_offset": 7},
+        "Hard": {"extra_bars": 30, "future_offset": 30},
+    }
+    difficulty = st.session_state.difficulty
+    extra_bars = difficulty_settings[difficulty]["extra_bars"]
+    future_offset = difficulty_settings[difficulty]["future_offset"]
 
-    # Determine future day based on difficulty
-    if st.session_state.difficulty == "Easy":
-        future_day_index = last_displayed_day + 1
-    elif st.session_state.difficulty == "Medium":
-        future_day_index = last_displayed_day + 7
-    else:  # Hard
-        future_day_index = last_displayed_day + 30
+    # Calculate the number of bars to generate
+    num_bars = 90 + extra_bars  # 90 for display + extra bars for future prediction
 
-    future_price = df["close"].iloc[future_day_index]
-    
-    st.session_state.data = df.iloc[:display_days]
-    
+    # Generate OHLC data
+    df = create_ohlc_df(num_bars=num_bars)
+    num_display_bars = 90  # Always display the last 90 bars
+
+    # Determine the future bar index
+    future_bar_index = num_display_bars + future_offset - 1
+
+    # Fetch future price
+    future_price = df["close"].iloc[future_bar_index]
+
+    # Prepare historical data for display
+    st.session_state.data = df.iloc[:num_display_bars]
+
+    # Create choices (formatted as money strings)
     choices = sorted(
         [future_price]
         + [round(future_price * (1 + random.uniform(-0.1, 0.1)), 2) for _ in range(3)]
     )
-
     choices = [f"${c:,.2f}" for c in choices]
     future_price = f"${future_price:,.2f}"
 
+    # Update session state
     st.session_state.future_price = future_price
     st.session_state.choices = choices
     st.session_state.user_choice = None
+
 
 
 def create_candlestick_chart(data: pd.DataFrame) -> go.Figure:
@@ -431,11 +445,11 @@ def main() -> None:
         show_results_page()
         return
 
-    if st.session_state.data is None or (
-        st.session_state.game_state == GameState.WAITING_FOR_GUESS
-        and st.session_state.user_choice is None
-    ):
-        prepare_new_round()
+    # if st.session_state.data is None or (
+    #     st.session_state.game_state == GameState.WAITING_FOR_GUESS
+    #     and st.session_state.user_choice is None
+    # ):
+    #     prepare_new_round()
 
     st.title("Stock Price Prediction Game")
     fig = create_candlestick_chart(st.session_state.data)

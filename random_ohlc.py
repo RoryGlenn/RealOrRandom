@@ -37,7 +37,6 @@ class RandomOHLC:
         self,
         num_bars: int,
         start_price: float,
-        name: str,
         volatility: float,
         drift: float,
     ) -> None:
@@ -50,8 +49,6 @@ class RandomOHLC:
             The total number of bars for which to generate data.
         start_price : float
             The initial starting price for the simulation.
-        name : str
-            A name identifier for the generated asset data.
         volatility : float
             The volatility factor applied to the price simulation.
         drift : float
@@ -59,7 +56,6 @@ class RandomOHLC:
         """
         self._num_bars = num_bars
         self._start_price = start_price
-        self._name = name
         self._volatility = volatility
         self._drift = drift
 
@@ -82,13 +78,8 @@ class RandomOHLC:
 
         for _ in range(num_bars - 1):
             shock = np.random.normal(0, 1) * np.sqrt(dt)
-            prices.append(
-                prices[-1]
-                * np.exp(
-                    (self._drift - 0.5 * (self._volatility**2)) * dt
-                    + self._volatility * shock
-                )
-            )
+            res = prices[-1] * np.exp((self._drift - 0.5 * (self._volatility**2)) * dt + self._volatility * shock)
+            prices.append(res)
 
         return np.array(prices)
 
