@@ -78,10 +78,14 @@ class RandomOHLC:
 
         for _ in range(num_bars - 1):
             shock = np.random.normal(0, 1) * np.sqrt(dt)
-            res = prices[-1] * np.exp((self._drift - 0.5 * (self._volatility**2)) * dt + self._volatility * shock)
-            prices.append(res)
+            res = prices[-1] * np.exp(
+                (self._drift - 0.5 * (self._volatility**2)) * dt
+                + self._volatility * shock
+            )
+            prices.append(float(res))
 
-        return np.array(prices)
+        # return np.array(prices)
+        return prices
 
     def generate_ohlc_df(self) -> pd.DataFrame:
         """

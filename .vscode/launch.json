@@ -7,9 +7,26 @@
       "request": "launch",
       "program": ".venv/lib/python3.12/site-packages/streamlit",
       "args": [ "run", "streamlit_app.py"],
-
       "console": "integratedTerminal",
       "justMyCode": true
+    },
+
+    {
+      "name": "Streamlit current file",
+      "type": "debugpy",
+      "request": "launch",
+      "program": ".venv/lib/python3.12/site-packages/streamlit",
+      "args": [ "run", "${file}"],
+      "console": "integratedTerminal",
+      "justMyCode": true
+    },
+
+    {
+      "name": "Python: Current File",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${file}",
+      "console": "integratedTerminal"
     }
   ]
 }

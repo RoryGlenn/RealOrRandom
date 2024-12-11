@@ -1,47 +1,8 @@
-"""
-This module implements a Streamlit-based stock prediction game that challenges the user 
-to guess future stock closing prices after reviewing the past 90 days of simulated OHLC data.
 
-The application:
-- Generates realistic daily OHLC data using a random simulation (via the RandomOHLC class).
-- Offers three difficulty levels (Easy, Medium, Hard), affecting how far into the future
-  the user must predict.
-- Manages the game state (start, initial, show result, finished) and user interactions 
-  through session state variables.
-- Displays charts, provides options for guess submissions, and shows final results 
-  including score and accuracy.
-
-Classes
--------
-GameState
-    Enumeration of the game's possible states.
-    
-Functions
----------
-initialize_session_state()
-    Initialize required session state variables if they do not exist.
-create_ohlc_df(num_bars: int = 90) -> pd.DataFrame
-    Generate a realistic OHLC dataset for a given number of days.
-prepare_new_round()
-    Prepare data and state for a new prediction round.
-create_candlestick_chart(data: pd.DataFrame) -> go.Figure
-    Create a candlestick chart from the given OHLC data.
-display_score()
-    Display the current user score.
-submit_callback()
-    Callback for the Submit button to check the user's guess.
-next_callback()
-    Callback for the Next button to proceed to the next round.
-start_callback()
-    Callback for the Start Game button to begin the game.
-show_results_page()
-    Display the final results page after all attempts are made.
-main()
-    Main entry point of the Streamlit app.
-"""
 
 import logging
 import random
+from streamlit.components.v1 import html
 
 import pandas as pd
 import plotly.graph_objects as go
@@ -83,6 +44,8 @@ class GameState:
     GAME_OVER: int = 2
 
 
+
+
 def initialize_session_state() -> None:
     """
     Initialize all required session state variables if they do not exist.
@@ -110,26 +73,23 @@ def initialize_session_state() -> None:
         st.session_state.msg = None
 
 
-def create_ohlc_df(num_bars: int = 90) -> pd.DataFrame:
+def create_ohlc_df(num_bars: int) -> pd.DataFrame:
     """
     Generate a realistic OHLC dataset for a given number of days.
 
     Uses a RandomOHLC generator to produce price data, then resamples it to daily (1D)
-    and ensures all prices remain above 1.0.
 
     Parameters
     ----------
-    num_bars : int, optional
-        Number of days to generate data for, by default 90.
+    num_bars : int
+        Number of days to generate data for.
 
     Returns
     -------
     pd.DataFrame
         A DataFrame containing daily OHLC data with columns: "open", "high", "low", "close".
     """
-    
-    # FIXME: currently generates num_bars + 1 bars, should generate num_bars bars
-    
+
     start_price = 10_000
     volatility = random.uniform(1, 3)
     drift = random.uniform(1, 3)
@@ -145,15 +105,16 @@ def create_ohlc_df(num_bars: int = 90) -> pd.DataFrame:
 
     # for col in df.columns:
     #     df[col] = df[col].clip(lower=1.0)
-    
+
     logger.info(
         "Num Days: %d, Start Price: %d, Volatility: %.2f, Drift: %.2f",
         num_bars,
         start_price,
         volatility,
         drift,
-    )    
+    )
     return df
+
 
 def money_to_float(money_str: str) -> float:
     """
@@ -177,7 +138,7 @@ def prepare_new_round() -> None:
     """
     Prepare data and state for a new prediction round.
 
-    Dynamically generates OHLC data based on difficulty, selects a future price, and 
+    Dynamically generates OHLC data based on difficulty, selects a future price, and
     creates a set of possible choices for the user to guess from.
     """
     # Map difficulty to required parameters
@@ -220,42 +181,83 @@ def prepare_new_round() -> None:
     st.session_state.user_choice = None
 
 
-
-def create_candlestick_chart(data: pd.DataFrame) -> go.Figure:
+def create_candlestick_chart(data: pd.DataFrame) -> None:
     """
-    Create a candlestick chart from the given OHLC data.
+    Render a candlestick chart using the lightweight-charts library.
 
     Parameters
     ----------
     data : pd.DataFrame
-        DataFrame containing columns "open", "high", "low", "close",
-        indexed by date or time.
+        DataFrame containing OHLC data with columns "open", "high", "low", "close".
 
     Returns
     -------
-    go.Figure
-        A Plotly Figure object containing the candlestick chart.
+    None
     """
-    fig = go.Figure(
-        data=[
-            go.Candlestick(
-                x=data.index,
-                open=data["open"],
-                high=data["high"],
-                low=data["low"],
-                close=data["close"],
-            )
-        ]
-    )
-    fig.update_layout(
-        title="Historical Stock Prices (Last 90 Days)",
-        xaxis_title="Date",
-        yaxis_title="Price",
-        xaxis_rangeslider_visible=True,
-        height=800,
-        width=1400,
-    )
-    return fig
+    candlestick_data = [
+        {
+            "time": str(index.date()),
+            "open": float(row["open"]),
+            "high": float(row["high"]),
+            "low": float(row["low"]),
+            "close": float(row["close"]),
+        }
+        for index, row in data.iterrows()
+    ]
+    
+    chart_script = f"""
+    <div id="chart" style="width: 100%; height: 600px;"></div>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <script>
+        const chart = LightweightCharts.createChart(document.getElementById('chart'), {{
+            width: 1200,
+            height: 800,
+            layout: {{
+                background: {{
+                    type: 'solid',
+                    color: '#1E1E1E' // Dark background color
+                }},
+                textColor: '#D3D3D3', // Light text color for labels
+            }},
+            grid: {{
+                vertLines: {{
+                    color: 'rgba(255, 255, 255, 0.1)', // Subtle vertical grid lines
+                }},
+                horzLines: {{
+                    color: 'rgba(255, 255, 255, 0.1)', // Subtle horizontal grid lines
+                }},
+            }},
+            crosshair: {{
+                vertLine: {{
+                    color: '#D3D3D3', // Crosshair vertical line color
+                    width: 1,
+                    style: 1,
+                }},
+                horzLine: {{
+                    color: '#D3D3D3', // Crosshair horizontal line color
+                    width: 1,
+                    style: 1,
+                }},
+            }},
+            priceScale: {{
+                borderColor: 'rgba(255, 255, 255, 0.2)', // Price scale border
+            }},
+            timeScale: {{
+                borderColor: 'rgba(255, 255, 255, 0.2)', // Time scale border
+            }},
+        }});
+
+        // Add candlestick data to the chart
+        const candlestickSeries = chart.addCandlestickSeries();
+        candlestickSeries.setData({candlestick_data});
+
+        // Optional: Configure chart resizing for responsiveness
+        window.addEventListener('resize', () => {{
+            chart.resize(window.innerWidth, 600);
+        }});
+    </script>
+    """
+    html(chart_script, height=600)
 
 
 def display_score() -> None:
@@ -345,10 +347,10 @@ def show_results_page() -> None:
     guesses_df = pd.DataFrame(
         st.session_state.guesses, columns=["Attempt", "Your Guess", "Actual Price"]
     )
-    
+
     guesses_df["Your Guess"] = guesses_df["Your Guess"].apply(money_to_float)
     guesses_df["Actual Price"] = guesses_df["Actual Price"].apply(money_to_float)
-    
+
     guesses_df["Absolute Error"] = (
         guesses_df["Your Guess"] - guesses_df["Actual Price"]
     ).abs()
@@ -445,15 +447,8 @@ def main() -> None:
         show_results_page()
         return
 
-    # if st.session_state.data is None or (
-    #     st.session_state.game_state == GameState.WAITING_FOR_GUESS
-    #     and st.session_state.user_choice is None
-    # ):
-    #     prepare_new_round()
-
     st.title("Stock Price Prediction Game")
-    fig = create_candlestick_chart(st.session_state.data)
-    st.plotly_chart(fig, use_container_width=False)
+    create_candlestick_chart(st.session_state.data)
     display_score()
 
     st.subheader("What do you think the future closing price will be?")
@@ -474,3 +469,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
