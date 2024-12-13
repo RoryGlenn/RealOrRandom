@@ -4,13 +4,42 @@
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0" />
-    <title>Lightweight Charts with Area Under Candlesticks</title>
+    <title>Lightweight Charts with Multiple Timeframes and Area</title>
     <script type="text/javascript"
         src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
     <style>
         body {
             padding: 0;
             margin: 0;
+        }
+
+        .buttons-container {
+            display: flex;
+            flex-direction: row;
+            gap: 8px;
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            z-index: 10;
+        }
+
+        .buttons-container button {
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            padding: 5px 15px;
+            color: #fff;
+            background-color: rgba(30, 144, 255, 0.8);
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .buttons-container button:hover {
+            background-color: rgba(30, 144, 255, 1);
+        }
+
+        .buttons-container button.active {
+            background-color: rgba(0, 102, 204, 1);
         }
     </style>
 </head>
@@ -91,49 +120,60 @@
             },
         });
 
-        // Generate candlestick data
-        const candleStickData = candlestick_data;
-
-        // Convert the candlestick data for use with a line series
-        const lineData = candleStickData.map(datapoint => ({
-            time: datapoint.time,
-            value: (datapoint.close + datapoint.open) / 2,
-        }));
+        // Data for multiple timeframes
+        const seriesData = new Map([
+            ['1D', candlestick_data.slice(0, 30)], // Last 30 days
+            ['1W', candlestick_data.slice(0, 15)], // Last 15 weeks
+            ['1M', candlestick_data.slice(0, 6)], // Last 6 months
+            ['1Y', candlestick_data.slice(0, 2)], // Last 2 years
+        ]);
 
         // Add an area series to the chart
         const areaSeries = chart.addAreaSeries({
-            lastValueVisible: false, // hide the last value marker for this series
-            crosshairMarkerVisible: false, // hide the crosshair marker for this series
-            lineColor: 'transparent', // hide the line
-            topColor: 'rgba(56, 33, 110, 0.6)',
+            lastValueVisible: false,
+            crosshairMarkerVisible: false,
+            lineColor: 'transparent',
+            topColor: 'rgba(56, 33, 110, 0.1)',
             bottomColor: 'rgba(56, 33, 110, 0.1)',
         });
-
-        // Set the data for the Area Series
-        areaSeries.setData(lineData);
 
         // Create the Main Series (Candlesticks)
         const mainSeries = chart.addCandlestickSeries();
 
-        // Set the data for the Main Series
-        mainSeries.setData(candleStickData);
+        // Function to update the chart based on selected timeframe
+        function setChartInterval(interval) {
+            const data = seriesData.get(interval);
+            mainSeries.setData(data);
 
-        // Automatically fit the time scale
-        chart.timeScale().setVisibleRange({
-            from: candleStickData[0].time,
-            to: candleStickData[candleStickData.length - 1].time,
+            const lineData = data.map(datapoint => ({
+                time: datapoint.time,
+                value: (datapoint.close + datapoint.open) / 2,
+            }));
+
+            areaSeries.setData(lineData);
+            chart.timeScale().fitContent();
+
+            // Update button states
+            document.querySelectorAll('.buttons-container button').forEach(button => {
+                button.classList.remove('active');
+            });
+            document.getElementById(interval).classList.add('active');
+        }
+
+        // Add buttons for switching timeframes
+        const buttonsContainer = document.createElement('div');
+        buttonsContainer.className = 'buttons-container';
+        ['1D', '1W', '1M', '1Y'].forEach(interval => {
+            const button = document.createElement('button');
+            button.id = interval;
+            button.textContent = interval;
+            button.addEventListener('click', () => setChartInterval(interval));
+            buttonsContainer.appendChild(button);
         });
+        document.body.appendChild(buttonsContainer);
 
-        // Automatically fit the price scale
-        const prices = candleStickData.map((item) => [item.low, item.high]).flat();
-        const minPrice = Math.min(...prices);
-        const maxPrice = Math.max(...prices);
-        chart.priceScale().applyOptions({
-            autoScale: true,
-        });
-
-        // Ensure the chart fits all content
-        chart.priceScale().fitContent();
+        // Initialize chart with 1D data
+        setChartInterval('1D');
 
         // Adding a window resize event handler
         window.addEventListener("resize", () => {
