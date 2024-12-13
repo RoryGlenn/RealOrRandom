@@ -23,7 +23,6 @@ with open("chart-template.html", "r") as file:
     html_template = file.read()
 
 
-
 class GameState:
     """
     Enumeration of the game's possible states.
@@ -195,8 +194,7 @@ def create_candlestick_chart(data) -> None:
     -------
     None
     """
-    global html_template
-    
+
     # Convert the DataFrame to a format suitable for Lightweight Charts
     candlestick_data = [
         {
@@ -210,11 +208,11 @@ def create_candlestick_chart(data) -> None:
     ]
 
     html_content = html_template.replace(
-        "{{candlestick_data}}", json.dumps(candlestick_data)
+        "candlestick_data", json.dumps(candlestick_data)
     )
 
     # Use Streamlit's HTML rendering
-    html(html_content, height=800)
+    html(html_content, height=800, width=1200)
 
 
 def display_score() -> None:
