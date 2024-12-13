@@ -19,7 +19,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-with open("testfile.html", "r") as file:
+with open("chart-template.html", "r") as file:
     html_template = file.read()
 
 

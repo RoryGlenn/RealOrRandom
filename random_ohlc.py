@@ -58,6 +58,25 @@ class RandomOHLC:
         self._start_price = start_price
         self._volatility = volatility
         self._drift = drift
+        self._agg_dict = {
+            "open": "first",
+            "high": "max",
+            "low": "min",
+            "close": "last",
+        }
+        self.timeframe_data = {
+            "1min": None,
+            "5min": None,
+            "15min": None,
+            "30min": None,
+            "1H": None,
+            "2H": None,
+            "4H": None,
+            "1D": None,
+            "3D": None,
+            "1W": None,
+            "1M": None,
+        }
 
     def _generate_random_prices(self, num_bars: int) -> np.ndarray:
         """
@@ -121,13 +140,33 @@ class RandomOHLC:
         # Adjust open prices to the previous candle's close to create continuity
         result["open"] = result["close"].shift(1).fillna(self._start_price)
 
-        agg = {
+        # Finally, resample to daily (1D) OHLC data
+        self.timeframe_data = self.create_timeframe_data(result)
+        return self.timeframe_data["1D"]
+
+    def create_timeframe_data(self, df: pd.DataFrame) -> None:
+        """
+        Resample the initial OHLC data into multiple timeframes.
+
+        This method takes the base 1min OHLC data and resamples it to a variety of
+        common timeframes, such as "1h", "4h", "1D", "1W", "1M".
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            The base OHLC DataFrame at 1min frequency.
+
+        Returns
+        -------
+        Dict[str, pd.DataFrame]: A dictionary of resampled OHLC dataframes for each timeframe.
+        """
+        aggregations = {
             "open": "first",
             "high": "max",
             "low": "min",
             "close": "last",
         }
-
-        # Finally, resample to daily (1D) OHLC data
-        result = result.resample("1D").aggregate(agg).round(2)
-        return result
+        return {
+            timeframe: df.resample(timeframe).aggregate(func=aggregations).round(2)
+            for timeframe in ["1h", "4h", "1D", "1W", "1M"]
+        }
