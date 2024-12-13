@@ -1,9 +1,7 @@
-
-
 import logging
 import random
 from streamlit.components.v1 import html
-
+import json
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -42,8 +40,6 @@ class GameState:
     WAITING_FOR_GUESS: int = 0
     REVEAL_GUESS_RESULT: int = 1
     GAME_OVER: int = 2
-
-
 
 
 def initialize_session_state() -> None:
@@ -181,9 +177,9 @@ def prepare_new_round() -> None:
     st.session_state.user_choice = None
 
 
-def create_candlestick_chart(data: pd.DataFrame) -> None:
+def create_candlestick_chart(data) -> None:
     """
-    Render a candlestick chart using the lightweight-charts library.
+    Render a candlestick chart using the Lightweight Charts library.
 
     Parameters
     ----------
@@ -194,9 +190,10 @@ def create_candlestick_chart(data: pd.DataFrame) -> None:
     -------
     None
     """
+    # Convert the DataFrame to a format suitable for Lightweight Charts
     candlestick_data = [
         {
-            "time": str(index.date()),
+            "time": index.strftime("%Y-%m-%d"),
             "open": float(row["open"]),
             "high": float(row["high"]),
             "low": float(row["low"]),
@@ -204,60 +201,103 @@ def create_candlestick_chart(data: pd.DataFrame) -> None:
         }
         for index, row in data.iterrows()
     ]
-    
+
+    # Dynamically generate the HTML and JavaScript
     chart_script = f"""
-    <div id="chart" style="width: 100%; height: 600px;"></div>
-    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
-    <script>
-        const chart = LightweightCharts.createChart(document.getElementById('chart'), {{
-            width: 1200,
-            height: 800,
-            layout: {{
-                background: {{
-                    type: 'solid',
-                    color: '#1E1E1E' // Dark background color
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <meta charset="UTF-8" />
+        <meta
+          name="viewport"
+          content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0"
+        />
+        <title>Lightweight Charts™ Customization Tutorial</title>
+        <script
+          type="text/javascript"
+          src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"      
+          
+        ></script>
+        <style>
+            body {{
+                padding: 0;
+                margin: 0;
+            }}
+        </style>
+      </head>
+      <body>
+        <div
+          id="container"
+          style="position: absolute; width: 100%; height: 100%"
+        ></div>
+        <script type="text/javascript">
+          // Create the Lightweight Chart within the container element
+          const chart = LightweightCharts.createChart(
+            document.getElementById('container'),
+            {{
+                width: 1200,
+                height: 800,
+                layout: {{
+                    textColor: '#D3D3D3', // Grid text color
                 }},
-                textColor: '#D3D3D3', // Light text color for labels
-            }},
-            grid: {{
-                vertLines: {{
-                    color: 'rgba(255, 255, 255, 0.1)', // Subtle vertical grid lines
+                grid: {{
+                    vertLines: {{
+                        color: 'rgba(255, 255, 255, 0.1)', // Vertical grid color
+                    }},
+                    horzLines: {{
+                        color: 'rgba(255, 255, 255, 0.1)', // Horizontal grid color
+                    }},
                 }},
-                horzLines: {{
-                    color: 'rgba(255, 255, 255, 0.1)', // Subtle horizontal grid lines
+                crosshair: {{
+                    mode: 1, // Show both vertical and horizontal crosshairs
                 }},
-            }},
-            crosshair: {{
-                vertLine: {{
-                    color: '#D3D3D3', // Crosshair vertical line color
-                    width: 1,
-                    style: 1,
+                priceScale: {{
+                    borderColor: 'rgba(255, 255, 255, 0.2)', // Price scale border color
                 }},
-                horzLine: {{
-                    color: '#D3D3D3', // Crosshair horizontal line color
-                    width: 1,
-                    style: 1,
+                timeScale: {{
+                    borderColor: '#555555',
+                    timeVisible: true,
+                    secondsVisible: false,
                 }},
-            }},
-            priceScale: {{
-                borderColor: 'rgba(255, 255, 255, 0.2)', // Price scale border
-            }},
-            timeScale: {{
-                borderColor: 'rgba(255, 255, 255, 0.2)', // Time scale border
-            }},
-        }});
+            }}
+          );
 
-        // Add candlestick data to the chart
-        const candlestickSeries = chart.addCandlestickSeries();
-        candlestickSeries.setData({candlestick_data});
+          // Generate candlestick data
+          const candleStickData = {json.dumps(candlestick_data)};
 
-        // Optional: Configure chart resizing for responsiveness
-        window.addEventListener('resize', () => {{
-            chart.resize(window.innerWidth, 600);
-        }});
-    </script>
+          // Create the Main Series (Candlesticks)
+          const mainSeries = chart.addCandlestickSeries();
+          // Set the data for the Main Series
+          mainSeries.setData(candleStickData);
+
+          // Automatically fit the time scale
+          chart.timeScale().setVisibleRange({{
+              from: candleStickData[0].time,
+              to: candleStickData[candleStickData.length - 1].time
+          }});
+
+          // Automatically fit the price scale
+          const prices = candleStickData.map(item => [item.low, item.high]).flat();
+          const minPrice = Math.min(...prices);
+          const maxPrice = Math.max(...prices);
+          chart.priceScale().applyOptions({{
+              autoScale: true,
+          }});
+
+          // Ensure the chart fits all content
+          chart.priceScale().fitContent();
+
+          // Adding a window resize event handler
+          window.addEventListener("resize", () => {{
+            chart.resize(window.innerWidth, window.innerHeight);
+          }});
+        </script>
+      </body>
+    </html>
     """
-    html(chart_script, height=600)
+
+    # Use Streamlit's HTML rendering
+    html(chart_script, height=800)
 
 
 def display_score() -> None:
@@ -448,7 +488,7 @@ def main() -> None:
         return
 
     st.title("Stock Price Prediction Game")
-    create_candlestick_chart(st.session_state.data)
+    chart = create_candlestick_chart(st.session_state.data)
     display_score()
 
     st.subheader("What do you think the future closing price will be?")
@@ -469,4 +509,3 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
-

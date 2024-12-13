@@ -82,9 +82,7 @@ class RandomOHLC:
                 (self._drift - 0.5 * (self._volatility**2)) * dt
                 + self._volatility * shock
             )
-            prices.append(float(res))
-
-        # return np.array(prices)
+            prices.append(res)
         return prices
 
     def generate_ohlc_df(self) -> pd.DataFrame:
