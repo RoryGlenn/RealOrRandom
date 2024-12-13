@@ -19,7 +19,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-with open("chart-template.html", "r") as file:
+with open("test.html", "r") as file:
     html_template = file.read()
 
 
@@ -212,7 +212,7 @@ def create_candlestick_chart(data) -> None:
     )
 
     # Use Streamlit's HTML rendering
-    html(html_content, height=800, width=1200)
+    html(html_content, height=800, width=1600)
 
 
 def display_score() -> None:

@@ -11,7 +11,6 @@
         body {
             padding: 0;
             margin: 0;
-            background-color: black;
         }
     </style>
 </head>
@@ -20,10 +19,18 @@
     <div id="container" style="position: absolute; width: 100%; height: 100%"></div>
     <script type="text/javascript">
 
+        // Get the current users primary locale
+        const currentLocale = window.navigator.languages[0];
+        // Create a number format using Intl.NumberFormat
+        const myPriceFormatter = Intl.NumberFormat(currentLocale, {
+            style: 'currency',
+            currency: 'USD', // Currency for data points
+        }).format;
+
         const chart = LightweightCharts.createChart(
             document.getElementById("container"), {
-            width: 1200,
-            height: 800,
+            // width: 200,
+            // height: 200,
             layout: {
                 background: {
                     color: "rgba(14, 17, 23, 1)",
@@ -53,7 +60,15 @@
                 },
             },
             priceScale: {
-                borderColor: "rgba(255, 255, 255, 0.2)", // Softer border
+                borderColor: 'rgba(255, 255, 255, 0.2)',
+                mode: 0, // Normal mode (not percentage or indexed)
+                priceFormat: {
+                    type: 'custom', // Use a custom price format
+                    formatter: (price) => {
+                        // Format the price as a currency with commas and two decimals
+                        return `$${price.toFixed(2).replace(/\d(?=(\d{3})+\.)/g, '$&,')}`;
+                    },
+                },
             },
             timeScale: {
                 borderColor: "rgba(255, 255, 255, 0.2)", // Softer border
@@ -62,11 +77,19 @@
             },
         });
 
+        // Apply the custom priceFormatter to the chart
+        chart.applyOptions({
+            localization: {
+                priceFormatter: myPriceFormatter,
+            },
+        });
+
         // Generate candlestick data
         const candleStickData = candlestick_data;
 
         // Create the Main Series (Candlesticks)
         const mainSeries = chart.addCandlestickSeries();
+
         // Set the data for the Main Series
         mainSeries.setData(candleStickData);
 
@@ -86,8 +109,6 @@
 
         // Ensure the chart fits all content
         chart.priceScale().fitContent();
-
-
 
         // Adding a window resize event handler
         window.addEventListener("resize", () => {
