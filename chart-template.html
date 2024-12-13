@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0" />
+    <title>Lightweight Charts™ Customization Tutorial</title>
+    <script type="text/javascript"
+        src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container" style="position: absolute; width: 100%; height: 100%"></div>
+    <script type="text/javascript">
+        // Create the Lightweight Chart within the container element
+        const chart = LightweightCharts.createChart(
+            document.getElementById("container"),
+            {
+                width: 1200,
+                height: 800,
+                layout: {
+                    textColor: "#D3D3D3", // Grid text color
+                },
+                grid: {
+                    vertLines: {
+                        color: "rgba(255, 255, 255, 0.1)", // Vertical grid color
+                    },
+                    horzLines: {
+                        color: "rgba(255, 255, 255, 0.1)", // Horizontal grid color
+                    },
+                },
+                crosshair: {
+                    mode: 1, // Show both vertical and horizontal crosshairs
+                },
+                priceScale: {
+                    borderColor: "rgba(255, 255, 255, 0.2)", // Price scale border color
+                },
+                timeScale: {
+                    borderColor: "#555555",
+                    timeVisible: true,
+                    secondsVisible: false,
+                },
+            }
+        );
+
+        // Generate candlestick data
+        const candleStickData = {{candlestick_data}};
+
+        // Create the Main Series (Candlesticks)
+        const mainSeries = chart.addCandlestickSeries();
+        // Set the data for the Main Series
+        mainSeries.setData(candleStickData);
+
+        // Automatically fit the time scale
+        chart.timeScale().setVisibleRange({
+            from: candleStickData[0].time,
+            to: candleStickData[candleStickData.length - 1].time,
+        });
+
+        // Automatically fit the price scale
+        const prices = candleStickData.map((item) => [item.low, item.high]).flat();
+        const minPrice = Math.min(...prices);
+        const maxPrice = Math.max(...prices);
+        chart.priceScale().applyOptions({
+            autoScale: true,
+        });
+
+        // Ensure the chart fits all content
+        chart.priceScale().fitContent();
+
+        // Adding a window resize event handler
+        window.addEventListener("resize", () => {
+            chart.resize(window.innerWidth, window.innerHeight);
+        });
+    </script>
+</body>
+
+</html>

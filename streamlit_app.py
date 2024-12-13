@@ -19,6 +19,11 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
+with open("chart-template.html", "r") as file:
+    html_template = file.read()
+
+
+
 class GameState:
     """
     Enumeration of the game's possible states.
@@ -190,6 +195,8 @@ def create_candlestick_chart(data) -> None:
     -------
     None
     """
+    global html_template
+    
     # Convert the DataFrame to a format suitable for Lightweight Charts
     candlestick_data = [
         {
@@ -202,102 +209,12 @@ def create_candlestick_chart(data) -> None:
         for index, row in data.iterrows()
     ]
 
-    # Dynamically generate the HTML and JavaScript
-    chart_script = f"""
-    <!DOCTYPE html>
-    <html>
-      <head>
-        <meta charset="UTF-8" />
-        <meta
-          name="viewport"
-          content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0"
-        />
-        <title>Lightweight Charts™ Customization Tutorial</title>
-        <script
-          type="text/javascript"
-          src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"      
-          
-        ></script>
-        <style>
-            body {{
-                padding: 0;
-                margin: 0;
-            }}
-        </style>
-      </head>
-      <body>
-        <div
-          id="container"
-          style="position: absolute; width: 100%; height: 100%"
-        ></div>
-        <script type="text/javascript">
-          // Create the Lightweight Chart within the container element
-          const chart = LightweightCharts.createChart(
-            document.getElementById('container'),
-            {{
-                width: 1200,
-                height: 800,
-                layout: {{
-                    textColor: '#D3D3D3', // Grid text color
-                }},
-                grid: {{
-                    vertLines: {{
-                        color: 'rgba(255, 255, 255, 0.1)', // Vertical grid color
-                    }},
-                    horzLines: {{
-                        color: 'rgba(255, 255, 255, 0.1)', // Horizontal grid color
-                    }},
-                }},
-                crosshair: {{
-                    mode: 1, // Show both vertical and horizontal crosshairs
-                }},
-                priceScale: {{
-                    borderColor: 'rgba(255, 255, 255, 0.2)', // Price scale border color
-                }},
-                timeScale: {{
-                    borderColor: '#555555',
-                    timeVisible: true,
-                    secondsVisible: false,
-                }},
-            }}
-          );
-
-          // Generate candlestick data
-          const candleStickData = {json.dumps(candlestick_data)};
-
-          // Create the Main Series (Candlesticks)
-          const mainSeries = chart.addCandlestickSeries();
-          // Set the data for the Main Series
-          mainSeries.setData(candleStickData);
-
-          // Automatically fit the time scale
-          chart.timeScale().setVisibleRange({{
-              from: candleStickData[0].time,
-              to: candleStickData[candleStickData.length - 1].time
-          }});
-
-          // Automatically fit the price scale
-          const prices = candleStickData.map(item => [item.low, item.high]).flat();
-          const minPrice = Math.min(...prices);
-          const maxPrice = Math.max(...prices);
-          chart.priceScale().applyOptions({{
-              autoScale: true,
-          }});
-
-          // Ensure the chart fits all content
-          chart.priceScale().fitContent();
-
-          // Adding a window resize event handler
-          window.addEventListener("resize", () => {{
-            chart.resize(window.innerWidth, window.innerHeight);
-          }});
-        </script>
-      </body>
-    </html>
-    """
+    html_content = html_template.replace(
+        "{{candlestick_data}}", json.dumps(candlestick_data)
+    )
 
     # Use Streamlit's HTML rendering
-    html(chart_script, height=800)
+    html(html_content, height=800)
 
 
 def display_score() -> None:
