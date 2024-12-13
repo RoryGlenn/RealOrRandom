@@ -160,13 +160,16 @@ class RandomOHLC:
         -------
         Dict[str, pd.DataFrame]: A dictionary of resampled OHLC dataframes for each timeframe.
         """
-        aggregations = {
+
+        candlebar_aggregations = {
             "open": "first",
             "high": "max",
             "low": "min",
             "close": "last",
         }
         return {
-            timeframe: df.resample(timeframe).aggregate(func=aggregations).round(2)
+            timeframe: df.resample(rule=timeframe)
+            .aggregate(func=candlebar_aggregations)
+            .round(decimals=2)
             for timeframe in ["1h", "4h", "1D", "1W", "1M"]
         }

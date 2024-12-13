@@ -180,6 +180,8 @@ def prepare_new_round() -> None:
     st.session_state.choices = choices
     st.session_state.user_choice = None
 
+    logger.info("Future Price: %s", future_price)
+
 
 def create_candlestick_chart(data) -> None:
     """
