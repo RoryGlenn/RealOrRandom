@@ -5,7 +5,9 @@ import json
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-
+from functools import wraps
+import time
+from typing import Callable
 from random_ohlc import RandomOHLC
 
 st.set_page_config(layout="wide", page_title="Stock Prediction Game")
@@ -46,6 +48,23 @@ class GameState:
     GAME_OVER: int = 2
 
 
+def timeit(func: Callable) -> Callable:
+    """
+    A decorator to measure and print the execution time of a function.
+    """
+
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.perf_counter()  # Start timing
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()  # End timing
+        execution_time = end_time - start_time
+        logger.info(f"Function '{func.__name__}' executed in {execution_time:.4f} seconds")
+        return result
+
+    return wrapper
+
+
 def initialize_session_state() -> None:
     """
     Initialize all required session state variables if they do not exist.
@@ -72,7 +91,7 @@ def initialize_session_state() -> None:
     if "msg" not in st.session_state:
         st.session_state.msg = None
 
-
+@timeit
 def create_ohlc_df(num_bars: int) -> pd.DataFrame:
     """
     Generate a realistic OHLC dataset for a given number of days.
@@ -101,11 +120,6 @@ def create_ohlc_df(num_bars: int) -> pd.DataFrame:
         drift=drift,
     )
 
-    df = rand_ohlc.generate_ohlc_df()
-
-    # for col in df.columns:
-    #     df[col] = df[col].clip(lower=1.0)
-
     logger.info(
         "Num Days: %d, Start Price: %d, Volatility: %.2f, Drift: %.2f",
         num_bars,
@@ -113,7 +127,7 @@ def create_ohlc_df(num_bars: int) -> pd.DataFrame:
         volatility,
         drift,
     )
-    return df
+    return rand_ohlc.generate_ohlc_data()
 
 
 def money_to_float(money_str: str) -> float:
@@ -156,6 +170,7 @@ def prepare_new_round() -> None:
 
     # Generate OHLC data
     df = create_ohlc_df(num_bars=num_bars)
+    
     num_display_bars = 90  # Always display the last 90 bars
 
     # Determine the future bar index
@@ -180,9 +195,9 @@ def prepare_new_round() -> None:
     st.session_state.choices = choices
     st.session_state.user_choice = None
 
-    logger.info("Future Price: %s", future_price)
+    # logger.info("Future Price: %s", future_price)
 
-
+@timeit
 def create_candlestick_chart(data) -> None:
     """
     Render a candlestick chart using the Lightweight Charts library.
@@ -212,6 +227,12 @@ def create_candlestick_chart(data) -> None:
     html_content = html_template.replace(
         "candlestick_data", json.dumps(candlestick_data)
     )
+    
+    # add timeframe data
+    html_content = html_content.replace('day_data', candlestick_data['1D'])
+    html_content = html_content.replace('week_data', candlestick_data['1W'])
+    html_content = html_content.replace('month_data', candlestick_data['1M'])
+    html_content = html_content.replace('year_data', candlestick_data['1Y'])
 
     # Use Streamlit's HTML rendering
     html(html_content, height=800, width=1600)
@@ -225,7 +246,7 @@ def display_score() -> None:
     st.write(f"Correct: {st.session_state.score['right']}")
     st.write(f"Wrong: {st.session_state.score['wrong']}")
 
-
+@timeit
 def submit_callback() -> None:
     """
     Callback function for the "Submit" button.
@@ -405,7 +426,7 @@ def main() -> None:
         return
 
     st.title("Stock Price Prediction Game")
-    chart = create_candlestick_chart(st.session_state.data)
+    create_candlestick_chart(st.session_state.data)
     display_score()
 
     st.subheader("What do you think the future closing price will be?")

@@ -15,6 +15,7 @@ RandomOHLC
 
 import logging
 from datetime import datetime
+from typing import Dict
 
 import numpy as np
 import pandas as pd
@@ -104,7 +105,7 @@ class RandomOHLC:
             prices.append(res)
         return prices
 
-    def generate_ohlc_df(self) -> pd.DataFrame:
+    def generate_ohlc_data(self) -> pd.DataFrame:
         """
         Generate daily OHLC price data using GBM.
 
@@ -142,9 +143,10 @@ class RandomOHLC:
 
         # Finally, resample to daily (1D) OHLC data
         self.timeframe_data = self.create_timeframe_data(result)
-        return self.timeframe_data["1D"]
+        # return self.timeframe_data["1D"]
+        return self.timeframe_data
 
-    def create_timeframe_data(self, df: pd.DataFrame) -> None:
+    def create_timeframe_data(self, df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
         """
         Resample the initial OHLC data into multiple timeframes.
 
@@ -171,5 +173,5 @@ class RandomOHLC:
             timeframe: df.resample(rule=timeframe)
             .aggregate(func=candlebar_aggregations)
             .round(decimals=2)
-            for timeframe in ["1h", "4h", "1D", "1W", "1M"]
+            for timeframe in ["1h", "4h", "1D", "1W", "1ME"]
         }

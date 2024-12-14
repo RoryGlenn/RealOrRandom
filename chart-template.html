@@ -11,38 +11,61 @@
         body {
             padding: 0;
             margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        #chart-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #buttons-container {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 14px;
+            background-color: rgba(56, 33, 110, 0.6);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: rgba(56, 33, 110, 0.8);
         }
     </style>
 </head>
 
 <body>
-    <div id="container" style="position: absolute; width: 100%; height: 100%"></div>
+    <div id="buttons-container"></div>
+    <div id="chart-container"></div>
+
     <script type="text/javascript">
-        // Get the current user's primary locale
         const currentLocale = window.navigator.languages[0];
-        // Create a number format using Intl.NumberFormat
         const myPriceFormatter = Intl.NumberFormat(currentLocale, {
             style: 'currency',
-            currency: 'USD', // Currency for data points
+            currency: 'USD',
         }).format;
 
         const chart = LightweightCharts.createChart(
-            document.getElementById("container"), {
+            document.getElementById("chart-container"), {
             layout: {
-                background: {
-                    color: "rgba(14, 17, 23, 1)",
-                },
-                textColor: "rgba(200, 200, 200, 0.8)", // Softer, smoother text
+                background: { color: "rgba(14, 17, 23, 1)" },
+                textColor: "rgba(200, 200, 200, 0.8)",
                 fontSize: 12,
                 fontFamily: "Arial, sans-serif",
             },
             grid: {
-                vertLines: {
-                    color: "rgba(255, 255, 255, 0.1)",
-                },
-                horzLines: {
-                    color: "rgba(255, 255, 255, 0.1)",
-                },
+                vertLines: { color: "rgba(255, 255, 255, 0.1)" },
+                horzLines: { color: "rgba(255, 255, 255, 0.1)" },
             },
             crosshair: {
                 vertLine: {
@@ -56,10 +79,7 @@
                     style: 0,
                 },
             },
-            priceScale: {
-                borderColor: 'rgba(255, 255, 255, 0.2)',
-                mode: 0,
-            },
+            priceScale: { borderColor: 'rgba(255, 255, 255, 0.2)', mode: 0 },
             timeScale: {
                 borderColor: "rgba(255, 255, 255, 0.2)",
                 timeVisible: true,
@@ -67,77 +87,72 @@
             },
         });
 
-        // Customizing the Crosshair
         chart.applyOptions({
             crosshair: {
                 mode: LightweightCharts.CrosshairMode.Normal,
-                vertLine: {
-                    width: 8,
-                    color: '#C3BCDB44',
-                    style: LightweightCharts.LineStyle.Solid,
-                    labelBackgroundColor: '#9B7DFF',
-                },
-                horzLine: {
-                    color: '#9B7DFF',
-                    labelBackgroundColor: '#9B7DFF',
-                },
+                vertLine: { width: 8, color: '#C3BCDB44', labelBackgroundColor: '#9B7DFF' },
+                horzLine: { color: '#9B7DFF', labelBackgroundColor: '#9B7DFF' },
             },
+            localization: { priceFormatter: myPriceFormatter },
         });
 
-        // Apply the custom priceFormatter to the chart
-        chart.applyOptions({
-            localization: {
-                priceFormatter: myPriceFormatter,
-            },
+        const dayData = day_data;
+        const weekData = week_data;
+        const monthData = month_data;
+        const yearData = year_data;
+        const seriesesData = new Map([['1D', dayData], ['1W', weekData], ['1M', monthData], ['1Y', yearData]]);
+
+        const intervalColors = {
+            '1D': '#2962FF',
+            '1W': 'rgb(225, 87, 90)',
+            '1M': 'rgb(242, 142, 44)',
+            '1Y': 'rgb(164, 89, 209)',
+        };
+
+        const lineSeries = chart.addLineSeries({ color: intervalColors['1D'] });
+
+        function setChartInterval(interval) {
+            lineSeries.setData(seriesesData.get(interval));
+            lineSeries.applyOptions({ color: intervalColors[interval] });
+            chart.timeScale().fitContent();
+        }
+
+        setChartInterval('1D');
+
+        const buttonsContainer = document.getElementById('buttons-container');
+        const intervals = ['1D', '1W', '1M', '1Y'];
+
+        intervals.forEach(interval => {
+            const button = document.createElement('button');
+            button.innerText = interval;
+            button.addEventListener('click', () => setChartInterval(interval));
+            buttonsContainer.appendChild(button);
         });
 
-        // Generate candlestick data
+        // Adding candlestick data (example)
         const candleStickData = candlestick_data;
 
-        // Convert the candlestick data for use with a line series
+        const mainSeries = chart.addCandlestickSeries();
+        mainSeries.setData(candleStickData);
+
         const lineData = candleStickData.map(datapoint => ({
             time: datapoint.time,
             value: (datapoint.close + datapoint.open) / 2,
         }));
 
-        // Add an area series to the chart
         const areaSeries = chart.addAreaSeries({
-            lastValueVisible: false, // hide the last value marker for this series
-            crosshairMarkerVisible: false, // hide the crosshair marker for this series
-            lineColor: 'transparent', // hide the line
+            lastValueVisible: false,
+            crosshairMarkerVisible: false,
+            lineColor: 'transparent',
             topColor: 'rgba(56, 33, 110, 0.6)',
             bottomColor: 'rgba(56, 33, 110, 0.1)',
         });
 
-        // Set the data for the Area Series
         areaSeries.setData(lineData);
 
-        // Create the Main Series (Candlesticks)
-        const mainSeries = chart.addCandlestickSeries();
-
-        // Set the data for the Main Series
-        mainSeries.setData(candleStickData);
-
-        // Automatically fit the time scale
-        chart.timeScale().setVisibleRange({
-            from: candleStickData[0].time,
-            to: candleStickData[candleStickData.length - 1].time,
-        });
-
-        // Automatically fit the price scale
-        const prices = candleStickData.map((item) => [item.low, item.high]).flat();
-        const minPrice = Math.min(...prices);
-        const maxPrice = Math.max(...prices);
-        chart.priceScale().applyOptions({
-            autoScale: true,
-        });
-
-        // Ensure the chart fits all content
         chart.priceScale().fitContent();
-
-        // Adding a window resize event handler
         window.addEventListener("resize", () => {
-            chart.resize(window.innerWidth, window.innerHeight);
+            chart.resize(window.innerWidth, document.getElementById("chart-container").offsetHeight);
         });
     </script>
 </body>
