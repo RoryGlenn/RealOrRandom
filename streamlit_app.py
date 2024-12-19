@@ -263,7 +263,7 @@ def create_candlestick_chart(data: Dict[str, pd.DataFrame]) -> None:
         for timeframe, df in filtered_df_dict.items()
     }
 
-    html_content = html_template.replace("candlestick_data", json.dumps(candlestick_data))
+    # html_content = html_template.replace("candlestick_data;", json.dumps(candlestick_data))
 
     to_replace = {
         "one_hour_data": candlestick_data["1h"],
@@ -272,7 +272,7 @@ def create_candlestick_chart(data: Dict[str, pd.DataFrame]) -> None:
         "week_data": candlestick_data["1W"],
         "month_data": candlestick_data["1ME"],
     }
-
+    html_content = html_template
     for key, value in to_replace.items():
         html_content = html_content.replace(key, json.dumps(value))
 
