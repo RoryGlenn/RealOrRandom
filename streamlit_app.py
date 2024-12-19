@@ -1,13 +1,15 @@
+import json
 import logging
 import random
-from streamlit.components.v1 import html
-import json
+import time
+from functools import wraps
+from typing import Callable, Dict, List, Tuple, Any
+
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
-from functools import wraps
-import time
-from typing import Callable
+from streamlit.components.v1 import html
+
 from random_ohlc import RandomOHLC
 
 st.set_page_config(layout="wide", page_title="Stock Prediction Game")
@@ -21,27 +23,12 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-with open("chart-template.html", "r") as file:
+with open("chart-template.html", "r", encoding="utf-8") as file:
     html_template = file.read()
 
 
 class GameState:
-    """
-    Enumeration of the game's possible states.
-
-    Attributes
-    ----------
-    READY_TO_PLAY : int
-        The starting state of the game, before the player begins making guesses.
-    WAITING_FOR_GUESS : int
-        The state where the game is active and waiting for the user's first guess.
-    REVEAL_GUESS_RESULT : int
-        The state after the user has submitted a guess, showing whether it was correct
-        or wrong, and allowing the user to proceed to the next round.
-    GAME_OVER : int
-        The state after all attempts have been made, presenting the final results page.
-    """
-
+    """Enumeration of the game's possible states."""
     READY_TO_PLAY: int = -1
     WAITING_FOR_GUESS: int = 0
     REVEAL_GUESS_RESULT: int = 1
@@ -50,18 +37,22 @@ class GameState:
 
 def timeit(func: Callable) -> Callable:
     """
-    A decorator to measure and print the execution time of a function.
+    A decorator to measure and log the execution time of a function.
+
+    Args:
+        func (Callable): The function to decorate.
+
+    Returns:
+        Callable: The wrapped function with timing measurement.
     """
-
     @wraps(func)
-    def wrapper(*args, **kwargs):
-        start_time = time.perf_counter()  # Start timing
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        start_time = time.perf_counter()
         result = func(*args, **kwargs)
-        end_time = time.perf_counter()  # End timing
+        end_time = time.perf_counter()
         execution_time = end_time - start_time
-        logger.info(f"Function '{func.__name__}' executed in {execution_time:.4f} seconds")
+        logger.info("Function '%s' executed in %.4f seconds", func.__name__, execution_time)
         return result
-
     return wrapper
 
 
@@ -91,24 +82,19 @@ def initialize_session_state() -> None:
     if "msg" not in st.session_state:
         st.session_state.msg = None
 
-@timeit
+
 def create_ohlc_df(num_bars: int) -> pd.DataFrame:
     """
-    Generate a realistic OHLC dataset for a given number of days.
+    Generate a realistic OHLC dataset for a given number of bars.
 
-    Uses a RandomOHLC generator to produce price data, then resamples it to daily (1D)
+    Uses a RandomOHLC generator to produce price data.
 
-    Parameters
-    ----------
-    num_bars : int
-        Number of days to generate data for.
+    Args:
+        num_bars (int): Number of data points to generate.
 
-    Returns
-    -------
-    pd.DataFrame
-        A DataFrame containing daily OHLC data with columns: "open", "high", "low", "close".
+    Returns:
+        pd.DataFrame: A DataFrame containing OHLC data.
     """
-
     start_price = 10_000
     volatility = random.uniform(1, 3)
     drift = random.uniform(1, 3)
@@ -134,17 +120,12 @@ def money_to_float(money_str: str) -> float:
     """
     Convert a money-formatted string into a float.
 
-    Parameters
-    ----------
-    money_str : str
-        The money-formatted string (e.g., "$1,234.56").
+    Args:
+        money_str (str): A string representing a monetary value (e.g. "$1,234.56").
 
-    Returns
-    -------
-    float
-        The original float value (e.g., 1234.56).
+    Returns:
+        float: The numeric value (e.g. 1234.56).
     """
-    # Remove "$" and "," then convert to float
     return float(money_str.replace("$", "").replace(",", ""))
 
 
@@ -155,7 +136,6 @@ def prepare_new_round() -> None:
     Dynamically generates OHLC data based on difficulty, selects a future price, and
     creates a set of possible choices for the user to guess from.
     """
-    # Map difficulty to required parameters
     difficulty_settings = {
         "Easy": {"extra_bars": 1, "future_offset": 1},
         "Medium": {"extra_bars": 7, "future_offset": 7},
@@ -165,24 +145,35 @@ def prepare_new_round() -> None:
     extra_bars = difficulty_settings[difficulty]["extra_bars"]
     future_offset = difficulty_settings[difficulty]["future_offset"]
 
-    # Calculate the number of bars to generate
-    num_bars = 90 + extra_bars  # 90 for display + extra bars for future prediction
+    num_bars = 90 + extra_bars
 
-    # Generate OHLC data
-    df = create_ohlc_df(num_bars=num_bars)
-    
-    num_display_bars = 90  # Always display the last 90 bars
+    start_price = 10_000
+    volatility = random.uniform(1, 3)
+    drift = random.uniform(1, 3)
 
-    # Determine the future bar index
+    rand_ohlc = RandomOHLC(
+        num_bars=num_bars,
+        start_price=start_price,
+        volatility=volatility,
+        drift=drift,
+    )
+
+    logger.info(
+        "Num Days: %d, Start Price: %d, Volatility: %.2f, Drift: %.2f",
+        num_bars,
+        start_price,
+        volatility,
+        drift,
+    )
+    ohlc_data = rand_ohlc.generate_ohlc_data()
+
+    df = pd.DataFrame(ohlc_data["1D"])
+    num_display_bars = 90
     future_bar_index = num_display_bars + future_offset - 1
-
-    # Fetch future price
     future_price = df["close"].iloc[future_bar_index]
 
-    # Prepare historical data for display
-    st.session_state.data = df.iloc[:num_display_bars]
+    st.session_state.data = ohlc_data
 
-    # Create choices (formatted as money strings)
     choices = sorted(
         [future_price]
         + [round(future_price * (1 + random.uniform(-0.1, 0.1)), 2) for _ in range(3)]
@@ -190,51 +181,101 @@ def prepare_new_round() -> None:
     choices = [f"${c:,.2f}" for c in choices]
     future_price = f"${future_price:,.2f}"
 
-    # Update session state
     st.session_state.future_price = future_price
     st.session_state.choices = choices
     st.session_state.user_choice = None
 
-    # logger.info("Future Price: %s", future_price)
 
-@timeit
-def create_candlestick_chart(data) -> None:
+def convert_df_to_candlestick_list(df: pd.DataFrame) -> List[Dict[str, Any]]:
     """
-    Render a candlestick chart using the Lightweight Charts library.
+    Convert a DataFrame with a DatetimeIndex and OHLC columns into a list of dictionaries.
 
-    Parameters
-    ----------
-    data : pd.DataFrame
-        DataFrame containing OHLC data with columns "open", "high", "low", "close".
+    Args:
+        df (pd.DataFrame): A DataFrame containing 'open', 'high', 'low', 'close' columns and a DatetimeIndex.
 
-    Returns
-    -------
-    None
+    Returns:
+        List[Dict[str, Any]]: A list of dictionaries suitable for candlestick charts.
     """
+    _df = df.copy()
+    _df["time"] = _df.index.strftime("%Y-%m-%d %H:%M:%S")
 
-    # Convert the DataFrame to a format suitable for Lightweight Charts
-    candlestick_data = [
-        {
-            "time": index.strftime("%Y-%m-%d"),
-            "open": float(row["open"]),
-            "high": float(row["high"]),
-            "low": float(row["low"]),
-            "close": float(row["close"]),
-        }
-        for index, row in data.iterrows()
-    ]
+    numeric_cols = ["open", "high", "low", "close"]
+    _df[numeric_cols] = _df[numeric_cols].astype(float)
 
-    html_content = html_template.replace(
-        "candlestick_data", json.dumps(candlestick_data)
+    return _df[["time"] + numeric_cols].to_dict("records")
+
+
+def filter_dfs_by_date_range(df_dict: Dict[str, pd.DataFrame], start_date: str, end_date: str) -> Dict[str, pd.DataFrame]:
+    """
+    Filter each DataFrame in a dictionary by a given date range.
+
+    Args:
+        df_dict (Dict[str, pd.DataFrame]): A dictionary of DataFrames keyed by timeframe.
+        start_date (str): The start date as a string (e.g., "YYYY-MM-DD").
+        end_date (str): The end date as a string (e.g., "YYYY-MM-DD").
+
+    Returns:
+        Dict[str, pd.DataFrame]: A new dictionary with filtered DataFrames.
+    """
+    filtered_dict = {}
+    for key, df in df_dict.items():
+        if not isinstance(df.index, pd.DatetimeIndex):
+            df.index = pd.to_datetime(df.index)
+        filtered_df = df[(df.index >= start_date) & (df.index <= end_date)]
+        filtered_dict[key] = filtered_df
+    return filtered_dict
+
+
+def detect_latest_start_and_earliest_end(df_dict: Dict[str, pd.DataFrame]) -> Tuple[pd.Timestamp, pd.Timestamp]:
+    """
+    Given a dictionary of DataFrames with DatetimeIndex, returns the latest start date and earliest end date.
+
+    Args:
+        df_dict (Dict[str, pd.DataFrame]): A dictionary of DataFrames keyed by timeframe.
+
+    Returns:
+        Tuple[pd.Timestamp, pd.Timestamp]: (latest_start_date, earliest_end_date)
+    """
+    earliest_starts = [df.index.min() for df in df_dict.values()]
+    latest_ends = [df.index.max() for df in df_dict.values()]
+    latest_start_date = max(earliest_starts)
+    earliest_end_date = min(latest_ends)
+    return latest_start_date, earliest_end_date
+
+
+def create_candlestick_chart(data: Dict[str, pd.DataFrame]) -> None:
+    """
+    Create and display a candlestick chart using the given data dictionary.
+
+    This function extracts the overlapping date range among all timeframes,
+    converts them to candlestick data format, and renders the chart using HTML.
+
+    Args:
+        data (Dict[str, pd.DataFrame]): A dictionary with timeframe keys and DataFrames as values.
+    """
+    latest_start_date, earliest_end_date = detect_latest_start_and_earliest_end(data)
+    filtered_df_dict = filter_dfs_by_date_range(
+        data, str(latest_start_date.date()), str(earliest_end_date.date())
     )
-    
-    # add timeframe data
-    html_content = html_content.replace('day_data', candlestick_data['1D'])
-    html_content = html_content.replace('week_data', candlestick_data['1W'])
-    html_content = html_content.replace('month_data', candlestick_data['1M'])
-    html_content = html_content.replace('year_data', candlestick_data['1Y'])
 
-    # Use Streamlit's HTML rendering
+    candlestick_data = {
+        timeframe: convert_df_to_candlestick_list(df)
+        for timeframe, df in filtered_df_dict.items()
+    }
+
+    html_content = html_template.replace("candlestick_data", json.dumps(candlestick_data))
+
+    to_replace = {
+        "one_hour_data": candlestick_data["1h"],
+        "four_hour_data": candlestick_data["4h"],
+        "day_data": candlestick_data["1D"],
+        "week_data": candlestick_data["1W"],
+        "month_data": candlestick_data["1ME"],
+    }
+
+    for key, value in to_replace.items():
+        html_content = html_content.replace(key, json.dumps(value))
+
     html(html_content, height=800, width=1600)
 
 
@@ -246,7 +287,7 @@ def display_score() -> None:
     st.write(f"Correct: {st.session_state.score['right']}")
     st.write(f"Wrong: {st.session_state.score['wrong']}")
 
-@timeit
+
 def submit_callback() -> None:
     """
     Callback function for the "Submit" button.
@@ -266,7 +307,6 @@ def submit_callback() -> None:
     )
     st.session_state.guesses.append((total_attempts, user_choice, future_price))
 
-    # Evaluate result
     if user_choice == future_price:
         st.session_state.score["right"] += 1
         st.session_state.msg = "Correct!"
@@ -303,9 +343,9 @@ def start_callback() -> None:
 
 def pregame_callback() -> None:
     """
-    Callback for the back to start button.
+    Callback for the 'Go Back to Start' button on the results page.
 
-    Moves the game to the INITIAL state and prepares a new round.
+    Resets the session state and returns the game to the initial state.
     """
     st.session_state.clear()
     initialize_session_state()
@@ -313,10 +353,10 @@ def pregame_callback() -> None:
 
 def show_results_page() -> None:
     """
-    Display the final results page after the user has completed 5 attempts.
+    Display the final results page after the user has completed all attempts.
 
     Shows the final score, accuracy, average absolute error, and a chart of guesses vs. actual prices.
-    Also provides a button to restart the game.
+    Provides a button to restart the game.
     """
     st.markdown("## Final Results")
     st.write("You have completed 5 attempts.")

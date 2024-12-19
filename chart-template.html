@@ -1,3 +1,174 @@
+<!-- <!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0" />
+    <title>Lightweight Charts with Area Under Candlesticks</title>
+    <script type="text/javascript"
+        src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        body {
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+
+        #chart-container {
+            flex: 1;
+            position: relative;
+        }
+
+        #buttons-container {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 14px;
+            background-color: rgba(56, 33, 110, 0.6);
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: rgba(56, 33, 110, 0.8);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="buttons-container"></div>
+    <div id="chart-container"></div>
+
+    <script type="text/javascript">
+        const currentLocale = window.navigator.languages[0];
+        const myPriceFormatter = Intl.NumberFormat(currentLocale, {
+            style: 'currency',
+            currency: 'USD',
+        }).format;
+
+        const chart = LightweightCharts.createChart(
+            document.getElementById("chart-container"), {
+            layout: {
+                background: {color: "rgba(14, 17, 23, 1)"},
+                textColor: "rgba(200, 200, 200, 0.8)",
+                fontSize: 12,
+                fontFamily: "Arial, sans-serif",
+            },
+            grid: {
+                vertLines: {color: "rgba(255, 255, 255, 0.1)"},
+                horzLines: {color: "rgba(255, 255, 255, 0.1)"},
+            },
+            crosshair: {
+                vertLine: {
+                    color: "rgba(200, 200, 200, 0.5)",
+                    width: 1,
+                    style: 0,
+                },
+                horzLine: {
+                    color: "rgba(200, 200, 200, 0.5)",
+                    width: 1,
+                    style: 0,
+                },
+            },
+            priceScale: {borderColor: 'rgba(255, 255, 255, 0.2)', mode: 0},
+            timeScale: {
+                borderColor: "rgba(255, 255, 255, 0.2)",
+                timeVisible: true,
+                secondsVisible: false,
+            },
+        });
+
+        chart.applyOptions({
+            crosshair: {
+                mode: LightweightCharts.CrosshairMode.Normal,
+                vertLine: {width: 8, color: '#C3BCDB44', labelBackgroundColor: '#9B7DFF'},
+                horzLine: {color: '#9B7DFF', labelBackgroundColor: '#9B7DFF'},
+            },
+            localization: {priceFormatter: myPriceFormatter},
+        });
+
+        const oneHourData = one_hour_data;
+        const fourHourData = four_hour_data;
+        const dayData = day_data;
+        const weekData = week_data;
+        const monthData = month_data;
+        const seriesesData = new Map([
+            ['1h', oneHourData],
+            ['4h', fourHourData],
+            ['1D', dayData],
+            ['1W', weekData],
+            ['1ME', monthData]
+        ]);
+
+        const intervalColors = {
+            '1h': 'rgb(225, 87, 90)',
+            '4h': 'rgb(225, 87, 90)',
+            '1D': 'rgb(225, 87, 90)',
+            '1W': 'rgb(225, 87, 90)',
+            '1ME': 'rgb(242, 142, 44)',
+        };
+
+        const lineSeries = chart.addLineSeries({color: intervalColors['1D']});
+
+        function setChartInterval(interval) {
+            lineSeries.setData(seriesesData.get(interval));
+            lineSeries.applyOptions({color: intervalColors[interval]});
+            chart.timeScale().fitContent();
+        }
+
+        setChartInterval('1D');
+
+        const buttonsContainer = document.getElementById('buttons-container');
+        const intervals = ['1h', '4h', '1D', '1W', '1ME'];
+
+        intervals.forEach(interval => {
+            const button = document.createElement('button');
+            button.innerText = interval;
+            button.addEventListener('click', () => setChartInterval(interval));
+            buttonsContainer.appendChild(button);
+        });
+
+        // Adding candlestick data (example)
+        const candleStickData = candlestick_data;
+
+        const mainSeries = chart.addCandlestickSeries();
+        mainSeries.setData(candleStickData);
+
+        const lineData = candleStickData.map(datapoint => ({
+            time: datapoint.time,
+            value: (datapoint.close + datapoint.open) / 2,
+        }));
+
+        const areaSeries = chart.addAreaSeries({
+            lastValueVisible: false,
+            crosshairMarkerVisible: false,
+            lineColor: 'transparent',
+            topColor: 'rgba(56, 33, 110, 0.6)',
+            bottomColor: 'rgba(56, 33, 110, 0.1)',
+        });
+
+        areaSeries.setData(lineData);
+
+        chart.priceScale().fitContent();
+        window.addEventListener("resize", () => {
+            chart.resize(window.innerWidth, document.getElementById("chart-container").offsetHeight);
+        });
+    </script>
+</body>
+
+</html> -->
+
+
+
 <!DOCTYPE html>
 <html>
 
@@ -96,19 +267,29 @@
             localization: { priceFormatter: myPriceFormatter },
         });
 
+        const oneHourData = one_hour_data;    // these variables should be defined in your JS context
+        const fourHourData = four_hour_data;  // before this script runs, e.g. via a <script> tag
         const dayData = day_data;
         const weekData = week_data;
         const monthData = month_data;
-        const yearData = year_data;
-        const seriesesData = new Map([['1D', dayData], ['1W', weekData], ['1M', monthData], ['1Y', yearData]]);
+
+        const seriesesData = new Map([
+            ['1h', oneHourData],
+            ['4h', fourHourData],
+            ['1D', dayData],
+            ['1W', weekData],
+            ['1ME', monthData]
+        ]);
 
         const intervalColors = {
-            '1D': '#2962FF',
+            '1h': 'rgb(225, 87, 90)',
+            '4h': 'rgb(225, 87, 90)',
+            '1D': 'rgb(225, 87, 90)',
             '1W': 'rgb(225, 87, 90)',
-            '1M': 'rgb(242, 142, 44)',
-            '1Y': 'rgb(164, 89, 209)',
+            '1ME': 'rgb(242, 142, 44)',
         };
 
+        // Add the line series first (lowest layer)
         const lineSeries = chart.addLineSeries({ color: intervalColors['1D'] });
 
         function setChartInterval(interval) {
@@ -120,7 +301,7 @@
         setChartInterval('1D');
 
         const buttonsContainer = document.getElementById('buttons-container');
-        const intervals = ['1D', '1W', '1M', '1Y'];
+        const intervals = ['1h', '4h', '1D', '1W', '1ME'];
 
         intervals.forEach(interval => {
             const button = document.createElement('button');
@@ -130,11 +311,9 @@
         });
 
         // Adding candlestick data (example)
-        const candleStickData = candlestick_data;
+        const candleStickData = candlestick_data; // should be defined in JS context
 
-        const mainSeries = chart.addCandlestickSeries();
-        mainSeries.setData(candleStickData);
-
+        // Create the area series before candlesticks so it's beneath them
         const lineData = candleStickData.map(datapoint => ({
             time: datapoint.time,
             value: (datapoint.close + datapoint.open) / 2,
@@ -150,7 +329,12 @@
 
         areaSeries.setData(lineData);
 
-        chart.priceScale().fitContent();
+        // Add the candlestick series last so it's on top
+        const mainSeries = chart.addCandlestickSeries();
+        mainSeries.setData(candleStickData);
+
+        chart.timeScale().fitContent();
+
         window.addEventListener("resize", () => {
             chart.resize(window.innerWidth, document.getElementById("chart-container").offsetHeight);
         });
