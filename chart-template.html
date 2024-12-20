@@ -49,6 +49,14 @@
     <div id="chart-container"></div>
 
     <script type="text/javascript">
+        // Ensure these variables are defined and populated before this script:
+        // const one_hour_data = [...];
+        // const four_hour_data = [...];
+        // const day_data = [...];
+        // const week_data = [...];
+        // const month_data = [...];
+        // const candleStickData = [...];
+
         const currentLocale = window.navigator.languages[0];
         const myPriceFormatter = Intl.NumberFormat(currentLocale, {
             style: 'currency',
@@ -96,8 +104,6 @@
             localization: { priceFormatter: myPriceFormatter },
         });
 
-        // Assume these variables are defined and populated correctly in the global scope:
-        // one_hour_data, four_hour_data, day_data, week_data, month_data
         const seriesesData = new Map([
             ['1h', one_hour_data],
             ['4h', four_hour_data],
@@ -106,27 +112,48 @@
             ['1ME', month_data]
         ]);
 
-        // Add the line series first (lowest layer)
-        // const lineSeries = chart.addLineSeries();
-        
-        // Add the candlestick series last so it's on top
+        // // Convert the candlestick data for use with a line (area) series
+        // const lineData = candleStickData.map(datapoint => ({
+        //     time: datapoint.time,
+        //     value: (datapoint.close + datapoint.open) / 2,
+        // }));
+
+        // // Add an area series first so the purple area is underneath the candlestick bars
+        const areaSeries = chart.addAreaSeries({
+            lastValueVisible: false,
+            crosshairMarkerVisible: false,
+            lineColor: 'transparent',
+            topColor: 'rgba(56, 33, 110, 0.6)',
+            bottomColor: 'rgba(56, 33, 110, 0.1)',
+        });
+
+        // areaSeries.setData(lineData);
+
+        // Add the candlestick series last so it's on top of the purple area
         const mainSeries = chart.addCandlestickSeries();
-        mainSeries.setData(seriesesData.get('1D'));
 
         function setChartInterval(interval) {
             const data = seriesesData.get(interval);
 
-            // Update line series data
-            // lineSeries.setData(data);
-
             // Update candlestick series data
             mainSeries.setData(data);
+
+            // Update area series data
+            const lineData = data.map(datapoint => ({
+                time: datapoint.time,
+                value: (datapoint.close + datapoint.open) / 2,
+            }));
+            
+            areaSeries.setData(lineData);
+
+
 
             chart.timeScale().fitContent();
             console.log('Set chart interval to', interval);
         }
 
-        setChartInterval('1D');
+        // Default interval
+        setChartInterval('1ME');
 
         const buttonsContainer = document.getElementById('buttons-container');
         const intervals = ['1h', '4h', '1D', '1W', '1ME'];

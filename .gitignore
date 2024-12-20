@@ -164,3 +164,8 @@ special_stuff.py
 special.py
 snooplog.txt
 custom_log.txt
+
+
+node_modules/
+package-lock.json
+package.json

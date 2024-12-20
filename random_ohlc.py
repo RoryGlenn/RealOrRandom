@@ -66,17 +66,17 @@ class RandomOHLC:
             "close": "last",
         }
         self.timeframe_data = {
-            "1min": None,
-            "5min": None,
-            "15min": None,
-            "30min": None,
-            "1H": None,
-            "2H": None,
-            "4H": None,
+            # "1min": None,
+            # "5min": None,
+            # "15min": None,
+            # "30min": None,
+            "1h": None,
+            # "2H": None,
+            "4h": None,
             "1D": None,
-            "3D": None,
+            # "3D": None,
             "1W": None,
-            "1M": None,
+            "1ME": None,
         }
 
     def _generate_random_prices(self, num_bars: int) -> np.ndarray:

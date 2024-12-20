@@ -29,6 +29,7 @@ with open("chart-template.html", "r", encoding="utf-8") as file:
 
 class GameState:
     """Enumeration of the game's possible states."""
+
     READY_TO_PLAY: int = -1
     WAITING_FOR_GUESS: int = 0
     REVEAL_GUESS_RESULT: int = 1
@@ -45,14 +46,18 @@ def timeit(func: Callable) -> Callable:
     Returns:
         Callable: The wrapped function with timing measurement.
     """
+
     @wraps(func)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         start_time = time.perf_counter()
         result = func(*args, **kwargs)
         end_time = time.perf_counter()
         execution_time = end_time - start_time
-        logger.info("Function '%s' executed in %.4f seconds", func.__name__, execution_time)
+        logger.info(
+            "Function '%s' executed in %.4f seconds", func.__name__, execution_time
+        )
         return result
+
     return wrapper
 
 
@@ -83,37 +88,37 @@ def initialize_session_state() -> None:
         st.session_state.msg = None
 
 
-def create_ohlc_df(num_bars: int) -> pd.DataFrame:
-    """
-    Generate a realistic OHLC dataset for a given number of bars.
+# def create_ohlc_df(num_bars: int) -> pd.DataFrame:
+#     """
+#     Generate a realistic OHLC dataset for a given number of bars.
 
-    Uses a RandomOHLC generator to produce price data.
+#     Uses a RandomOHLC generator to produce price data.
 
-    Args:
-        num_bars (int): Number of data points to generate.
+#     Args:
+#         num_bars (int): Number of data points to generate.
 
-    Returns:
-        pd.DataFrame: A DataFrame containing OHLC data.
-    """
-    start_price = 10_000
-    volatility = random.uniform(1, 3)
-    drift = random.uniform(1, 3)
+#     Returns:
+#         pd.DataFrame: A DataFrame containing OHLC data.
+#     """
+#     start_price = 10_000
+#     volatility = random.uniform(1, 3)
+#     drift = random.uniform(1, 3)
 
-    rand_ohlc = RandomOHLC(
-        num_bars=num_bars,
-        start_price=start_price,
-        volatility=volatility,
-        drift=drift,
-    )
+#     rand_ohlc = RandomOHLC(
+#         num_bars=num_bars,
+#         start_price=start_price,
+#         volatility=volatility,
+#         drift=drift,
+#     )
 
-    logger.info(
-        "Num Days: %d, Start Price: %d, Volatility: %.2f, Drift: %.2f",
-        num_bars,
-        start_price,
-        volatility,
-        drift,
-    )
-    return rand_ohlc.generate_ohlc_data()
+#     logger.info(
+#         "Num Days: %d, Start Price: %d, Volatility: %.2f, Drift: %.2f",
+#         num_bars,
+#         start_price,
+#         volatility,
+#         drift,
+#     )
+#     return rand_ohlc.generate_ohlc_data()
 
 
 def money_to_float(money_str: str) -> float:
@@ -129,7 +134,7 @@ def money_to_float(money_str: str) -> float:
     return float(money_str.replace("$", "").replace(",", ""))
 
 
-def prepare_new_round() -> None:
+def prepare_new_round(start_price=10_000, num_bars=90) -> None:
     """
     Prepare data and state for a new prediction round.
 
@@ -145,9 +150,8 @@ def prepare_new_round() -> None:
     extra_bars = difficulty_settings[difficulty]["extra_bars"]
     future_offset = difficulty_settings[difficulty]["future_offset"]
 
-    num_bars = 90 + extra_bars
+    num_bars += extra_bars
 
-    start_price = 10_000
     volatility = random.uniform(1, 3)
     drift = random.uniform(1, 3)
 
@@ -168,7 +172,7 @@ def prepare_new_round() -> None:
     ohlc_data = rand_ohlc.generate_ohlc_data()
 
     df = pd.DataFrame(ohlc_data["1D"])
-    num_display_bars = 90
+    num_display_bars = num_bars - extra_bars
     future_bar_index = num_display_bars + future_offset - 1
     future_price = df["close"].iloc[future_bar_index]
 
@@ -205,7 +209,9 @@ def convert_df_to_candlestick_list(df: pd.DataFrame) -> List[Dict[str, Any]]:
     return _df[["time"] + numeric_cols].to_dict("records")
 
 
-def filter_dfs_by_date_range(df_dict: Dict[str, pd.DataFrame], start_date: str, end_date: str) -> Dict[str, pd.DataFrame]:
+def filter_dfs_by_date_range(
+    df_dict: Dict[str, pd.DataFrame], start_date: str, end_date: str
+) -> Dict[str, pd.DataFrame]:
     """
     Filter each DataFrame in a dictionary by a given date range.
 
@@ -226,7 +232,9 @@ def filter_dfs_by_date_range(df_dict: Dict[str, pd.DataFrame], start_date: str, 
     return filtered_dict
 
 
-def detect_latest_start_and_earliest_end(df_dict: Dict[str, pd.DataFrame]) -> Tuple[pd.Timestamp, pd.Timestamp]:
+def detect_latest_start_and_earliest_end(
+    df_dict: Dict[str, pd.DataFrame]
+) -> Tuple[pd.Timestamp, pd.Timestamp]:
     """
     Given a dictionary of DataFrames with DatetimeIndex, returns the latest start date and earliest end date.
 
@@ -263,17 +271,16 @@ def create_candlestick_chart(data: Dict[str, pd.DataFrame]) -> None:
         for timeframe, df in filtered_df_dict.items()
     }
 
-    # html_content = html_template.replace("candlestick_data;", json.dumps(candlestick_data))
-
-    to_replace = {
+    candlestick_dict = {
         "one_hour_data": candlestick_data["1h"],
         "four_hour_data": candlestick_data["4h"],
         "day_data": candlestick_data["1D"],
         "week_data": candlestick_data["1W"],
         "month_data": candlestick_data["1ME"],
     }
+
     html_content = html_template
-    for key, value in to_replace.items():
+    for key, value in candlestick_dict.items():
         html_content = html_content.replace(key, json.dumps(value))
 
     html(html_content, height=800, width=1600)
