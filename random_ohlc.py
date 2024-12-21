@@ -59,25 +59,6 @@ class RandomOHLC:
         self._start_price = start_price
         self._volatility = volatility
         self._drift = drift
-        self._agg_dict = {
-            "open": "first",
-            "high": "max",
-            "low": "min",
-            "close": "last",
-        }
-        self.timeframe_data = {
-            # "1min": None,
-            # "5min": None,
-            # "15min": None,
-            # "30min": None,
-            "1h": None,
-            # "2H": None,
-            "4h": None,
-            "1D": None,
-            # "3D": None,
-            "1W": None,
-            "1ME": None,
-        }
 
     def _generate_random_prices(self, num_bars: int) -> np.ndarray:
         """
@@ -126,13 +107,14 @@ class RandomOHLC:
         # Once these finer-grained price movements are modeled, the data is resampled to daily intervals, preserving the realistic daily OHLC patterns derived from the high-frequency (minute-level) simulation.
 
         # Convert days to minutes for simulation
-        num_minutes = self._num_bars * 1440
+        num_minutes = self._num_bars * 1440 # 1441
 
         # Generate random prices using GBM
         rand_prices = self._generate_random_prices(num_bars=num_minutes)
 
         # Create a DataFrame with per-minute prices
-        dates = pd.date_range(start=datetime.now(), periods=num_minutes, freq="1min")
+        dt = datetime.strptime("2030-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
+        dates = pd.date_range(start=dt, periods=num_minutes, freq="1min")
         df = pd.DataFrame({"date": dates, "price": rand_prices}).set_index("date")
 
         # Resample to 1min OHLC from the per-minute prices
@@ -142,16 +124,16 @@ class RandomOHLC:
         result["open"] = result["close"].shift(1).fillna(self._start_price)
 
         # Finally, resample to daily (1D) OHLC data
-        self.timeframe_data = self.create_timeframe_data(result)
-        # return self.timeframe_data["1D"]
-        return self.timeframe_data
+        timeframe_data = self._create_timeframe_data(result)
 
-    def create_timeframe_data(self, df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
+        return timeframe_data
+
+    def _create_timeframe_data(self, df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
         """
         Resample the initial OHLC data into multiple timeframes.
 
         This method takes the base 1min OHLC data and resamples it to a variety of
-        common timeframes, such as "1h", "4h", "1D", "1W", "1M".
+        common timeframes, such as "1h", "4h", "1D", "1W", "1ME".
 
         Parameters
         ----------
@@ -173,5 +155,6 @@ class RandomOHLC:
             timeframe: df.resample(rule=timeframe)
             .aggregate(func=candlebar_aggregations)
             .round(decimals=2)
-            for timeframe in ["1h", "4h", "1D", "1W", "1ME"]
+            # for timeframe in ["1h", "4h", "1D", "1W", "1ME"]
+            for timeframe in ['1D', '1W']
         }
