@@ -28,6 +28,10 @@ with open("chart-template.html", "r", encoding="utf-8") as file:
     html_template = file.read()
 
 
+# TODO 
+#     fix x-axis
+#     fix time frames not showing 1h & 4h
+
 class GameState:
     """Enumeration of the game's possible states."""
 
@@ -102,7 +106,7 @@ def money_to_float(money_str: str) -> float:
     return float(money_str.replace("$", "").replace(",", ""))
 
 
-def prepare_new_round(start_price=10_000, num_bars=90) -> None:
+def prepare_new_round(start_price=10_000, num_bars=150) -> None:
     """
     Prepare data and state for a new prediction round.
 
@@ -117,7 +121,6 @@ def prepare_new_round(start_price=10_000, num_bars=90) -> None:
     difficulty = st.session_state.difficulty
     extra_bars = difficulty_settings[difficulty]["extra_bars"]
     future_offset = difficulty_settings[difficulty]["future_offset"]
-
     num_bars += extra_bars
 
     rand_ohlc = RandomOHLC(
@@ -138,7 +141,6 @@ def prepare_new_round(start_price=10_000, num_bars=90) -> None:
     ohlc_data = rand_ohlc.generate_ohlc_data()
     num_display_bars = rand_ohlc._num_bars - extra_bars
     future_bar_index = num_display_bars + future_offset - 1
-    # future_price = float(ohlc_data["1D"]["close"].iloc[future_bar_index])
     future_price = float(ohlc_data["1D"]["close"].iloc[future_bar_index])
 
     choices = sorted(
@@ -181,8 +183,6 @@ def filter_dfs_by_date_range(
     """
     start_date = pd.to_datetime(start_date)
     end_date = pd.to_datetime(end_date)
-
-    # FIXME: since this function filters corectly, the start_date and end_date must be wrong!
 
     filtered_dict = {}
     for time_interval, df in df_dict.items():
@@ -306,42 +306,48 @@ def create_candlestick_chart(data: Dict[str, pd.DataFrame]) -> None:
     Args:
         data (Dict[str, pd.DataFrame]): A dictionary with timeframe keys and DataFrames as values.
     """
+    
+    filtered_df_dict = data # take out when done testing
 
-    def check_start_end_date():
-        start_dates = {timeframe: df.index[0] for timeframe, df in data.items()}
-        end_dates = {timeframe: df.index[-1] for timeframe, df in data.items()}
-        from pprint import pformat
+    # def check_start_end_date():
+    #     start_dates = {timeframe: df.index[0] for timeframe, df in data.items()}
+    #     end_dates = {timeframe: df.index[-1] for timeframe, df in data.items()}
+    #     from pprint import pformat
 
-        if len(set(start_dates.values())) != 1:
-            raise ValueError(
-                f"Start dates do not match across timeframes: {pformat(start_dates, sort_dicts=False)}"
-            )
-        if len(set(end_dates.values())) != 1:
-            raise ValueError(
-                f"End dates do not match across timeframes: {pformat(end_dates, sort_dicts=False)}"
-            )
+    #     if len(set(start_dates.values())) != 1:
+    #         raise ValueError(
+    #             f"Start dates do not match across timeframes: {pformat(start_dates, sort_dicts=False)}"
+    #         )
+    #     if len(set(end_dates.values())) != 1:
+    #         raise ValueError(
+    #             f"End dates do not match across timeframes: {pformat(end_dates, sort_dicts=False)}"
+    #         )
             
-    if not has_common_index(list(data.values())):
-        raise ValueError("No common index found among DataFrames.")
+    # if not has_common_index(list(data.values())):
+    #     raise ValueError("No common index found among DataFrames.")
 
-    latest_start_date, earliest_end_date = find_common_indices(data)
-    logger.info(
-        "Latest Start Date: %s, Earliest End Date: %s",
-        latest_start_date,
-        earliest_end_date,
-    )
+    # FIXME: when using 1D & 1W work together fine but 1D & 1W & 1ME timeframes dont.
+    # The date selected will be the same day for the firs and last when using 1D & 1W & 1ME.
+    # Why does it not do this with only  1D & 1W timeframes?
 
-    filtered_df_dict = filter_dfs_by_date_range(
-        data, latest_start_date.date(), earliest_end_date.date()
-    )
+    # latest_start_date, earliest_end_date = find_common_indices(data)
+    # logger.info(
+    #     "Latest Start Date: %s, Earliest End Date: %s",
+    #     latest_start_date,
+    #     earliest_end_date,
+    # )
 
-    logger.info("First Date in Filtered Data:")
-    for key, value in filtered_df_dict.items():
-        logger.info("key: %s, value: %s", key, value.index[0])
+    # filtered_df_dict = filter_dfs_by_date_range(
+    #     data, latest_start_date.date(), earliest_end_date.date()
+    # )
 
-    logger.info("Last Date in Filtered Data:")
-    for key, value in filtered_df_dict.items():
-        logger.info("key: %s, value: %s", key, value.index[-1])
+    # logger.info("First Date in Filtered Data:")
+    # for key, value in filtered_df_dict.items():
+    #     logger.info("key: %s, value: %s", key, value.index[0])
+
+    # logger.info("Last Date in Filtered Data:")
+    # for key, value in filtered_df_dict.items():
+    #     logger.info("key: %s, value: %s", key, value.index[-1])
 
     # check_start_end_date()
 
@@ -355,7 +361,7 @@ def create_candlestick_chart(data: Dict[str, pd.DataFrame]) -> None:
         # "four_hour_data": candlestick_data["4h"],
         "day_data": candlestick_data["1D"],
         "week_data": candlestick_data["1W"],
-        # "month_data": candlestick_data["1ME"],
+        "month_data": candlestick_data["1ME"],
     }
 
     html_content = html_template

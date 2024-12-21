@@ -109,7 +109,7 @@
             // ['4h', four_hour_data]
             ['1D', day_data],
             ['1W', week_data],
-            // ['1ME', month_data]
+            ['1ME', month_data]
         ]);
 
         // Add an area series first so the purple area is underneath the candlestick bars
@@ -147,7 +147,7 @@
 
         const buttonsContainer = document.getElementById('buttons-container');
         // const intervals = ['1h', '4h', '1D', '1W', '1ME'];
-        const intervals = ['1D', '1W'];
+        const intervals = ['1D', '1W', '1ME'];
 
         intervals.forEach(interval => {
             const button = document.createElement('button');

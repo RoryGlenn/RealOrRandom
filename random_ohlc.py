@@ -156,5 +156,5 @@ class RandomOHLC:
             .aggregate(func=candlebar_aggregations)
             .round(decimals=2)
             # for timeframe in ["1h", "4h", "1D", "1W", "1ME"]
-            for timeframe in ['1D', '1W']
+            for timeframe in ['1D', '1W', '1ME']
         }
