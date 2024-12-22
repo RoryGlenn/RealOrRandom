@@ -156,6 +156,16 @@
             buttonsContainer.appendChild(button);
         });
 
+        // // Convert to ISO 8601
+        // const formatted_data = raw_data.map(item => ({
+        //     time: item.time.replace(" ", "T"), // Convert to ISO format
+        //     open: item.open,
+        //     high: item.high,
+        //     low: item.low,
+        //     close: item.close,
+        // }));
+
+
         chart.timeScale().fitContent();
 
         window.addEventListener("resize", () => {

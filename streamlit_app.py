@@ -5,7 +5,7 @@ import time
 from functools import wraps
 from pprint import pprint
 from typing import Callable, Dict, List, Any
-import datetime
+from datetime import datetime
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -28,9 +28,10 @@ with open("chart-template.html", "r", encoding="utf-8") as file:
     html_template = file.read()
 
 
-# TODO 
+# TODO
 #     fix x-axis
 #     fix time frames not showing 1h & 4h
+
 
 class GameState:
     """Enumeration of the game's possible states."""
@@ -106,6 +107,21 @@ def money_to_float(money_str: str) -> float:
     return float(money_str.replace("$", "").replace(",", ""))
 
 
+def convert_to_iso(data):
+    formatted_data_iso = [
+        {
+            # "time": datetime.strptime(str(ohlc["time"]), "%Y-%m-%d %H:%M:%S").isoformat(),
+            "time": str(ohlc["time"]).split(" ")[0],
+            "open": ohlc["open"],
+            "high": ohlc["high"],
+            "low": ohlc["low"],
+            "close": ohlc["close"],
+        }
+        for ohlc in data
+    ]
+    return formatted_data_iso
+
+
 def prepare_new_round(start_price=10_000, num_bars=150) -> None:
     """
     Prepare data and state for a new prediction round.
@@ -167,133 +183,10 @@ def convert_df_to_candlestick_list(df: pd.DataFrame) -> List[Dict[str, Any]]:
         List[Dict[str, Any]]: A list of dictionaries suitable for candlestick charts.
     """
     _df = df.copy()
-    _df["time"] = _df.index.strftime("%Y-%m-%d %H:%M:%S")
+    _df["time"] = _df.index
     numeric_cols = ["open", "high", "low", "close"]
     _df[numeric_cols] = _df[numeric_cols].astype(float)
     return _df[["time"] + numeric_cols].to_dict("records")
-
-
-def filter_dfs_by_date_range(
-    df_dict: Dict[str, pd.DataFrame], start_date: datetime.date, end_date: datetime.date
-) -> Dict[str, pd.DataFrame]:
-    """
-    Filter each DataFrame in a dictionary by a given date range.
-
-        Dict[str, pd.DataFrame]: A new dictionary with filtered DataFrames.
-    """
-    start_date = pd.to_datetime(start_date)
-    end_date = pd.to_datetime(end_date)
-
-    filtered_dict = {}
-    for time_interval, df in df_dict.items():
-        if not isinstance(df.index, pd.DatetimeIndex):
-            df.index = pd.to_datetime(df.index)
-        filtered_df = df[(df.index >= start_date) & (df.index <= end_date)]
-        filtered_dict[time_interval] = filtered_df
-    return filtered_dict
-
-
-# def detect_latest_start_and_earliest_end(
-#     df_dict: Dict[str, pd.DataFrame]
-# ) -> Tuple[pd.Timestamp, pd.Timestamp]:
-#     """
-#     Given a dictionary of DataFrames with DatetimeIndex, returns the latest start date and earliest end date
-#     that exist in all DataFrames.
-
-#     Args:
-#         df_dict (Dict[str, pd.DataFrame]): A dictionary of DataFrames keyed by timeframe.
-
-#     Returns:
-#         Tuple[pd.Timestamp, pd.Timestamp]: (latest_start_date, earliest_end_date)
-#     """
-
-#     # Step 1: Find initial latest start and earliest end across all DataFrames
-#     earliest_starts = [df.index.min() for df in df_dict.values()]
-#     latest_ends = [df.index.max() for df in df_dict.values()]
-#     latest_start_date = max(earliest_starts)
-#     earliest_end_date = min(latest_ends)
-
-#     # Step 2: Ensure these dates exist in all DataFrames
-#     for df in df_dict.values():
-#         valid_dates = df.index[df.index >= latest_start_date]
-#         if not valid_dates.empty:
-#             latest_start_date = max(latest_start_date, valid_dates.min())
-
-#         valid_dates = df.index[df.index <= earliest_end_date]
-#         if not valid_dates.empty:
-#             earliest_end_date = min(earliest_end_date, valid_dates.max())
-
-#     for time_interval, df in df_dict.items():
-#         if latest_start_date not in df.index:
-#             raise ValueError(
-#                 f"Latest start date {latest_start_date} not found in {time_interval} data."
-#             )
-#         if earliest_end_date not in df.index:
-#             raise ValueError(
-#                 f"Earliest end date {earliest_end_date} not found in {time_interval} data."
-#             )
-#     return latest_start_date, earliest_end_date
-
-
-
-def has_common_index(dataframes):
-    """
-    Check if there is at least one index that is common in all DataFrames.
-
-    Parameters:
-        dataframes (list): List of pandas DataFrames.
-
-    Returns:
-        bool: True if there is at least one common index, False otherwise.
-    """
-    # Get the set of indices for each DataFrame
-    index_sets = [set(df.index) for df in dataframes]
-    
-    # Find the intersection of all index sets
-    common_indices = set.intersection(*index_sets)
-    
-    # Return True if there are common indices, False otherwise
-    return len(common_indices) > 0
-
-
-def find_common_indices(dataframes):
-    """
-    Find the first and last common indices among a list of DataFrames.
-
-    Parameters:
-        dataframes (list): List of pandas DataFrames.
-
-    Returns:
-        tuple: First and last common index, or (None, None) if no common index exists.
-    """
-
-    # Convert index to DatetimeIndex if not already
-    for i, df in enumerate(dataframes.values()):
-        if not isinstance(df.index, pd.DatetimeIndex):
-            df.index = pd.to_datetime(df.index, format="%Y-%m-%d %H:%M:%S")
-            dataframes[i] = df
-
-    index_sets = [set(df.index) for df in dataframes.values()]
-    
-    
-
-    # # First index 
-    # for interval, df in dataframes.items():
-    #     logger.info("First index: %s - %s", interval, df.index[0])
-
-    # # Last index
-    # for interval, df in dataframes.items():
-    #     logger.info("Last index: %s - %s", interval, df.index[-1])
-
-    # Find the intersection of all index sets
-    common_indices = set.intersection(*index_sets)
-
-    # If there are common indices, return the first and last (sorted)
-    if common_indices:
-        sorted_indices = sorted(common_indices)
-        return sorted_indices[0], sorted_indices[-1]
-
-    raise ValueError("No common index found among DataFrames.")
 
 
 def create_candlestick_chart(data: Dict[str, pd.DataFrame]) -> None:
@@ -306,68 +199,23 @@ def create_candlestick_chart(data: Dict[str, pd.DataFrame]) -> None:
     Args:
         data (Dict[str, pd.DataFrame]): A dictionary with timeframe keys and DataFrames as values.
     """
-    
-    filtered_df_dict = data # take out when done testing
-
-    # def check_start_end_date():
-    #     start_dates = {timeframe: df.index[0] for timeframe, df in data.items()}
-    #     end_dates = {timeframe: df.index[-1] for timeframe, df in data.items()}
-    #     from pprint import pformat
-
-    #     if len(set(start_dates.values())) != 1:
-    #         raise ValueError(
-    #             f"Start dates do not match across timeframes: {pformat(start_dates, sort_dicts=False)}"
-    #         )
-    #     if len(set(end_dates.values())) != 1:
-    #         raise ValueError(
-    #             f"End dates do not match across timeframes: {pformat(end_dates, sort_dicts=False)}"
-    #         )
-            
-    # if not has_common_index(list(data.values())):
-    #     raise ValueError("No common index found among DataFrames.")
-
-    # FIXME: when using 1D & 1W work together fine but 1D & 1W & 1ME timeframes dont.
-    # The date selected will be the same day for the firs and last when using 1D & 1W & 1ME.
-    # Why does it not do this with only  1D & 1W timeframes?
-
-    # latest_start_date, earliest_end_date = find_common_indices(data)
-    # logger.info(
-    #     "Latest Start Date: %s, Earliest End Date: %s",
-    #     latest_start_date,
-    #     earliest_end_date,
-    # )
-
-    # filtered_df_dict = filter_dfs_by_date_range(
-    #     data, latest_start_date.date(), earliest_end_date.date()
-    # )
-
-    # logger.info("First Date in Filtered Data:")
-    # for key, value in filtered_df_dict.items():
-    #     logger.info("key: %s, value: %s", key, value.index[0])
-
-    # logger.info("Last Date in Filtered Data:")
-    # for key, value in filtered_df_dict.items():
-    #     logger.info("key: %s, value: %s", key, value.index[-1])
-
-    # check_start_end_date()
 
     candlestick_data = {
-        timeframe: convert_df_to_candlestick_list(df)
-        for timeframe, df in filtered_df_dict.items()
+        timeframe: convert_df_to_candlestick_list(df) for timeframe, df in data.items()
     }
 
     candlestick_dict = {
         # "one_hour_data": candlestick_data["1h"],
         # "four_hour_data": candlestick_data["4h"],
-        "day_data": candlestick_data["1D"],
-        "week_data": candlestick_data["1W"],
-        "month_data": candlestick_data["1ME"],
+        "day_data": convert_to_iso(candlestick_data["1D"]),
+        "week_data": convert_to_iso(candlestick_data["1W"]),
+        "month_data": convert_to_iso(candlestick_data["1ME"]),
     }
 
     html_content = html_template
 
-    for key, value in candlestick_dict.items():
-        html_content = html_content.replace(key, json.dumps(value))
+    for time_interval, df in candlestick_dict.items():
+        html_content = html_content.replace(time_interval, json.dumps(df))
 
     html(html_content, height=800, width=1600)
 

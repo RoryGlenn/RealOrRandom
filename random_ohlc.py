@@ -107,7 +107,7 @@ class RandomOHLC:
         # Once these finer-grained price movements are modeled, the data is resampled to daily intervals, preserving the realistic daily OHLC patterns derived from the high-frequency (minute-level) simulation.
 
         # Convert days to minutes for simulation
-        num_minutes = self._num_bars * 1440 # 1441
+        num_minutes = self._num_bars * 1440  # 1441
 
         # Generate random prices using GBM
         rand_prices = self._generate_random_prices(num_bars=num_minutes)
@@ -156,5 +156,5 @@ class RandomOHLC:
             .aggregate(func=candlebar_aggregations)
             .round(decimals=2)
             # for timeframe in ["1h", "4h", "1D", "1W", "1ME"]
-            for timeframe in ['1D', '1W', '1ME']
+            for timeframe in ["1D", "1W", "1ME"]
         }
