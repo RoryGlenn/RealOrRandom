@@ -23,14 +23,18 @@ logging.basicConfig(
 
 logger = logging.getLogger(__name__)
 
+DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
+
 
 with open("chart-template.html", "r", encoding="utf-8") as file:
     html_template = file.read()
 
 
 # TODO
-#     fix x-axis
-#     fix time frames not showing 1h & 4h
+# how do i debug the x-axis not showing in my code?
+#     fix the x-axis not showing in my code
+
+# fix time frames not showing 1h & 4h
 
 
 class GameState:
@@ -107,22 +111,7 @@ def money_to_float(money_str: str) -> float:
     return float(money_str.replace("$", "").replace(",", ""))
 
 
-def convert_to_iso(data):
-    formatted_data_iso = [
-        {
-            # "time": datetime.strptime(str(ohlc["time"]), "%Y-%m-%d %H:%M:%S").isoformat(),
-            "time": str(ohlc["time"]).split(" ")[0],
-            "open": ohlc["open"],
-            "high": ohlc["high"],
-            "low": ohlc["low"],
-            "close": ohlc["close"],
-        }
-        for ohlc in data
-    ]
-    return formatted_data_iso
-
-
-def prepare_new_round(start_price=10_000, num_bars=150) -> None:
+def prepare_new_round(start_price=10_000, num_bars=90) -> None:
     """
     Prepare data and state for a new prediction round.
 
@@ -205,13 +194,11 @@ def create_candlestick_chart(data: Dict[str, pd.DataFrame]) -> None:
     }
 
     candlestick_dict = {
-        # "one_hour_data": candlestick_data["1h"],
-        # "four_hour_data": candlestick_data["4h"],
-        "day_data": convert_to_iso(candlestick_data["1D"]),
-        "week_data": convert_to_iso(candlestick_data["1W"]),
-        "month_data": convert_to_iso(candlestick_data["1ME"]),
+        "day_data": candlestick_data["1D"],
+        # "week_data": candlestick_data["1W"],
+        # "month_data": candlestick_data["1ME"],
     }
-
+    
     html_content = html_template
 
     for time_interval, df in candlestick_dict.items():

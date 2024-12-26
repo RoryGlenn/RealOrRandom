@@ -15,7 +15,7 @@ RandomOHLC
 
 import logging
 from datetime import datetime
-from typing import Dict
+from typing import Dict, List
 
 import numpy as np
 import pandas as pd
@@ -23,6 +23,8 @@ import pandas as pd
 pd.options.display.float_format = "{:.2f}".format
 
 logger = logging.getLogger(__name__)
+
+DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
 class RandomOHLC:
@@ -60,7 +62,8 @@ class RandomOHLC:
         self._volatility = volatility
         self._drift = drift
 
-    def _generate_random_prices(self, num_bars: int) -> np.ndarray:
+
+    def _generate_random_prices(self, num_bars: int) -> List:
         """
         Simulate prices using Geometric Brownian Motion (GBM).
 
@@ -86,6 +89,48 @@ class RandomOHLC:
             prices.append(res)
         return prices
 
+
+    def _create_timeframe_data(self, df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
+        """
+        Resample the initial OHLC data into multiple timeframes and convert the index to Unix timestamps.
+
+        This method takes the base 1min OHLC data and resamples it to a variety of
+        common timeframes, such as "1D", "1W", "1ME".
+
+        Parameters
+        ----------
+        df : pd.DataFrame
+            The base OHLC DataFrame at 1min frequency.
+
+        Returns
+        -------
+        Dict[str, pd.DataFrame]: A dictionary of resampled OHLC dataframes for each timeframe
+                                with indices converted to Unix timestamps.
+        """
+
+        candlebar_aggregations = {
+            "open": "first",
+            "high": "max",
+            "low": "min",
+            "close": "last",
+        }
+
+        def resample_and_convert_to_unix(dataframe, rule):
+            resampled = (
+                dataframe.resample(rule=rule)
+                .aggregate(func=candlebar_aggregations)
+                .round(decimals=2)
+            )
+            # Convert index to Unix timestamp
+            resampled.index = resampled.index.map(lambda ts: int(ts.timestamp()))
+            return resampled
+
+        return {
+            timeframe: resample_and_convert_to_unix(df, rule=timeframe)
+            # for timeframe in ["1D", "1W", "1ME"]
+            for timeframe in ['1D']
+        }
+
     def generate_ohlc_data(self) -> pd.DataFrame:
         """
         Generate daily OHLC price data using GBM.
@@ -107,13 +152,13 @@ class RandomOHLC:
         # Once these finer-grained price movements are modeled, the data is resampled to daily intervals, preserving the realistic daily OHLC patterns derived from the high-frequency (minute-level) simulation.
 
         # Convert days to minutes for simulation
-        num_minutes = self._num_bars * 1440  # 1441
+        num_minutes = self._num_bars * 1440
 
         # Generate random prices using GBM
         rand_prices = self._generate_random_prices(num_bars=num_minutes)
 
         # Create a DataFrame with per-minute prices
-        dt = datetime.strptime("2030-01-01 00:00:00", "%Y-%m-%d %H:%M:%S")
+        dt = datetime.strptime("2030-01-01 00:00:00", DATE_FORMAT)
         dates = pd.date_range(start=dt, periods=num_minutes, freq="1min")
         df = pd.DataFrame({"date": dates, "price": rand_prices}).set_index("date")
 
@@ -127,34 +172,3 @@ class RandomOHLC:
         timeframe_data = self._create_timeframe_data(result)
 
         return timeframe_data
-
-    def _create_timeframe_data(self, df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
-        """
-        Resample the initial OHLC data into multiple timeframes.
-
-        This method takes the base 1min OHLC data and resamples it to a variety of
-        common timeframes, such as "1h", "4h", "1D", "1W", "1ME".
-
-        Parameters
-        ----------
-        df : pd.DataFrame
-            The base OHLC DataFrame at 1min frequency.
-
-        Returns
-        -------
-        Dict[str, pd.DataFrame]: A dictionary of resampled OHLC dataframes for each timeframe.
-        """
-
-        candlebar_aggregations = {
-            "open": "first",
-            "high": "max",
-            "low": "min",
-            "close": "last",
-        }
-        return {
-            timeframe: df.resample(rule=timeframe)
-            .aggregate(func=candlebar_aggregations)
-            .round(decimals=2)
-            # for timeframe in ["1h", "4h", "1D", "1W", "1ME"]
-            for timeframe in ["1D", "1W", "1ME"]
-        }

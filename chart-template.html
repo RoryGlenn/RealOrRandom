@@ -19,6 +19,7 @@
         #chart-container {
             flex: 1;
             position: relative;
+            height: "auto";
         }
 
         #buttons-container {
@@ -49,13 +50,6 @@
     <div id="chart-container"></div>
 
     <script type="text/javascript">
-        // Ensure these variables are defined and populated before this script:
-        // const one_hour_data = [...];
-        // const four_hour_data = [...];
-        // const day_data = [...];
-        // const week_data = [...];
-        // const month_data = [...];
-        // const candleStickData = [...];
 
         const currentLocale = window.navigator.languages[0];
         const myPriceFormatter = Intl.NumberFormat(currentLocale, {
@@ -104,13 +98,14 @@
             localization: {priceFormatter: myPriceFormatter},
         });
 
+
         const seriesesData = new Map([
-            // ['1h', one_hour_data],
-            // ['4h', four_hour_data]
             ['1D', day_data],
-            ['1W', week_data],
-            ['1ME', month_data]
+            // ['1W', week_data],
+            // ['1ME', month_data]
         ]);
+
+        console.log("Day data:", day_data );
 
         // Add an area series first so the purple area is underneath the candlestick bars
         const areaSeries = chart.addAreaSeries({
@@ -142,12 +137,11 @@
             console.log('Set chart interval to', interval);
         }
 
-        // Default interval
         setChartInterval('1D');
 
         const buttonsContainer = document.getElementById('buttons-container');
-        // const intervals = ['1h', '4h', '1D', '1W', '1ME'];
-        const intervals = ['1D', '1W', '1ME'];
+        // const intervals = ['1D', '1W', '1ME'];
+        const intervals = ['1D']
 
         intervals.forEach(interval => {
             const button = document.createElement('button');
@@ -155,18 +149,6 @@
             button.addEventListener('click', () => setChartInterval(interval));
             buttonsContainer.appendChild(button);
         });
-
-        // // Convert to ISO 8601
-        // const formatted_data = raw_data.map(item => ({
-        //     time: item.time.replace(" ", "T"), // Convert to ISO format
-        //     open: item.open,
-        //     high: item.high,
-        //     low: item.low,
-        //     close: item.close,
-        // }));
-
-
-        chart.timeScale().fitContent();
 
         window.addEventListener("resize", () => {
             chart.resize(window.innerWidth, document.getElementById("chart-container").offsetHeight);
