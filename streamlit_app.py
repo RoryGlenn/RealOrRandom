@@ -198,7 +198,7 @@ def create_candlestick_chart(data: Dict[str, pd.DataFrame]) -> None:
         # "week_data": candlestick_data["1W"],
         # "month_data": candlestick_data["1ME"],
     }
-    
+
     html_content = html_template
 
     for time_interval, df in candlestick_dict.items():

@@ -62,7 +62,6 @@ class RandomOHLC:
         self._volatility = volatility
         self._drift = drift
 
-
     def _generate_random_prices(self, num_bars: int) -> List:
         """
         Simulate prices using Geometric Brownian Motion (GBM).
@@ -88,7 +87,6 @@ class RandomOHLC:
             )
             prices.append(res)
         return prices
-
 
     def _create_timeframe_data(self, df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
         """
@@ -128,7 +126,7 @@ class RandomOHLC:
         return {
             timeframe: resample_and_convert_to_unix(df, rule=timeframe)
             # for timeframe in ["1D", "1W", "1ME"]
-            for timeframe in ['1D']
+            for timeframe in ["1D"]
         }
 
     def generate_ohlc_data(self) -> pd.DataFrame:

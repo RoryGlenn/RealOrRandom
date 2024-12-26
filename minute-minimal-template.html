@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Minimal Chart</title>
+    <script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <style>
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+
+        #chart-container {
+            width: 100%;
+            height: 80%;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="chart-container"></div>
+    <script>
+        const chartContainer = document.getElementById('chart-container');
+
+        const chart = LightweightCharts.createChart(chartContainer, {
+            width: chartContainer.offsetWidth,
+            height: chartContainer.offsetHeight,
+            layout: {
+                background: {color: '#FFFFFF'},
+                textColor: '#000000',
+            },
+            timeScale: {
+                timeVisible: true,
+                secondsVisible: true, // Show seconds for detailed debugging
+            },
+        });
+
+        // Add a candlestick series
+        const candlestickSeries = chart.addCandlestickSeries();
+
+        // Minimal example data
+        const data = [
+            {"time": 1704067200, "open": 10000.0, "high": 10583.14, "low": 6232.47, "close": 6390.81},
+            {"time": 1704067260, "open": 6390.81, "high": 8213.12, "low": 3709.99, "close": 3915.38},
+        ];
+
+        // Set data for the candlestick series
+        candlestickSeries.setData(data);
+
+        // Fit content to ensure visibility
+        chart.timeScale().fitContent();
+    </script>
+</body>
+
+</html>

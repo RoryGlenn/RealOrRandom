@@ -105,7 +105,7 @@
             // ['1ME', month_data]
         ]);
 
-        console.log("Day data:", day_data );
+        // console.log("Day data:", day_data );
 
         // Add an area series first so the purple area is underneath the candlestick bars
         const areaSeries = chart.addAreaSeries({
@@ -120,9 +120,11 @@
         const mainSeries = chart.addCandlestickSeries();
 
         function setChartInterval(interval) {
-            const data = seriesesData.get(interval);
-
-            // Update candlestick series data
+            // const data = seriesesData.get(interval);
+            const data = [
+            {"time": 1704067200, "open": 10000, "high": 10583, "low": 6232, "close": 6390},
+            {"time": 1704067260, "open": 6390, "high": 8213, "low": 3709, "close": 3915},
+        ];
             mainSeries.setData(data);
 
             // Update area series data
@@ -143,12 +145,12 @@
         // const intervals = ['1D', '1W', '1ME'];
         const intervals = ['1D']
 
-        intervals.forEach(interval => {
-            const button = document.createElement('button');
-            button.innerText = interval;
-            button.addEventListener('click', () => setChartInterval(interval));
-            buttonsContainer.appendChild(button);
-        });
+        // intervals.forEach(interval => {
+        //     const button = document.createElement('button');
+        //     button.innerText = interval;
+        //     button.addEventListener('click', () => setChartInterval(interval));
+        //     buttonsContainer.appendChild(button);
+        // });
 
         window.addEventListener("resize", () => {
             chart.resize(window.innerWidth, document.getElementById("chart-container").offsetHeight);
