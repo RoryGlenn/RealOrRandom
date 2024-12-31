@@ -5,7 +5,6 @@ import time
 from functools import wraps
 from pprint import pprint
 from typing import Callable, Dict, List, Any
-from datetime import datetime
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
@@ -31,14 +30,11 @@ with open("chart-template.html", "r", encoding="utf-8") as file:
 
 
 # TODO
-# how do i debug the x-axis not showing in my code?
-#     fix the x-axis not showing in my code
-
-# fix time frames not showing 1h & 4h
+# How to append buttons to the buttons container without destroying the x-axis
+# Fix time frames not showing 1h & 4h
 
 
 class GameState:
-    """Enumeration of the game's possible states."""
 
     READY_TO_PLAY: int = -1
     WAITING_FOR_GUESS: int = 0
@@ -111,7 +107,7 @@ def money_to_float(money_str: str) -> float:
     return float(money_str.replace("$", "").replace(",", ""))
 
 
-def prepare_new_round(start_price=10_000, num_bars=90) -> None:
+def prepare_new_round(start_price: int = 10_000, num_bars: int = 90) -> None:
     """
     Prepare data and state for a new prediction round.
 

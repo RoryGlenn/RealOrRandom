@@ -87,6 +87,39 @@ class RandomOHLC:
             )
             prices.append(res)
         return prices
+    
+    
+    def _resample_and_convert_to_unix(df: pd.DataFrame, time_interval: str, candlebar_aggregations: Dict[str, str]) -> pd.DataFrame:
+        """
+        Resamples a dataframe from a 1 minute time interval to `time_interval` then converts
+        the index to a unix timestamp so that lightweight-charts is able to display any desired time interval.
+
+        Parameters
+        ----------
+        df : DataFrame
+            dataframe to be resampled to a lower time interval and index converted to unix timestamp.
+        time_interval : str
+            one of the given time intevals ['1D', '1W', ...].
+        candlebar_aggregations : Dict[str, str]
+            instructions on how to aggregate the candlebar.
+        
+        """
+        
+        candlebar_aggregations = {
+            "open": "first",
+            "high": "max",
+            "low": "min",
+            "close": "last",
+        }
+
+        resampled = (
+            df.resample(rule=time_interval)
+            .aggregate(func=candlebar_aggregations)
+            .round(decimals=2)
+        )
+        # Convert index to Unix timestamp
+        resampled.index = resampled.index.map(lambda ts: int(ts.timestamp()))
+        return resampled
 
     def _create_timeframe_data(self, df: pd.DataFrame) -> Dict[str, pd.DataFrame]:
         """
@@ -102,30 +135,11 @@ class RandomOHLC:
 
         Returns
         -------
-        Dict[str, pd.DataFrame]: A dictionary of resampled OHLC dataframes for each timeframe
-                                with indices converted to Unix timestamps.
+        Dict[str, pd.DataFrame]: A dictionary of resampled OHLC dataframes for each timeframe with indices converted to Unix timestamps.
         """
 
-        candlebar_aggregations = {
-            "open": "first",
-            "high": "max",
-            "low": "min",
-            "close": "last",
-        }
-
-        def resample_and_convert_to_unix(dataframe, rule):
-            resampled = (
-                dataframe.resample(rule=rule)
-                .aggregate(func=candlebar_aggregations)
-                .round(decimals=2)
-            )
-            # Convert index to Unix timestamp
-            resampled.index = resampled.index.map(lambda ts: int(ts.timestamp()))
-            return resampled
-
         return {
-            timeframe: resample_and_convert_to_unix(df, rule=timeframe)
-            # for timeframe in ["1D", "1W", "1ME"]
+            timeframe: self._resample_and_convert_to_unix(df, timeframe)
             for timeframe in ["1D"]
         }
 
@@ -150,7 +164,8 @@ class RandomOHLC:
         # Once these finer-grained price movements are modeled, the data is resampled to daily intervals, preserving the realistic daily OHLC patterns derived from the high-frequency (minute-level) simulation.
 
         # Convert days to minutes for simulation
-        num_minutes = self._num_bars * 1440
+        minutes_in_day = 1440
+        num_minutes = self._num_bars * minutes_in_day
 
         # Generate random prices using GBM
         rand_prices = self._generate_random_prices(num_bars=num_minutes)
