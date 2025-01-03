@@ -80,6 +80,25 @@
       .buttons-container button:active {
         background-color: rgba(209, 212, 220, 1);
       }
+
+      .timeframe-button {
+        background-color: rgba(240, 243, 250, 1) !important;
+        color: rgba(19, 23, 34, 1) !important;
+      }
+
+      .timeframe-button.active {
+        background-color: rgba(56, 33, 110, 0.8) !important;
+        color: white !important;
+        font-weight: bold;
+      }
+
+      .timeframe-button:hover {
+        background-color: rgba(224, 227, 235, 1) !important;
+      }
+
+      .timeframe-button.active:hover {
+        background-color: rgba(56, 33, 110, 0.8) !important;
+      }
     </style>
   </head>
 
@@ -220,14 +239,35 @@ C: ${myPriceFormatter(data.close)}`;
       intervals.forEach(interval => {
         const button = document.createElement('button');
         button.innerText = interval;
+        button.setAttribute('data-interval', interval);
+        button.classList.add('timeframe-button');
+        if (interval === '1D') {  // Set default active state
+            button.classList.add('active');
+        }
         button.addEventListener('click', () => {
           setChartInterval(interval);
+          updateActiveButton(interval);
         });
         console.log('Adding button for interval:', interval);
         buttonsContainer.appendChild(button);
       });
 
       console.log('Button container children:', buttonsContainer.children.length);
+
+      function updateActiveButton(interval) {
+        document.querySelectorAll('.timeframe-button').forEach(btn => {
+          btn.classList.remove('active');
+        });
+        document.querySelector(`[data-interval="${interval}"]`).classList.add('active');
+      }
+
+      document.querySelectorAll('.timeframe-button').forEach(button => {
+        button.addEventListener('click', function() {
+          const interval = this.getAttribute('data-interval');
+          updateActiveButton(interval);
+          setChartInterval(interval);
+        });
+      });
 
     </script>
   </body>

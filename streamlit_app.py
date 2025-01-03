@@ -33,6 +33,75 @@ with open("chart-template.html", "r", encoding="utf-8") as file:
 # Fix time frames not showing 1h & 4h
 
 
+
+def all_values_same(dict_dfs: dict) -> bool:
+    """
+    Given a dictionary of {name: DataFrame}, check that for every row index
+    (in the intersection of their indices), the columns with the same name
+    have identical values across all DataFrames.
+
+    Returns
+    -------
+    bool
+        True if all corresponding values match for each index and column.
+        False if there is at least one mismatch.
+
+    Notes
+    -----
+    - Only rows in the *intersection* of all DataFrame indices are compared.
+    - All DataFrames are assumed to have the same columns (or at least
+      overlapping columns). Columns are matched by column name.
+    - If a mismatch is found, the function prints the mismatched rows.
+    """
+
+    # 1) Concatenate all DataFrames along axis=1 (columns),
+    #    creating a MultiIndex with levels = [dict_keys, original_columns].
+    #    'join="inner"' ensures we only use the intersection of the indices.
+    try:
+        df_concat = pd.concat(dict_dfs, axis=1, join="inner", keys=dict_dfs.keys())
+    except ValueError as e:
+        print("Error concatenating DataFrames:", e)
+        return False
+
+    # df_concat now has columns like:
+    #   (key1, colA)  (key1, colB)  ...  (key2, colA)  (key2, colB) ...
+    #
+    # We want to check, for each original column name (colA, colB, etc.),
+    # whether the values across all keys (df1, df2, etc.) are the same at each row.
+
+    # 2) Iterate through each original column name in the second level of the MultiIndex
+    col_level_names = df_concat.columns.levels[1]  # unique original column names
+    all_good = True
+
+    for col_name in col_level_names:
+        # Extract just this column name across all DataFrames
+        # sub_df columns = dictionary keys
+        # sub_df rows = the intersection of the original indices
+        sub_df = df_concat.xs(col_name, axis=1, level=1)
+
+        # If sub_df has shape (N, M), each row has M values from M DataFrames.
+        # We want all M values to be the same for each row.
+        # A quick check is that sub_df.nunique(axis=1) should be 1 for each row.
+        rowwise_uniques = sub_df.nunique(axis=1)
+
+        mismatches = rowwise_uniques[rowwise_uniques > 1]
+        if not mismatches.empty:
+            # We found at least one row where values differ among the DataFrames
+            all_good = False
+            print(f"[Mismatch] Column '{col_name}' differs in these rows:")
+            for row_idx in mismatches.index:
+                values = sub_df.loc[row_idx].to_dict()
+                print(f"  Index {row_idx} => {values}")
+
+    # 3) Final result
+    if all_good:
+        print("All corresponding values match across all DataFrames.")
+        return True
+    else:
+        print("There were mismatches.")
+        return False
+
+
 class GameState:
     """
     Constants representing different states of the game flow.
@@ -99,6 +168,8 @@ def initialize_session_state() -> None:
         st.session_state.guesses = []
     if "msg" not in st.session_state:
         st.session_state.msg = None
+    if "active_interval" not in st.session_state:
+        st.session_state.active_interval = "1D"  # Default to daily view
 
 
 def money_to_float(money_str: str) -> float:
@@ -147,6 +218,9 @@ def prepare_new_round(start_price: int = 10_000, days_needed: int = 90) -> None:
     )
 
     ohlc_data = rand_ohlc.generate_ohlc_data()
+    
+    all_values_same(ohlc_data)
+    
     num_display_bars = rand_ohlc.days_needed - extra_bars
     future_bar_index = num_display_bars + future_offset - 1
     future_price = float(ohlc_data["1D"]["close"].iloc[future_bar_index])
