@@ -128,6 +128,14 @@
             fixLeftEdge: true,
             fixRightEdge: true,
             minBarSpacing: 2,
+            timeVisible: true,
+            secondsVisible: false,
+            tickMarkFormatter: (time) => {
+                const date = new Date(time * 1000);
+                const hours = date.getHours().toString().padStart(2, '0');
+                const minutes = date.getMinutes().toString().padStart(2, '0');
+                return `${hours}:${minutes}`;
+            }
           },
           grid: {
             vertLines: { color: 'rgba(42, 46, 57, 0.5)' },
@@ -163,6 +171,8 @@
       });
 
       const seriesesData = new Map([
+        ['1min', one_minute_data],
+        ['5min', five_minute_data],
         ['15min', fifteen_minute_data],
         ['1h', one_hour_data],
         ['4h', four_hour_data],
@@ -245,7 +255,7 @@ C: ${myPriceFormatter(data.close)}`;
 
       setChartInterval('1D');
 
-      const intervals = ['15min','1h','4h','1D', '1W', '1ME'];
+      const intervals = ['1min', '5min', '15min', '1h', '4h', '1D', '1W', '1ME'];
       console.log('Creating buttons for intervals:', intervals);
 
       intervals.forEach(interval => {

@@ -15,9 +15,12 @@ The data generation process uses Geometric Brownian Motion (GBM) with configurab
 volatility and drift parameters to create realistic price movements.
 """
 
-from logging import getLogger
+# Standard library
 from datetime import datetime
+from logging import getLogger
 from typing import Dict
+
+# Third-party
 import numpy as np
 import pandas as pd
 
@@ -60,8 +63,8 @@ class RandomOHLC:
     Notes
     -----
     The class generates minute-level data first, then resamples it to larger
-    timeframes (15min, 1h, 4h, 1D, 1W, 1ME) to ensure realistic price movements
-    across all timeframes.
+    timeframes (1min, 5min, 15min, 1h, 4h, 1D, 1W, 1ME) to ensure realistic 
+    price movements across all timeframes.
     """
 
     def __init__(
@@ -218,9 +221,6 @@ class RandomOHLC:
         - Close: Last price in interval
         """
 
-        # logger.info("Resampling to %s interval from %d minutes of data (%.2f days)",
-        #             time_interval, len(df), len(df)/1440)
-
         candlebar_aggregations = {
             "open": "first",
             "high": "max",
@@ -251,15 +251,15 @@ class RandomOHLC:
         -------
         Dict[str, pd.DataFrame]
             Dictionary mapping timeframe names to resampled DataFrames.
-            Keys are timeframe identifiers ('15min', '1h', etc.).
+            Keys are timeframe identifiers ('1min', '5min', '15min', '1h', etc.).
             Values are DataFrames with OHLC columns and Unix timestamp index.
 
         Notes
         -----
-        Supported timeframes are: 15min, 1h, 4h, 1D, 1W, 1ME.
+        Supported timeframes are: 1min, 5min, 15min, 1h, 4h, 1D, 1W, 1ME.
         """
         # Define desired time intervals
-        time_intervals = ["15min", "1h", "4h", "1D", "1W", "1ME"]
+        time_intervals = ["1min", "5min", "15min", "1h", "4h", "1D", "1W", "1ME"]
         # Resample the data for each timeframe
         return {
             timeframe: self._resample_and_convert_to_unix(df, timeframe)

@@ -23,18 +23,21 @@ The game supports three difficulty levels:
 - Hard: Predict price 30 days ahead
 """
 
+# Standard library
+from functools import wraps
 from json import dumps
 import logging
 import random
 import time
-from functools import wraps
-from pprint import pprint
-from typing import Callable, Dict, List, Any
+from typing import Any, Callable, Dict, List
+
+# Third-party
 import pandas as pd
 import plotly.graph_objects as go
 import streamlit as st
 from streamlit.components.v1 import html
 
+# Local
 from random_ohlc import RandomOHLC
 
 st.set_page_config(layout="wide", page_title="Stock Prediction Game")
@@ -347,6 +350,8 @@ def create_candlestick_chart(data: Dict[str, pd.DataFrame]) -> None:
     Notes
     -----
     Supported timeframes:
+    - 1 minute
+    - 5 minute
     - 15 minute
     - 1 hour
     - 4 hour
@@ -359,6 +364,7 @@ def create_candlestick_chart(data: Dict[str, pd.DataFrame]) -> None:
     - Timeframe selection
     - Price tooltips
     - Interactive navigation
+    - Time display on x-axis (HH:MM format for intraday)
     """
 
     candlestick_data = {
@@ -377,6 +383,8 @@ def create_candlestick_chart(data: Dict[str, pd.DataFrame]) -> None:
             )
 
     candlestick_dict = {
+        "one_minute_data": candlestick_data["1min"],
+        "five_minute_data": candlestick_data["5min"],
         "fifteen_minute_data": candlestick_data["15min"],
         "one_hour_data": candlestick_data["1h"],
         "four_hour_data": candlestick_data["4h"],
