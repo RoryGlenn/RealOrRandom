@@ -23,10 +23,14 @@ from typing import Dict
 # Third-party
 import numpy as np
 import pandas as pd
+import streamlit as st
+
 
 pd.options.display.float_format = "{:.2f}".format
 
+
 logger = getLogger(__name__)
+
 
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
@@ -63,7 +67,7 @@ class RandomOHLC:
     Notes
     -----
     The class generates minute-level data first, then resamples it to larger
-    timeframes (1min, 5min, 15min, 1h, 4h, 1D, 1W, 1ME) to ensure realistic 
+    timeframes (1min, 5min, 15min, 1h, 4h, 1D, 1W, 1ME) to ensure realistic
     price movements across all timeframes.
     """
 
@@ -260,6 +264,7 @@ class RandomOHLC:
         """
         # Define desired time intervals
         time_intervals = ["1min", "5min", "15min", "1h", "4h", "1D", "1W", "1ME"]
+
         # Resample the data for each timeframe
         return {
             timeframe: self._resample_and_convert_to_unix(df, timeframe)
@@ -291,8 +296,10 @@ class RandomOHLC:
         minutes_in_day = 1440
         num_minutes = self._days_needed * minutes_in_day
 
-        logger.info("Generating %d days of data (%d minutes)", self._days_needed, num_minutes)
-        
+        logger.info(
+            "Generating %d days of data (%d minutes)", self._days_needed, num_minutes
+        )
+
         # Generate random prices using GBM for minute-level resolution
         rand_prices = self._generate_random_prices(num_minutes)
 
@@ -303,7 +310,7 @@ class RandomOHLC:
 
         # Create a DataFrame for the simulated prices
         df = pd.DataFrame({"date": dates, "price": rand_prices}).set_index("date")
-        
+
         # Resample to minute-level OHLC data from the raw prices
         ohlc_data = df["price"].resample("1min").ohlc()
         logger.info("Created minute OHLC data with shape: %s", ohlc_data.shape)
@@ -313,9 +320,18 @@ class RandomOHLC:
 
         # Log some statistics about the base data
         logger.info("Base OHLC data statistics:")
-        logger.info("  Price range: $%.2f to $%.2f", ohlc_data["low"].min(), ohlc_data["high"].max())
-        logger.info("  Total price movement: %.2f%%", 
-                    ((ohlc_data["close"].iloc[-1] - ohlc_data["open"].iloc[0]) 
-                     / ohlc_data["open"].iloc[0] * 100))
+        logger.info(
+            "  Price range: $%.2f to $%.2f",
+            ohlc_data["low"].min(),
+            ohlc_data["high"].max(),
+        )
+        logger.info(
+            "  Total price movement: %.2f%%",
+            (
+                (ohlc_data["close"].iloc[-1] - ohlc_data["open"].iloc[0])
+                / ohlc_data["open"].iloc[0]
+                * 100
+            ),
+        )
 
         return self._create_timeframe_data(ohlc_data)

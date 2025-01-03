@@ -24,37 +24,83 @@ The game supports three difficulty levels:
 """
 
 # Standard library
-from functools import wraps
-from json import dumps
+from datetime import datetime
+import json
 import logging
+import os
+import platform
 import random
+import socket
 import time
+from functools import wraps
 from typing import Any, Callable, Dict, List
 
 # Third-party
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
+import psutil
 import streamlit as st
 from streamlit.components.v1 import html
 
 # Local
 from random_ohlc import RandomOHLC
+from database import init_db, store_game_results
 
 st.set_page_config(layout="wide", page_title="Stock Prediction Game")
 
+# Initialize logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [%(levelname)s] - %(message)s",
     datefmt="%H:%M:%S",
 )
-
 logger = logging.getLogger(__name__)
+
+# Initialize database
+try:
+    init_db()
+    logger.info("Database initialized successfully")
+except Exception as e:
+    logger.error("Failed to initialize database: %s", e)
+
+# Load HTML template
+with open("chart-template.html", "r", encoding="utf-8") as file:
+    html_template = file.read()
 
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
-with open("chart-template.html", "r", encoding="utf-8") as file:
-    html_template = file.read()
+def get_system_info() -> Dict[str, Any]:
+    """
+    Get detailed system information for debugging.
+
+    Returns
+    -------
+    Dict[str, Any]
+        Detailed system information including:
+        - OS details
+        - CPU information
+    """
+
+    try:
+        system_info = {
+            "timestamp": datetime.now().isoformat(),
+            "system": {
+                "platform": platform.platform(),
+                "machine": platform.machine(),
+                "processor": platform.processor(),
+                "cpu_count": psutil.cpu_count(),
+                "hostname": socket.gethostname(),
+            },
+        }
+
+        logger.info("System info collected successfully")
+        return system_info
+
+    except Exception as e:
+        logger.error("Error collecting system info: %s", e)
+        return {"error": str(e)}
 
 
 def all_values_same(dict_dfs: dict) -> bool:
@@ -223,6 +269,8 @@ def initialize_session_state() -> None:
         st.session_state.msg = None
     if "active_interval" not in st.session_state:
         st.session_state.active_interval = "1D"
+    if "system_info" not in st.session_state:
+        st.session_state.system_info = get_system_info()
 
     # Auto-start only after all variables are initialized
     if "game_state" not in st.session_state:
@@ -396,7 +444,7 @@ def create_candlestick_chart(data: Dict[str, pd.DataFrame]) -> None:
     html_content = html_template
 
     for time_interval, df in candlestick_dict.items():
-        html_content = html_content.replace(time_interval, dumps(df))
+        html_content = html_content.replace(time_interval, json.dumps(df))
 
     html(html_content, height=800, width=1600)
 
@@ -414,20 +462,7 @@ def display_score() -> None:
 
 
 def submit_callback() -> None:
-    """
-    Process user's price prediction submission.
-
-    Validates the user's guess, updates the score, and determines if the
-    game should continue or end based on number of attempts.
-
-    Notes
-    -----
-    Updates session state:
-    - score : Updates right/wrong count
-    - guesses : Adds current guess to history
-    - msg : Sets feedback message
-    - game_state : Updates based on total attempts
-    """
+    """Process user's price prediction submission."""
     user_choice = st.session_state.user_choice
     future_price = st.session_state.future_price
 
@@ -435,9 +470,7 @@ def submit_callback() -> None:
         st.warning("Please select a price before submitting.")
         return
 
-    total_attempts = (
-        st.session_state.score["right"] + st.session_state.score["wrong"] + 1
-    )
+    total_attempts = st.session_state.score["right"] + st.session_state.score["wrong"] + 1
     st.session_state.guesses.append((total_attempts, user_choice, future_price))
 
     if user_choice == future_price:
@@ -569,15 +602,53 @@ def show_results_page() -> None:
 
     st.button("Go Back to Start", on_click=pregame_callback)
 
+    # Log results when game is over
+    log_game_results()
+
+
+def log_game_results() -> None:
+    """Store game results in database and log file."""
+    results = {
+        "timestamp": datetime.now().isoformat(),
+        "difficulty": st.session_state.difficulty,
+        "score": st.session_state.score,
+        "guesses": st.session_state.guesses,
+        "metrics": {
+            "accuracy": (st.session_state.score["right"] / 5) * 100,
+            "total_attempts": 5,
+        },
+        "system_info": st.session_state.system_info,
+    }
+    
+    # Store in database
+    if store_game_results(results):
+        logger.info("Game results stored in database successfully")
+    else:
+        logger.warning("Failed to store results in database, falling back to JSON")
+    
+    # Also keep JSON logging for backup
+    os.makedirs("logs", exist_ok=True)
+    log_file = "logs/game_history.json"
+    try:
+        if os.path.exists(log_file):
+            with open(log_file, "r") as f:
+                history = json.load(f)
+        else:
+            history = []
+            
+        history.append(results)
+        
+        with open(log_file, "w") as f:
+            json.dump(history, f, indent=2)
+            
+        logger.info("Game results logged to JSON file")
+    except Exception as e:
+        logger.error("Failed to log results to JSON file: %s", e)
+
 
 def main() -> None:
     """
     Main entry point of the Streamlit app.
-
-    Handles the game flow:
-    - Start page with difficulty selection
-    - Initial game state showing historical prices and waiting for a guess
-    - After 5 attempts, display results page
     """
     initialize_session_state()
 

@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+game_data.db
+logs/
+
+
 # C extensions
 *.so
 
