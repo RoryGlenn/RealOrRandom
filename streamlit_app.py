@@ -1,4 +1,29 @@
-import json
+"""
+Interactive stock price prediction game using Streamlit.
+
+This module implements a web-based game where users try to predict future stock
+prices based on historical OHLC data shown across multiple timeframes.
+
+Functions
+---------
+initialize_session_state
+    Initialize all required Streamlit session state variables.
+prepare_new_round
+    Generate new OHLC data and setup game parameters for a round.
+create_candlestick_chart
+    Create and display an interactive multi-timeframe chart.
+main
+    Main entry point and game flow controller.
+
+Notes
+-----
+The game supports three difficulty levels:
+- Easy: Predict next day's price
+- Medium: Predict price 7 days ahead
+- Hard: Predict price 30 days ahead
+"""
+
+from json import dumps
 import logging
 import random
 import time
@@ -32,7 +57,23 @@ with open("chart-template.html", "r", encoding="utf-8") as file:
 def all_values_same(dict_dfs: dict) -> bool:
     """
     Check if OHLC values are consistent across different timeframes.
-    Prints detailed information about any mismatches found.
+
+    Parameters
+    ----------
+    dict_dfs : dict
+        Dictionary of DataFrames containing OHLC data for different timeframes.
+
+    Returns
+    -------
+    bool
+        True if all values match across timeframes, False otherwise.
+
+    Notes
+    -----
+    Logs detailed information about any mismatches found, including:
+    - Timestamp of mismatch
+    - Column where mismatch occurred
+    - Values and their corresponding timeframes
     """
     try:
         df_concat = pd.concat(dict_dfs, axis=1, join="inner", keys=dict_dfs.keys())
@@ -78,12 +119,20 @@ def all_values_same(dict_dfs: dict) -> bool:
 
 class GameState:
     """
-    Constants representing different states of the game flow.
+    Game state enumeration.
 
-    READY_TO_PLAY: Initial state before game starts
-    WAITING_FOR_GUESS: Waiting for user's price prediction
-    REVEAL_GUESS_RESULT: Showing if guess was correct/incorrect
-    GAME_OVER: Game completed after 5 attempts
+    Represents the different states of game progression.
+
+    Attributes
+    ----------
+    READY_TO_PLAY : int
+        Initial state (-1), showing welcome screen
+    WAITING_FOR_GUESS : int
+        Active gameplay state (0), waiting for user input
+    REVEAL_GUESS_RESULT : int
+        Showing result of guess (1)
+    GAME_OVER : int
+        Final state (2), showing results page
     """
 
     READY_TO_PLAY: int = -1
@@ -94,13 +143,21 @@ class GameState:
 
 def timeit(func: Callable) -> Callable:
     """
-    A decorator to measure and log the execution time of a function.
+    Decorator to measure and log function execution time.
 
-    Args:
-        func (Callable): The function to decorate.
+    Parameters
+    ----------
+    func : Callable
+        Function to be timed.
 
-    Returns:
-        Callable: The wrapped function with timing measurement.
+    Returns
+    -------
+    Callable
+        Wrapped function that logs execution time.
+
+    Notes
+    -----
+    Logs function name and execution time in seconds.
     """
 
     @wraps(func)
@@ -119,7 +176,30 @@ def timeit(func: Callable) -> Callable:
 
 def initialize_session_state() -> None:
     """
-    Initialize all required session state variables if they do not exist.
+    Initialize all required Streamlit session state variables.
+
+    Ensures all necessary game state variables exist and have default values
+    before the game starts or continues.
+
+    Notes
+    -----
+    Initializes the following session state variables:
+    - difficulty : str
+        Game difficulty level ('Easy', 'Medium', 'Hard')
+    - score : dict
+        Tracks correct and wrong guesses
+    - game_state : GameState
+        Current state of the game flow
+    - data : dict
+        OHLC data for all timeframes
+    - future_price : str
+        Target price to predict
+    - choices : list
+        Available price choices for the user
+    - user_choice : str
+        User's selected price prediction
+    - active_interval : str
+        Currently displayed timeframe
     """
     # Initialize all basic variables first
     if "difficulty" not in st.session_state:
@@ -151,11 +231,15 @@ def money_to_float(money_str: str) -> float:
     """
     Convert a money-formatted string into a float.
 
-    Args:
-        money_str (str): A string representing a monetary value (e.g. "$1,234.56").
+    Parameters
+    ----------
+    money_str : str
+        String representing a monetary value (e.g., "$1,234.56").
 
-    Returns:
-        float: The numeric value (e.g. 1234.56).
+    Returns
+    -------
+    float
+        Numeric value without currency formatting.
     """
     return float(money_str.replace("$", "").replace(",", ""))
 
@@ -164,8 +248,23 @@ def prepare_new_round(start_price: int = 10_000, days_needed: int = 90) -> None:
     """
     Prepare data and state for a new prediction round.
 
-    Dynamically generates OHLC data based on difficulty, selects a future price, and
-    creates a set of possible choices for the user to guess from.
+    Generates new OHLC data and sets up game parameters based on the
+    current difficulty level.
+
+    Parameters
+    ----------
+    start_price : int, default 10000
+        Starting price for the new data series.
+    days_needed : int, default 90
+        Number of days of historical data to generate.
+
+    Notes
+    -----
+    The function:
+    1. Adjusts data generation based on difficulty
+    2. Creates synthetic OHLC data
+    3. Selects a future price target
+    4. Generates multiple choice options
     """
     difficulty_settings = {
         "Easy": {"extra_bars": 1, "future_offset": 1},
@@ -177,6 +276,14 @@ def prepare_new_round(start_price: int = 10_000, days_needed: int = 90) -> None:
     future_offset = difficulty_settings[difficulty]["future_offset"]
     days_needed += extra_bars
 
+    logger.info("Starting new round with difficulty: %s", difficulty)
+    logger.info(
+        "Total days to generate: %d (display: %d, future: %d)",
+        days_needed,
+        days_needed - extra_bars,
+        future_offset,
+    )
+
     rand_ohlc = RandomOHLC(
         days_needed=days_needed,
         start_price=start_price,
@@ -184,44 +291,42 @@ def prepare_new_round(start_price: int = 10_000, days_needed: int = 90) -> None:
         drift=random.uniform(1, 3),
     )
 
-    logger.info(
-        "Num Days: %d, Start Price: %d, Volatility: %.2f, Drift: %.2f",
-        rand_ohlc.days_needed,
-        rand_ohlc.start_price,
-        rand_ohlc.volatility,
-        rand_ohlc.drift,
-    )
-
     ohlc_data = rand_ohlc.generate_ohlc_data()
-
-    all_values_same(ohlc_data)
 
     num_display_bars = rand_ohlc.days_needed - extra_bars
     future_bar_index = num_display_bars + future_offset - 1
     future_price = float(ohlc_data["1D"]["close"].iloc[future_bar_index])
 
+    logger.info(
+        "Future price target: $%.2f (index: %d)", future_price, future_bar_index
+    )
+
     choices = sorted(
         [future_price]
         + [round(future_price * (1 + random.uniform(-0.1, 0.1)), 2) for _ in range(3)]
     )
-    choices_list = [f"${c:,.2f}" for c in choices]
-    future_price_str = f"${future_price:,.2f}"
+    logger.info("Generated choices: %s", [f"${c:,.2f}" for c in choices])
 
     st.session_state.data = ohlc_data
-    st.session_state.future_price = future_price_str
-    st.session_state.choices = choices_list
+    st.session_state.future_price = f"${future_price:,.2f}"
+    st.session_state.choices = [f"${c:,.2f}" for c in choices]
     st.session_state.user_choice = None
 
 
 def convert_df_to_candlestick_list(df: pd.DataFrame) -> List[Dict[str, Any]]:
     """
-    Convert a DataFrame with a DatetimeIndex and OHLC columns into a list of dictionaries.
+    Convert OHLC DataFrame to list of dictionaries for charting.
 
-    Args:
-        df (pd.DataFrame): A DataFrame containing 'open', 'high', 'low', 'close' columns and a DatetimeIndex.
+    Parameters
+    ----------
+    df : pd.DataFrame
+        DataFrame with OHLC columns and DatetimeIndex.
 
-    Returns:
-        List[Dict[str, Any]]: A list of dictionaries suitable for candlestick charts.
+    Returns
+    -------
+    List[Dict[str, Any]]
+        List of dictionaries with format suitable for candlestick charts.
+        Each dict contains: time, open, high, low, close.
     """
     _df = df.copy()
     _df["time"] = _df.index
@@ -232,18 +337,44 @@ def convert_df_to_candlestick_list(df: pd.DataFrame) -> List[Dict[str, Any]]:
 
 def create_candlestick_chart(data: Dict[str, pd.DataFrame]) -> None:
     """
-    Create and display a candlestick chart using the given data dictionary.
+    Create and display an interactive multi-timeframe candlestick chart.
 
-    This function extracts the overlapping date range among all timeframes,
-    converts them to candlestick data format, and renders the chart using HTML.
+    Parameters
+    ----------
+    data : Dict[str, pd.DataFrame]
+        Dictionary mapping timeframes to OHLC DataFrames.
 
-    Args:
-        data (Dict[str, pd.DataFrame]): A dictionary with timeframe keys and DataFrames as values.
+    Notes
+    -----
+    Supported timeframes:
+    - 15 minute
+    - 1 hour
+    - 4 hour
+    - Daily
+    - Weekly
+    - Monthly
+
+    The chart includes:
+    - Candlestick display
+    - Timeframe selection
+    - Price tooltips
+    - Interactive navigation
     """
 
     candlestick_data = {
         timeframe: convert_df_to_candlestick_list(df) for timeframe, df in data.items()
     }
+
+    # Log first and last timestamps for each timeframe
+    for timeframe, data_list in candlestick_data.items():
+        if data_list:
+            logger.info(
+                "%s timeframe range: %s to %s (%d bars)",
+                timeframe,
+                pd.Timestamp(data_list[0]["time"], unit="s"),
+                pd.Timestamp(data_list[-1]["time"], unit="s"),
+                len(data_list),
+            )
 
     candlestick_dict = {
         "fifteen_minute_data": candlestick_data["15min"],
@@ -257,14 +388,17 @@ def create_candlestick_chart(data: Dict[str, pd.DataFrame]) -> None:
     html_content = html_template
 
     for time_interval, df in candlestick_dict.items():
-        html_content = html_content.replace(time_interval, json.dumps(df))
+        html_content = html_content.replace(time_interval, dumps(df))
 
     html(html_content, height=800, width=1600)
 
 
 def display_score() -> None:
     """
-    Display the current score (number of correct and wrong guesses) to the user.
+    Display the current game score.
+
+    Shows the number of correct and incorrect price predictions
+    made by the user in the current session.
     """
     st.subheader("Score")
     st.write(f"Correct: {st.session_state.score['right']}")
@@ -273,10 +407,18 @@ def display_score() -> None:
 
 def submit_callback() -> None:
     """
-    Callback function for the "Submit" button.
+    Process user's price prediction submission.
 
-    Checks the user's guess against the future price, updates the score, and changes
-    the game state based on the total number of attempts made.
+    Validates the user's guess, updates the score, and determines if the
+    game should continue or end based on number of attempts.
+
+    Notes
+    -----
+    Updates session state:
+    - score : Updates right/wrong count
+    - guesses : Adds current guess to history
+    - msg : Sets feedback message
+    - game_state : Updates based on total attempts
     """
     user_choice = st.session_state.user_choice
     future_price = st.session_state.future_price
@@ -306,9 +448,16 @@ def submit_callback() -> None:
 
 def next_callback() -> None:
     """
-    Callback function for the "Next" button.
+    Prepare the next round of the game.
 
-    Sets the game state to WAITING_FOR_GUESS, and prepares a new round of data.
+    Resets the game state to WAITING_FOR_GUESS and generates
+    new price data while maintaining current score.
+
+    Notes
+    -----
+    Updates session state:
+    - game_state : Set to WAITING_FOR_GUESS
+    - Triggers new data generation via prepare_new_round()
     """
     st.session_state.game_state = GameState.WAITING_FOR_GUESS
     prepare_new_round()
@@ -316,9 +465,10 @@ def next_callback() -> None:
 
 def start_callback() -> None:
     """
-    Callback for the start game button.
+    Initialize a new game session.
 
-    Moves the game to the WAITING_FOR_GUESS state and prepares a new round.
+    Resets game state and generates new price data based on
+    selected difficulty level.
     """
     st.session_state.game_state = GameState.WAITING_FOR_GUESS
     prepare_new_round()
@@ -326,9 +476,15 @@ def start_callback() -> None:
 
 def pregame_callback() -> None:
     """
-    Callback for the 'Go Back to Start' button on the results page.
+    Reset the game to initial state.
 
-    Resets the session state and returns the game to the initial state.
+    Clears all session state variables and reinitializes them
+    to start a fresh game.
+
+    Notes
+    -----
+    - Clears entire session state
+    - Calls initialize_session_state() for fresh setup
     """
     st.session_state.clear()
     initialize_session_state()
@@ -336,10 +492,12 @@ def pregame_callback() -> None:
 
 def show_results_page() -> None:
     """
-    Display the final results page after the user has completed all attempts.
+    Display the final game results page.
 
-    Shows the final score, accuracy, average absolute error, and a chart of guesses vs. actual prices.
-    Provides a button to restart the game.
+    Shows:
+    - Final score
+    - Success rate
+    - Option to start a new game
     """
     st.markdown("## Final Results")
     st.write("You have completed 5 attempts.")
