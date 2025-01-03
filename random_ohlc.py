@@ -146,7 +146,7 @@ class RandomOHLC:
             A dictionary mapping timeframe names to resampled DataFrames.
         """
         # Define desired time intervals
-        time_intervals = ["1D", "1W", "1ME"]
+        time_intervals = ['15min', '1h', '4h', '1D', '1W', '1ME']
         # Resample the data for each timeframe
         return {
             timeframe: self._resample_and_convert_to_unix(df, timeframe)
@@ -164,7 +164,7 @@ class RandomOHLC:
         """
         # NOTE: We simulate at minute-level resolution to create realistic intraday price movements
         # This allows us to capture authentic high-low variations within each day
-        # The minute-level data is then resampled to larger timeframes (1D, 1W, 1ME)
+        # The minute-level data is then resampled to larger timeframes (15min, 1H, 4H, 1D, 1W, 1ME)
         
         # Calculate required number of minutes to generate the requested number of daily bars
         # For example, if num_bars=30, we need 30 days worth of minute data

@@ -197,6 +197,9 @@ def create_candlestick_chart(data: Dict[str, pd.DataFrame]) -> None:
     }
 
     candlestick_dict = {
+        "fifteen_minute_data": candlestick_data["15min"],
+        "one_hour_data": candlestick_data["1h"],
+        "four_hour_data": candlestick_data["4h"],
         "day_data": candlestick_data["1D"],
         "week_data": candlestick_data["1W"],
         "month_data": candlestick_data["1ME"],

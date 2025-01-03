@@ -142,6 +142,9 @@
       });
 
       const seriesesData = new Map([
+        ['15min', fifteen_minute_data],
+        ['1h', one_hour_data],
+        ['4h', four_hour_data],
         ['1D', day_data],
         ['1W', week_data],
         ['1ME', month_data]
@@ -158,12 +161,43 @@
 
       const buttonsContainer = document.getElementById('buttons-container');
 
+      // Add this after creating the chart but before setting data
+      const tooltipElement = document.createElement('div');
+      tooltipElement.style.position = 'absolute';
+      tooltipElement.style.display = 'none';
+      tooltipElement.style.padding = '8px';
+      tooltipElement.style.backgroundColor = 'rgba(14, 17, 23, 0.7)';
+      tooltipElement.style.color = 'white';
+      tooltipElement.style.borderRadius = '4px';
+      tooltipElement.style.zIndex = '1000';
+      document.getElementById('container').appendChild(tooltipElement);
+
       // Add the candlestick series last so it's on top of the purple area
-      const mainSeries = chart.addCandlestickSeries();
+      const mainSeries = chart.addCandlestickSeries({
+        priceLineVisible: false,
+        lastValueVisible: false,
+      });
+
+      chart.subscribeCrosshairMove(param => {
+        if (param.point === undefined || !param.time || param.point.x < 0 || param.point.y < 0) {
+          tooltipElement.style.display = 'none';
+          return;
+        }
+
+        const data = param.seriesData.get(mainSeries);
+        if (data) {
+          tooltipElement.style.display = 'block';
+          tooltipElement.style.left = `${param.point.x + 15}px`;
+          tooltipElement.style.top = `${param.point.y - 15}px`;
+          tooltipElement.innerHTML = `O: ${myPriceFormatter(data.open)}<br>
+H: ${myPriceFormatter(data.high)}<br>
+L: ${myPriceFormatter(data.low)}<br>
+C: ${myPriceFormatter(data.close)}`;
+        }
+      });
 
       function setChartInterval(interval) {
         const data = seriesesData.get(interval) || [];
-
         if (data.length === 0) {
           console.error(`No data for interval ${interval}`);
           return;
@@ -180,7 +214,7 @@
 
       setChartInterval('1D');
 
-      const intervals = ['1D', '1W', '1ME'];
+      const intervals = ['15min','1h','4h','1D', '1W', '1ME'];
       console.log('Creating buttons for intervals:', intervals);
 
       intervals.forEach(interval => {
