@@ -36,7 +36,6 @@ from functools import wraps
 from typing import Any, Callable, Dict, List
 
 # Third-party
-import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import psutil
@@ -380,8 +379,12 @@ def convert_df_to_candlestick_list(df: pd.DataFrame) -> List[Dict[str, Any]]:
         Each dict contains: time, open, high, low, close.
     """
     _df = df.copy()
+    
+    # Calculate 30-day MA
+    _df['ma30'] = _df['close'].rolling(window=30).mean()
+    
     _df["time"] = _df.index
-    numeric_cols = ["open", "high", "low", "close"]
+    numeric_cols = ["open", "high", "low", "close", "ma30"]
     _df[numeric_cols] = _df[numeric_cols].astype(float)
     return _df[["time"] + numeric_cols].to_dict("records")
 
