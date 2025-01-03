@@ -29,83 +29,57 @@ with open("chart-template.html", "r", encoding="utf-8") as file:
     html_template = file.read()
 
 
-# TODO
-# Fix time frames not showing 1h & 4h
-
-
-
 def all_values_same(dict_dfs: dict) -> bool:
     """
-    Given a dictionary of {name: DataFrame}, check that for every row index
-    (in the intersection of their indices), the columns with the same name
-    have identical values across all DataFrames.
-
-    Returns
-    -------
-    bool
-        True if all corresponding values match for each index and column.
-        False if there is at least one mismatch.
-
-    Notes
-    -----
-    - Only rows in the *intersection* of all DataFrame indices are compared.
-    - All DataFrames are assumed to have the same columns (or at least
-      overlapping columns). Columns are matched by column name.
-    - If a mismatch is found, the function prints the mismatched rows.
+    Check if OHLC values are consistent across different timeframes.
+    Prints detailed information about any mismatches found.
     """
-
-    # 1) Concatenate all DataFrames along axis=1 (columns),
-    #    creating a MultiIndex with levels = [dict_keys, original_columns].
-    #    'join="inner"' ensures we only use the intersection of the indices.
     try:
         df_concat = pd.concat(dict_dfs, axis=1, join="inner", keys=dict_dfs.keys())
     except ValueError as e:
-        print("Error concatenating DataFrames:", e)
+        logger.error("Error concatenating DataFrames: %s", e)
         return False
 
-    # df_concat now has columns like:
-    #   (key1, colA)  (key1, colB)  ...  (key2, colA)  (key2, colB) ...
-    #
-    # We want to check, for each original column name (colA, colB, etc.),
-    # whether the values across all keys (df1, df2, etc.) are the same at each row.
-
-    # 2) Iterate through each original column name in the second level of the MultiIndex
-    col_level_names = df_concat.columns.levels[1]  # unique original column names
+    col_level_names = df_concat.columns.levels[1]  # OHLC column names
     all_good = True
+    mismatches_by_interval = {}
 
     for col_name in col_level_names:
-        # Extract just this column name across all DataFrames
-        # sub_df columns = dictionary keys
-        # sub_df rows = the intersection of the original indices
         sub_df = df_concat.xs(col_name, axis=1, level=1)
-
-        # If sub_df has shape (N, M), each row has M values from M DataFrames.
-        # We want all M values to be the same for each row.
-        # A quick check is that sub_df.nunique(axis=1) should be 1 for each row.
         rowwise_uniques = sub_df.nunique(axis=1)
-
         mismatches = rowwise_uniques[rowwise_uniques > 1]
+
         if not mismatches.empty:
-            # We found at least one row where values differ among the DataFrames
             all_good = False
-            print(f"[Mismatch] Column '{col_name}' differs in these rows:")
             for row_idx in mismatches.index:
                 values = sub_df.loc[row_idx].to_dict()
-                print(f"  Index {row_idx} => {values}")
+                # Group values by their actual value to see which intervals match
+                by_value = {}
+                for interval, value in values.items():
+                    by_value.setdefault(value, []).append(interval)
 
-    # 3) Final result
-    if all_good:
-        print("All corresponding values match across all DataFrames.")
-        return True
+                if row_idx not in mismatches_by_interval:
+                    mismatches_by_interval[row_idx] = {}
+                mismatches_by_interval[row_idx][col_name] = by_value
+
+    if not all_good:
+        logger.error("Found mismatches in the following timeframes:")
+        for timestamp, cols in mismatches_by_interval.items():
+            logger.error("At timestamp %s:", timestamp)
+            for col, grouped_values in cols.items():
+                logger.error("  Column '%s':", col)
+                for value, intervals in grouped_values.items():
+                    logger.error("    Value %.2f in intervals: %s", value, intervals)
     else:
-        print("There were mismatches.")
-        return False
+        logger.info("All OHLC values are consistent across timeframes")
+
+    return all_good
 
 
 class GameState:
     """
     Constants representing different states of the game flow.
-    
+
     READY_TO_PLAY: Initial state before game starts
     WAITING_FOR_GUESS: Waiting for user's price prediction
     REVEAL_GUESS_RESULT: Showing if guess was correct/incorrect
@@ -146,14 +120,12 @@ def timeit(func: Callable) -> Callable:
 def initialize_session_state() -> None:
     """
     Initialize all required session state variables if they do not exist.
-
-    Ensures that all necessary keys are present in the Streamlit session_state
-    before the game begins or continues.
     """
+    # Initialize all basic variables first
+    if "difficulty" not in st.session_state:
+        st.session_state.difficulty = "Easy"
     if "score" not in st.session_state:
         st.session_state.score = {"right": 0, "wrong": 0}
-    if "game_state" not in st.session_state:
-        st.session_state.game_state = GameState.READY_TO_PLAY
     if "data" not in st.session_state:
         st.session_state.data = None
     if "future_price" not in st.session_state:
@@ -162,14 +134,17 @@ def initialize_session_state() -> None:
         st.session_state.choices = None
     if "user_choice" not in st.session_state:
         st.session_state.user_choice = None
-    if "difficulty" not in st.session_state:
-        st.session_state.difficulty = "Easy"
     if "guesses" not in st.session_state:
         st.session_state.guesses = []
     if "msg" not in st.session_state:
         st.session_state.msg = None
     if "active_interval" not in st.session_state:
-        st.session_state.active_interval = "1D"  # Default to daily view
+        st.session_state.active_interval = "1D"
+
+    # Auto-start only after all variables are initialized
+    if "game_state" not in st.session_state:
+        st.session_state.game_state = GameState.WAITING_FOR_GUESS
+        prepare_new_round()
 
 
 def money_to_float(money_str: str) -> float:
@@ -218,9 +193,9 @@ def prepare_new_round(start_price: int = 10_000, days_needed: int = 90) -> None:
     )
 
     ohlc_data = rand_ohlc.generate_ohlc_data()
-    
+
     all_values_same(ohlc_data)
-    
+
     num_display_bars = rand_ohlc.days_needed - extra_bars
     future_bar_index = num_display_bars + future_offset - 1
     future_price = float(ohlc_data["1D"]["close"].iloc[future_bar_index])
@@ -439,6 +414,10 @@ def main() -> None:
     - After 5 attempts, display results page
     """
     initialize_session_state()
+
+    # Auto-start the game in development
+    if st.session_state.game_state == GameState.READY_TO_PLAY:
+        start_callback()
 
     if st.session_state.game_state == GameState.READY_TO_PLAY:
         _, col2, _ = st.columns([1, 2, 1])

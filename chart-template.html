@@ -116,15 +116,22 @@
       const chart = LightweightCharts.createChart(
         document.getElementById('container'),
         {
+          width: document.getElementById('container').offsetWidth,
+          height: document.getElementById('container').offsetHeight,
           layout: {
             background: { color: 'rgba(14, 17, 23, 1)' },
-            textColor: 'rgba(200, 200, 200, 0.8)',
-            fontSize: 12,
-            fontFamily: 'Arial, sans-serif'
+            textColor: '#DDD',
+          },
+          timeScale: {
+            rightOffset: 12,
+            barSpacing: 3,
+            fixLeftEdge: true,
+            fixRightEdge: true,
+            minBarSpacing: 2,
           },
           grid: {
-            vertLines: { color: 'rgba(255, 255, 255, 0.1)' },
-            horzLines: { color: 'rgba(255, 255, 255, 0.1)' }
+            vertLines: { color: 'rgba(42, 46, 57, 0.5)' },
+            horzLines: { color: 'rgba(42, 46, 57, 0.5)' },
           },
           crosshair: {
             vertLine: {
@@ -139,11 +146,6 @@
             }
           },
           priceScale: { borderColor: 'rgba(255, 255, 255, 0.2)', mode: 0 },
-          timeScale: {
-            borderColor: 'rgba(255, 255, 255, 0.2)',
-            timeVisible: true,
-            secondsVisible: false
-          }
         }
       );
 
@@ -228,6 +230,16 @@ C: ${myPriceFormatter(data.close)}`;
           value: (d.close + d.open) / 2
         }));
         areaSeries.setData(lineData);
+        
+        // Dynamic bar spacing based on data length
+        const totalBars = data.length;
+        const containerWidth = chart.timeScale().width();
+        const optimalSpacing = Math.max(2, Math.floor(containerWidth / totalBars));
+        
+        chart.timeScale().applyOptions({
+          barSpacing: optimalSpacing,
+          rightOffset: 12
+        });
         chart.timeScale().fitContent();
       }
 

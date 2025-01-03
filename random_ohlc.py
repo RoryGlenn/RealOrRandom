@@ -104,29 +104,30 @@ class RandomOHLC:
         """
         Resample a DataFrame from 1-minute intervals to a specified timeframe
         and convert the index to Unix timestamps.
-
-        Parameters
-        ----------
-        df : pd.DataFrame
-            The input DataFrame to resample.
-        time_interval : str
-            The desired resampling interval (e.g., '1D', '1H').
-
-        Returns
-        -------
-        pd.DataFrame
-            Resampled DataFrame with the index as Unix timestamps.
         """
         candlebar_aggregations = {
-            "open": "first",
-            "high": "max",
-            "low": "min",
-            "close": "last",
+            "open": "first",    # First price in the interval
+            "high": "max",      # Highest price in the interval
+            "low": "min",       # Lowest price in the interval
+            "close": "last",    # Last price in the interval
+            "volume": "sum" if "volume" in df.columns else None,  # Sum volume if it exists
         }
+        # Remove None values from aggregations
+        candlebar_aggregations = {k: v for k, v in candlebar_aggregations.items() if v is not None}
+
         # Resample data to the specified interval
         resampled = (
-            df.resample(time_interval).aggregate(candlebar_aggregations).round(2)
+            df.resample(
+                rule=time_interval,
+                closed='left',     # Include left boundary of interval
+                label='left',      # Use start of interval as label
+                offset='0min'      # Start intervals at exact timestamps
+            )
+            .agg(candlebar_aggregations)
+            .dropna()             # Remove any intervals without data
+            .round(2)
         )
+
         # Convert the index from datetime to Unix timestamp
         resampled.index = resampled.index.map(lambda ts: int(ts.timestamp()))
         return resampled
