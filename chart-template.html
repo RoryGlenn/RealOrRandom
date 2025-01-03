@@ -1,161 +1,200 @@
 <!DOCTYPE html>
 <html>
-
-<head>
+  <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1.0,maximum-scale=1.0,minimum-scale=1.0"
+    />
     <title>Lightweight Charts with Area Under Candlesticks</title>
-    <script type="text/javascript"
-        src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
+    <script
+      type="text/javascript"
+      src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"
+    ></script>
+
     <style>
-        body {
-            padding: 0;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-        }
+      body {
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        height: 100vh;
+      }
 
-        #chart-container {
-            flex: 1;
-            position: relative;
-            height: "auto";
-        }
+      #container {
+        flex: 1;
+        position: relative;
+        height: auto;
+      }
 
-        #buttons-container {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin: 10px;
-        }
+      button {
+        padding: 10px 20px;
+        font-size: 14px;
+        background-color: rgba(56, 33, 110, 0.6);
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
 
-        button {
-            padding: 10px 20px;
-            font-size: 14px;
-            background-color: rgba(56, 33, 110, 0.6);
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
+      button:hover {
+        background-color: rgba(56, 33, 110, 0.8);
+      }
 
-        button:hover {
-            background-color: rgba(56, 33, 110, 0.8);
-        }
+      .buttons-container {
+        display: flex;
+        flex-direction: row;
+        gap: 8px;
+        padding: 16px;
+        position: fixed;
+        top: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(14, 17, 23, 1);
+        z-index: 999;
+        border-radius: 0 0 8px 8px;
+        width: auto;
+      }
+
+      .buttons-container button {
+        all: initial;
+        font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto,
+          Ubuntu, sans-serif;
+        font-size: 16px;
+        font-style: normal;
+        font-weight: 510;
+        line-height: 24px;
+
+        letter-spacing: -0.32px;
+        padding: 8px 24px;
+        color: rgba(19, 23, 34, 1);
+        background-color: rgba(240, 243, 250, 1);
+        border-radius: 8px;
+        cursor: pointer;
+      }
+
+      .buttons-container button:hover {
+        background-color: rgba(224, 227, 235, 1);
+      }
+
+      .buttons-container button:active {
+        background-color: rgba(209, 212, 220, 1);
+      }
     </style>
-</head>
+  </head>
 
-<body>
-    <div id="buttons-container"></div>
-    <div id="chart-container"></div>
-
+  <body>
+    <div id="container"></div>
+    <div class="buttons-container" id="buttons-container"></div>
+    
     <script type="text/javascript">
+      const currentLocale = window.navigator.languages[0]
+      const myPriceFormatter = Intl.NumberFormat(currentLocale, {
+        style: 'currency',
+        currency: 'USD'
+      }).format
 
-        const currentLocale = window.navigator.languages[0];
-        const myPriceFormatter = Intl.NumberFormat(currentLocale, {
-            style: 'currency',
-            currency: 'USD',
-        }).format;
-
-        const chart = LightweightCharts.createChart(
-            document.getElementById("chart-container"), {
-            layout: {
-                background: {color: "rgba(14, 17, 23, 1)"},
-                textColor: "rgba(200, 200, 200, 0.8)",
-                fontSize: 12,
-                fontFamily: "Arial, sans-serif",
+      const chart = LightweightCharts.createChart(
+        document.getElementById('container'),
+        {
+          layout: {
+            background: { color: 'rgba(14, 17, 23, 1)' },
+            textColor: 'rgba(200, 200, 200, 0.8)',
+            fontSize: 12,
+            fontFamily: 'Arial, sans-serif'
+          },
+          grid: {
+            vertLines: { color: 'rgba(255, 255, 255, 0.1)' },
+            horzLines: { color: 'rgba(255, 255, 255, 0.1)' }
+          },
+          crosshair: {
+            vertLine: {
+              color: 'rgba(200, 200, 200, 0.5)',
+              width: 1,
+              style: 0
             },
-            grid: {
-                vertLines: {color: "rgba(255, 255, 255, 0.1)"},
-                horzLines: {color: "rgba(255, 255, 255, 0.1)"},
-            },
-            crosshair: {
-                vertLine: {
-                    color: "rgba(200, 200, 200, 0.5)",
-                    width: 1,
-                    style: 0,
-                },
-                horzLine: {
-                    color: "rgba(200, 200, 200, 0.5)",
-                    width: 1,
-                    style: 0,
-                },
-            },
-            priceScale: {borderColor: 'rgba(255, 255, 255, 0.2)', mode: 0},
-            timeScale: {
-                borderColor: "rgba(255, 255, 255, 0.2)",
-                timeVisible: true,
-                secondsVisible: false,
-            },
-        });
-
-        chart.applyOptions({
-            crosshair: {
-                mode: LightweightCharts.CrosshairMode.Normal,
-                vertLine: {width: 8, color: '#C3BCDB44', labelBackgroundColor: '#9B7DFF'},
-                horzLine: {color: '#9B7DFF', labelBackgroundColor: '#9B7DFF'},
-            },
-            localization: {priceFormatter: myPriceFormatter},
-        });
-
-
-        const seriesesData = new Map([
-            ['1D', day_data],
-            // ['1W', week_data],
-            // ['1ME', month_data]
-        ]);
-
-        // console.log("Day data:", day_data );
-
-        // Add an area series first so the purple area is underneath the candlestick bars
-        const areaSeries = chart.addAreaSeries({
-            lastValueVisible: false,
-            crosshairMarkerVisible: false,
-            lineColor: 'transparent',
-            topColor: 'rgba(56, 33, 110, 0.6)',
-            bottomColor: 'rgba(56, 33, 110, 0.1)',
-        });
-
-        // Add the candlestick series last so it's on top of the purple area
-        const mainSeries = chart.addCandlestickSeries();
-
-        function setChartInterval(interval) {
-            // const data = seriesesData.get(interval);
-            const data = [
-            {"time": 1704067200, "open": 10000, "high": 10583, "low": 6232, "close": 6390},
-            {"time": 1704067260, "open": 6390, "high": 8213, "low": 3709, "close": 3915},
-        ];
-            mainSeries.setData(data);
-
-            // Update area series data
-            const lineData = data.map(datapoint => ({
-                time: datapoint.time,
-                value: (datapoint.close + datapoint.open) / 2,
-            }));
-
-            areaSeries.setData(lineData);
-
-            chart.timeScale().fitContent();
-            console.log('Set chart interval to', interval);
+            horzLine: {
+              color: 'rgba(200, 200, 200, 0.5)',
+              width: 1,
+              style: 0
+            }
+          },
+          priceScale: { borderColor: 'rgba(255, 255, 255, 0.2)', mode: 0 },
+          timeScale: {
+            borderColor: 'rgba(255, 255, 255, 0.2)',
+            timeVisible: true,
+            secondsVisible: false
+          }
         }
+      );
 
-        setChartInterval('1D');
+      chart.applyOptions({
+        crosshair: {
+          mode: LightweightCharts.CrosshairMode.Normal,
+          vertLine: {
+            width: 8,
+            color: '#C3BCDB44',
+            labelBackgroundColor: '#9B7DFF'
+          },
+          horzLine: { color: '#9B7DFF', labelBackgroundColor: '#9B7DFF' }
+        },
+        localization: { priceFormatter: myPriceFormatter }
+      });
 
-        const buttonsContainer = document.getElementById('buttons-container');
-        // const intervals = ['1D', '1W', '1ME'];
-        const intervals = ['1D']
+      const seriesesData = new Map([
+        ['1D', day_data],
+        ['1W', week_data],
+        ['1ME', month_data]
+      ]);
 
-        // intervals.forEach(interval => {
-        //     const button = document.createElement('button');
-        //     button.innerText = interval;
-        //     button.addEventListener('click', () => setChartInterval(interval));
-        //     buttonsContainer.appendChild(button);
-        // });
+      // Add an area series first so the purple area is underneath the candlestick bars
+      const areaSeries = chart.addAreaSeries({
+        lastValueVisible: false,
+        crosshairMarkerVisible: false,
+        lineColor: 'transparent',
+        topColor: 'rgba(56, 33, 110, 0.6)',
+        bottomColor: 'rgba(56, 33, 110, 0.1)'
+      })
 
-        window.addEventListener("resize", () => {
-            chart.resize(window.innerWidth, document.getElementById("chart-container").offsetHeight);
+      const buttonsContainer = document.getElementById('buttons-container');
+
+      // Add the candlestick series last so it's on top of the purple area
+      const mainSeries = chart.addCandlestickSeries();
+
+      function setChartInterval(interval) {
+        const data = seriesesData.get(interval) || [];
+
+        if (data.length === 0) {
+          console.error(`No data for interval ${interval}`);
+          return;
+        }
+        mainSeries.setData(data);
+
+        const lineData = data.map(d => ({
+          time: d.time,
+          value: (d.close + d.open) / 2
+        }));
+        areaSeries.setData(lineData);
+        chart.timeScale().fitContent();
+      }
+
+      setChartInterval('1D');
+
+      const intervals = ['1D', '1W', '1ME'];
+      console.log('Creating buttons for intervals:', intervals);
+
+      intervals.forEach(interval => {
+        const button = document.createElement('button');
+        button.innerText = interval;
+        button.addEventListener('click', () => {
+          setChartInterval(interval);
         });
-    </script>
-</body>
+        console.log('Adding button for interval:', interval);
+        buttonsContainer.appendChild(button);
+      });
 
+      console.log('Button container children:', buttonsContainer.children.length);
+
+    </script>
+  </body>
 </html>

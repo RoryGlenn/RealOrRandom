@@ -30,11 +30,18 @@ with open("chart-template.html", "r", encoding="utf-8") as file:
 
 
 # TODO
-# How to append buttons to the buttons container without destroying the x-axis
 # Fix time frames not showing 1h & 4h
 
 
 class GameState:
+    """
+    Constants representing different states of the game flow.
+    
+    READY_TO_PLAY: Initial state before game starts
+    WAITING_FOR_GUESS: Waiting for user's price prediction
+    REVEAL_GUESS_RESULT: Showing if guess was correct/incorrect
+    GAME_OVER: Game completed after 5 attempts
+    """
 
     READY_TO_PLAY: int = -1
     WAITING_FOR_GUESS: int = 0
@@ -107,7 +114,7 @@ def money_to_float(money_str: str) -> float:
     return float(money_str.replace("$", "").replace(",", ""))
 
 
-def prepare_new_round(start_price: int = 10_000, num_bars: int = 90) -> None:
+def prepare_new_round(start_price: int = 10_000, days_needed: int = 90) -> None:
     """
     Prepare data and state for a new prediction round.
 
@@ -122,10 +129,10 @@ def prepare_new_round(start_price: int = 10_000, num_bars: int = 90) -> None:
     difficulty = st.session_state.difficulty
     extra_bars = difficulty_settings[difficulty]["extra_bars"]
     future_offset = difficulty_settings[difficulty]["future_offset"]
-    num_bars += extra_bars
+    days_needed += extra_bars
 
     rand_ohlc = RandomOHLC(
-        num_bars=num_bars,
+        days_needed=days_needed,
         start_price=start_price,
         volatility=random.uniform(1, 3),
         drift=random.uniform(1, 3),
@@ -133,14 +140,14 @@ def prepare_new_round(start_price: int = 10_000, num_bars: int = 90) -> None:
 
     logger.info(
         "Num Days: %d, Start Price: %d, Volatility: %.2f, Drift: %.2f",
-        rand_ohlc._num_bars,
-        rand_ohlc._start_price,
-        rand_ohlc._volatility,
-        rand_ohlc._drift,
+        rand_ohlc.days_needed,
+        rand_ohlc.start_price,
+        rand_ohlc.volatility,
+        rand_ohlc.drift,
     )
 
     ohlc_data = rand_ohlc.generate_ohlc_data()
-    num_display_bars = rand_ohlc._num_bars - extra_bars
+    num_display_bars = rand_ohlc.days_needed - extra_bars
     future_bar_index = num_display_bars + future_offset - 1
     future_price = float(ohlc_data["1D"]["close"].iloc[future_bar_index])
 
@@ -191,8 +198,8 @@ def create_candlestick_chart(data: Dict[str, pd.DataFrame]) -> None:
 
     candlestick_dict = {
         "day_data": candlestick_data["1D"],
-        # "week_data": candlestick_data["1W"],
-        # "month_data": candlestick_data["1ME"],
+        "week_data": candlestick_data["1W"],
+        "month_data": candlestick_data["1ME"],
     }
 
     html_content = html_template
