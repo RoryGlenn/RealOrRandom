@@ -74,95 +74,12 @@
       .timeframe-button.active:hover {
         background-color: rgba(56, 33, 110, 0.8) !important;
       }
-
-      .chart-toolbar {
-        position: fixed;
-        top: 0;
-        right: 20px;
-        display: flex;
-        gap: 8px;
-        padding: 8px;
-        z-index: 1000;
-      }
-
-      .indicator-button {
-        display: flex;
-        align-items: center;
-        gap: 6px;
-        padding: 6px 12px;
-        background: rgb(19, 23, 34);
-        border: 1px solid rgba(240, 243, 250, 0.1);
-        border-radius: 4px;
-        color: rgb(240, 243, 250);
-        font-family: -apple-system, BlinkMacSystemFont, 'Trebuchet MS', Roboto, Ubuntu, sans-serif;
-        font-size: 14px;
-        cursor: pointer;
-      }
-
-      .indicator-button:hover {
-        background: rgba(240, 243, 250, 0.1);
-      }
-
-      .indicator-dropdown {
-        position: absolute;
-        top: 100%;
-        right: 0;
-        background: rgb(19, 23, 34);
-        border: 1px solid rgba(240, 243, 250, 0.1);
-        border-radius: 4px;
-        padding: 4px 0;
-        min-width: 200px;
-        display: none;
-        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
-      }
-
-      .indicator-dropdown.show {
-        display: block;
-      }
-
-      .indicator-item {
-        padding: 8px 12px;
-        color: rgb(240, 243, 250);
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        cursor: pointer;
-      }
-
-      .indicator-item:hover {
-        background: rgba(240, 243, 250, 0.05);
-      }
     </style>
   </head>
 
   <body>
     <div id="container"></div>
     <div class="buttons-container" id="buttons-container"></div>
-    
-    <div class="chart-toolbar">
-      <div class="indicator-menu">
-        <button class="indicator-button">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-            <path d="M3 3v10.5h12V3H3zm9.9 9H4.5V4.5h8.4V12z"/>
-            <path d="M6 7.5h1.5V10H6z"/>
-            <path d="M9 5.5h1.5V10H9z"/>
-          </svg>
-          Indicators
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
-            <path d="M7 10l5 5 5-5" stroke-width="2" stroke-linecap="round"/>
-          </svg>
-        </button>
-        <div class="indicator-dropdown">
-          <div class="indicator-item" data-indicator="MA">
-            <svg width="18" height="18" viewBox="0 0 18 18" fill="currentColor">
-              <path d="M3 9h12M3 4.5h12M3 13.5h12"/>
-            </svg>
-            Moving Average
-          </div>
-          <!-- Add more indicators as needed -->
-        </div>
-      </div>
-    </div>
     
     <script type="text/javascript">
       const currentLocale = window.navigator.languages[0]
@@ -330,72 +247,6 @@
           setChartInterval(interval);
         });
       });
-
-      // Add indicator button functionality
-      const indicatorButton = document.querySelector('.indicator-button');
-      const indicatorDropdown = document.querySelector('.indicator-dropdown');
-
-      // Toggle dropdown when clicking the indicator button
-      indicatorButton.addEventListener('click', (e) => {
-        e.stopPropagation();
-        indicatorDropdown.classList.toggle('show');
-      });
-
-      // Close dropdown when clicking outside
-      document.addEventListener('click', (e) => {
-        if (!e.target.closest('.indicator-menu')) {
-          indicatorDropdown.classList.remove('show');
-        }
-      });
-
-      // Add MA line series
-      const ma30Series = chart.addLineSeries({
-        color: '#9B7DFF',
-        lineWidth: 2,
-        title: 'MA(30)',
-        priceLineVisible: false,
-        lastValueVisible: false,
-        visible: false
-      });
-
-      // Handle indicator selection
-      document.querySelector('.indicator-item').addEventListener('click', (e) => {
-        const indicator = e.currentTarget.dataset.indicator;
-        if (indicator === 'MA') {
-          const isVisible = !ma30Series.options().visible;
-          ma30Series.applyOptions({ visible: isVisible });
-          
-          // Update MA data if visible
-          if (isVisible) {
-            const data = seriesesData.get(
-              document.querySelector('.timeframe-button.active').dataset.interval
-            );
-            const maData = data.map((d, i, arr) => {
-              if (i < 9) return { time: d.time, value: null };
-              const sum = arr.slice(i - 9, i + 1).reduce((a, b) => a + b.close, 0);
-              return { time: d.time, value: sum / 10 };
-            });
-            ma30Series.setData(maData);
-          }
-        }
-        indicatorDropdown.classList.remove('show');
-      });
-
-      // Update MA when changing timeframes
-      const originalSetChartInterval = setChartInterval;
-      setChartInterval = function(interval) {
-        originalSetChartInterval(interval);
-        
-        if (ma30Series.options().visible) {
-          const data = seriesesData.get(interval);
-          const maData = data.map((d, i, arr) => {
-            if (i < 29) return { time: d.time, value: null };
-            const sum = arr.slice(i - 29, i + 1).reduce((a, b) => a + b.close, 0);
-            return { time: d.time, value: sum / 30 };
-          });
-          ma30Series.setData(maData);
-        }
-      };
 
     </script>
   </body>
