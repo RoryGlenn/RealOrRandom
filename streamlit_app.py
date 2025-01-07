@@ -23,8 +23,9 @@ The game supports three difficulty levels:
 - Hard: Predict price 30 days ahead
 """
 
-# Standard library
+# Standard library imports
 from datetime import datetime
+from functools import wraps
 import json
 import logging
 import os
@@ -32,20 +33,20 @@ import platform
 import random
 import socket
 import time
-from functools import wraps
 from typing import Any, Callable, Dict, List
 
-# Third-party
+# Third-party imports
 import pandas as pd
 import plotly.graph_objects as go
 import psutil
 import streamlit as st
 from streamlit.components.v1 import html
 
-# Local
-from random_ohlc import RandomOHLC
+# Local imports
 from database import init_db, store_game_results
+from random_ohlc import RandomOHLC
 
+# Initialize Streamlit configuration
 st.set_page_config(layout="wide", page_title="Stock Prediction Game")
 
 # Initialize logging
@@ -115,13 +116,6 @@ def all_values_same(dict_dfs: dict) -> bool:
     -------
     bool
         True if all values match across timeframes, False otherwise.
-
-    Notes
-    -----
-    Logs detailed information about any mismatches found, including:
-    - Timestamp of mismatch
-    - Column where mismatch occurred
-    - Values and their corresponding timeframes
     """
     try:
         df_concat = pd.concat(dict_dfs, axis=1, join="inner", keys=dict_dfs.keys())
@@ -130,7 +124,6 @@ def all_values_same(dict_dfs: dict) -> bool:
         return False
 
     col_level_names = df_concat.columns.levels[1]  # OHLC column names
-    all_good = True
     mismatches_by_interval = {}
 
     for col_name in col_level_names:
@@ -139,30 +132,50 @@ def all_values_same(dict_dfs: dict) -> bool:
         mismatches = rowwise_uniques[rowwise_uniques > 1]
 
         if not mismatches.empty:
-            all_good = False
-            for row_idx in mismatches.index:
-                values = sub_df.loc[row_idx].to_dict()
-                # Group values by their actual value to see which intervals match
-                by_value = {}
-                for interval, value in values.items():
-                    by_value.setdefault(value, []).append(interval)
+            _log_mismatches(mismatches, sub_df, col_name, mismatches_by_interval)
+            return False
 
-                if row_idx not in mismatches_by_interval:
-                    mismatches_by_interval[row_idx] = {}
-                mismatches_by_interval[row_idx][col_name] = by_value
+    logger.info("All OHLC values are consistent across timeframes")
+    return True
 
-    if not all_good:
-        logger.error("Found mismatches in the following timeframes:")
-        for timestamp, cols in mismatches_by_interval.items():
-            logger.error("At timestamp %s:", timestamp)
-            for col, grouped_values in cols.items():
-                logger.error("  Column '%s':", col)
-                for value, intervals in grouped_values.items():
-                    logger.error("    Value %.2f in intervals: %s", value, intervals)
-    else:
-        logger.info("All OHLC values are consistent across timeframes")
 
-    return all_good
+def _log_mismatches(
+    mismatches: pd.Series,
+    sub_df: pd.DataFrame,
+    col_name: str,
+    mismatches_by_interval: Dict[str, Dict[str, Dict[float, List[str]]]],
+) -> None:
+    """
+    Log details about mismatched values across different timeframes.
+
+    Parameters
+    ----------
+    mismatches : pd.Series
+        Series containing indices where mismatches were found.
+    sub_df : pd.DataFrame
+        DataFrame containing the data for a specific OHLC column.
+    col_name : str
+        Name of the OHLC column being checked (open, high, low, close).
+    mismatches_by_interval : Dict[str, Dict[str, Dict[float, List[str]]]]
+        Dictionary to store mismatch information organized by timestamp and column.
+    """
+    for row_idx in mismatches.index:
+        values = sub_df.loc[row_idx].to_dict()
+        by_value = {}
+        for interval, value in values.items():
+            by_value.setdefault(value, []).append(interval)
+
+        if row_idx not in mismatches_by_interval:
+            mismatches_by_interval[row_idx] = {}
+        mismatches_by_interval[row_idx][col_name] = by_value
+
+    logger.error("Found mismatches in the following timeframes:")
+    for timestamp, cols in mismatches_by_interval.items():
+        logger.error("At timestamp %s:", timestamp)
+        for col, grouped_values in cols.items():
+            logger.error("  Column '%s':", col)
+            for value, intervals in grouped_values.items():
+                logger.error("    Value %.2f in intervals: %s", value, intervals)
 
 
 class GameState:
@@ -187,6 +200,27 @@ class GameState:
     WAITING_FOR_GUESS: int = 0
     REVEAL_GUESS_RESULT: int = 1
     GAME_OVER: int = 2
+
+    @classmethod
+    def is_valid_state(cls, state: int) -> bool:
+        """Check if a given state is valid."""
+        return state in {
+            cls.READY_TO_PLAY,
+            cls.WAITING_FOR_GUESS,
+            cls.REVEAL_GUESS_RESULT,
+            cls.GAME_OVER,
+        }
+
+    @classmethod
+    def get_state_name(cls, state: int) -> str:
+        """Get the name of a game state."""
+        state_names = {
+            cls.READY_TO_PLAY: "Ready to Play",
+            cls.WAITING_FOR_GUESS: "Waiting for Guess",
+            cls.REVEAL_GUESS_RESULT: "Revealing Result",
+            cls.GAME_OVER: "Game Over",
+        }
+        return state_names.get(state, "Unknown State")
 
 
 def timeit(func: Callable) -> Callable:
@@ -234,20 +268,26 @@ def initialize_session_state() -> None:
     Initializes the following session state variables:
     - difficulty : str
         Game difficulty level ('Easy', 'Medium', 'Hard')
-    - score : dict
+    - score : Dict[str, int]
         Tracks correct and wrong guesses
     - game_state : GameState
         Current state of the game flow
-    - data : dict
+    - data : Dict[str, pd.DataFrame]
         OHLC data for all timeframes
     - future_price : str
         Target price to predict
-    - choices : list
+    - choices : List[str]
         Available price choices for the user
-    - user_choice : str
+    - user_choice : Optional[str]
         User's selected price prediction
     - active_interval : str
         Currently displayed timeframe
+    - system_info : Dict[str, Any]
+        System information for logging
+    - guesses : List[Tuple[int, str, str]]
+        History of user's guesses
+    - msg : Optional[str]
+        Current game message to display
     """
     # Initialize all basic variables first
     if "difficulty" not in st.session_state:
@@ -271,10 +311,9 @@ def initialize_session_state() -> None:
     if "system_info" not in st.session_state:
         st.session_state.system_info = get_system_info()
 
-    # Auto-start only after all variables are initialized
+    # Initialize game state to READY_TO_PLAY
     if "game_state" not in st.session_state:
-        st.session_state.game_state = GameState.WAITING_FOR_GUESS
-        prepare_new_round()
+        st.session_state.game_state = GameState.READY_TO_PLAY
 
 
 def money_to_float(money_str: str) -> float:
@@ -290,6 +329,11 @@ def money_to_float(money_str: str) -> float:
     -------
     float
         Numeric value without currency formatting.
+
+    Examples
+    --------
+    >>> money_to_float("$1,234.56")
+    1234.56
     """
     return float(money_str.replace("$", "").replace(",", ""))
 
@@ -311,10 +355,14 @@ def prepare_new_round(start_price: int = 10_000, days_needed: int = 90) -> None:
     Notes
     -----
     The function:
-    1. Adjusts data generation based on difficulty
-    2. Creates synthetic OHLC data
+    1. Adjusts data generation based on difficulty level:
+       - Easy: 1 day ahead
+       - Medium: 7 days ahead
+       - Hard: 30 days ahead
+    2. Creates synthetic OHLC data using RandomOHLC
     3. Selects a future price target
-    4. Generates multiple choice options
+    4. Generates multiple choice options within ±10% of target
+    5. Updates session state with new data and choices
     """
     difficulty_settings = {
         "Easy": {"extra_bars": 1, "future_offset": 1},
@@ -376,7 +424,13 @@ def convert_df_to_candlestick_list(df: pd.DataFrame) -> List[Dict[str, Any]]:
     -------
     List[Dict[str, Any]]
         List of dictionaries with format suitable for candlestick charts.
-        Each dict contains: time, open, high, low, close.
+        Each dict contains: time, open, high, low, close, ma30.
+
+    Notes
+    -----
+    - Calculates 30-day moving average
+    - Converts time index to numeric format
+    - Ensures all numeric columns are float type
     """
     _df = df.copy()
 
@@ -411,13 +465,13 @@ def create_candlestick_chart(data: Dict[str, pd.DataFrame]) -> None:
     - Monthly
 
     The chart includes:
-    - Candlestick display
-    - Timeframe selection
+    - Candlestick display with purple area underneath
+    - Timeframe selection buttons
     - Price tooltips
     - Interactive navigation
     - Time display on x-axis (HH:MM format for intraday)
+    - Dynamic bar spacing based on data length
     """
-
     candlestick_data = {
         timeframe: convert_df_to_candlestick_list(df) for timeframe, df in data.items()
     }
@@ -454,10 +508,16 @@ def create_candlestick_chart(data: Dict[str, pd.DataFrame]) -> None:
 
 def display_score() -> None:
     """
-    Display the current game score.
+    Display the current game score in the Streamlit interface.
 
     Shows the number of correct and incorrect price predictions
     made by the user in the current session.
+
+    Notes
+    -----
+    Uses Streamlit's st.write() to display:
+    - Number of correct predictions
+    - Number of incorrect predictions
     """
     st.subheader("Score")
     st.write(f"Correct: {st.session_state.score['right']}")
@@ -465,7 +525,20 @@ def display_score() -> None:
 
 
 def submit_callback() -> None:
-    """Process user's price prediction submission."""
+    """
+    Process user's price prediction submission.
+
+    Updates the game state and score based on the user's prediction:
+    - Compares user's choice with actual future price
+    - Updates score (right/wrong counts)
+    - Updates game state (reveal result or game over)
+    - Stores guess history
+
+    Notes
+    -----
+    Game ends after 5 attempts, transitioning to GAME_OVER state.
+    Otherwise, transitions to REVEAL_GUESS_RESULT state.
+    """
     user_choice = st.session_state.user_choice
     future_price = st.session_state.future_price
 
@@ -515,6 +588,12 @@ def start_callback() -> None:
 
     Resets game state and generates new price data based on
     selected difficulty level.
+
+    Notes
+    -----
+    Updates session state:
+    - game_state : Set to WAITING_FOR_GUESS
+    - Triggers initial data generation via prepare_new_round()
     """
     st.session_state.game_state = GameState.WAITING_FOR_GUESS
     prepare_new_round()
@@ -531,6 +610,7 @@ def pregame_callback() -> None:
     -----
     - Clears entire session state
     - Calls initialize_session_state() for fresh setup
+    - Returns game to READY_TO_PLAY state
     """
     st.session_state.clear()
     initialize_session_state()
@@ -541,9 +621,21 @@ def show_results_page() -> None:
     Display the final game results page.
 
     Shows:
-    - Final score
-    - Success rate
+    - Final score and accuracy
+    - Table of all guesses and actual prices
+    - Interactive plot comparing guesses to actual prices
+    - Performance feedback message
     - Option to start a new game
+
+    Notes
+    -----
+    - Calculates accuracy as (correct guesses / total attempts) * 100
+    - Calculates average absolute error between guesses and actual prices
+    - Provides different feedback messages based on performance:
+      * > 3 correct: Suggests trying harder difficulty
+      * 0 correct: Encourages trying again
+      * Otherwise: Offers general encouragement
+    - Logs game results to database and backup JSON file
     """
     st.markdown("## Final Results")
     st.write("You have completed 5 attempts.")
@@ -594,16 +686,17 @@ def show_results_page() -> None:
 
     st.plotly_chart(fig, use_container_width=True)
 
-    if st.session_state.score["right"] > 3:
-        st.write(
-            "**Great job!** You got most of them right. Consider trying a harder difficulty next time!"
-        )
-    elif st.session_state.score["right"] == 0:
-        st.write(
+    message = (
+        "**Great job!** You got most of them right. Consider trying a harder "
+        "difficulty next time!"
+        if st.session_state.score["right"] > 3
+        else (
             "**Tough luck this time!** Consider trying again to improve your accuracy."
+            if st.session_state.score["right"] == 0
+            else "You did okay! With a bit more practice, you might do even better."
         )
-    else:
-        st.write("You did okay! With a bit more practice, you might do even better.")
+    )
+    st.write(message)
 
     st.button("Go Back to Start", on_click=pregame_callback)
 
@@ -612,7 +705,25 @@ def show_results_page() -> None:
 
 
 def log_game_results() -> None:
-    """Store game results in database and log file."""
+    """
+    Store game results in database and log file.
+
+    Saves the following information:
+    - Timestamp of game completion
+    - Difficulty level used
+    - Final score
+    - History of guesses
+    - Performance metrics
+    - System information
+
+    Notes
+    -----
+    - Primary storage is in SQLite database via store_game_results()
+    - Backup storage in JSON file at logs/game_history.json
+    - Creates logs directory if it doesn't exist
+    - Appends to existing JSON file if present
+    - Handles storage failures gracefully with logging
+    """
     results = {
         "timestamp": datetime.now().isoformat(),
         "difficulty": st.session_state.difficulty,
@@ -636,16 +747,13 @@ def log_game_results() -> None:
     log_file = "logs/game_history.json"
     try:
         if os.path.exists(log_file):
-            with open(log_file, "r") as f:
+            with open(log_file, "r", encoding="utf-8") as f:
                 history = json.load(f)
         else:
             history = []
-
         history.append(results)
-
-        with open(log_file, "w") as f:
+        with open(log_file, "w", encoding="utf-8") as f:
             json.dump(history, f, indent=2)
-
         logger.info("Game results logged to JSON file")
     except Exception as e:  # pylint: disable=broad-exception-caught
         logger.error("Failed to log results to JSON file: %s", e)
@@ -654,22 +762,39 @@ def log_game_results() -> None:
 def main() -> None:
     """
     Main entry point of the Streamlit app.
+
+    Controls the game flow and user interface based on the current game state:
+    - READY_TO_PLAY: Shows welcome screen and difficulty selection
+    - GAME_OVER: Shows final results page
+    - Other states: Shows game interface with chart and controls
+
+    Notes
+    -----
+    Game Interface Components:
+    - Multi-timeframe candlestick chart
+    - Current score display
+    - Price prediction interface
+    - Submit/Next buttons based on state
+    - Success/Error messages for predictions
+
+    Game Flow:
+    1. Welcome screen with difficulty selection
+    2. Main game loop with price predictions
+    3. Results page after 5 attempts
+    4. Option to start new game
     """
     initialize_session_state()
-
-    # Auto-start the game in development
-    if st.session_state.game_state == GameState.READY_TO_PLAY:
-        start_callback()
 
     if st.session_state.game_state == GameState.READY_TO_PLAY:
         _, col2, _ = st.columns([1, 2, 1])
         with col2:
             st.markdown("## Welcome to the **Ultimate Stock Prediction Challenge**!")
-            st.write(
+            welcome_text = (
                 "You've just joined the analytics team at a top trading firm. "
-                "To prove your skills, you'll be shown the last 90 days of a stock's prices. "
-                "Your mission? **Predict the future closing price!**"
+                "To prove your skills, you'll be shown the last 90 days of a "
+                "stock's prices. Your mission? **Predict the future closing price!**"
             )
+            st.write(welcome_text)
 
             st.markdown(
                 """
@@ -680,9 +805,11 @@ def main() -> None:
                 """
             )
 
-            st.write(
-                "Can you outsmart the market and achieve the highest accuracy possible? Select a difficulty and press **Start Game** to find out!"
+            game_prompt = (
+                "Can you outsmart the market and achieve the highest accuracy "
+                "possible? Select a difficulty and press **Start Game** to find out!"
             )
+            st.write(game_prompt)
 
             st.session_state.difficulty = st.radio(
                 "Choose your difficulty:", ["Easy", "Medium", "Hard"], index=0

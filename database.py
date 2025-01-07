@@ -1,9 +1,11 @@
 """Database operations for storing game results."""
 
+# Standard library imports
 import logging
 import sqlite3
-from typing import Dict, Any
+from typing import Any, Dict
 
+# Configure logging
 logger = logging.getLogger(__name__)
 
 

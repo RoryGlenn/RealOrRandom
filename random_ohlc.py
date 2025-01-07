@@ -15,22 +15,22 @@ The data generation process uses Geometric Brownian Motion (GBM) with configurab
 volatility and drift parameters to create realistic price movements.
 """
 
-# Standard library
+# Standard library imports
 from datetime import datetime
 from logging import getLogger
 from typing import Dict
 
-# Third-party
+# Third-party imports
 import numpy as np
 import pandas as pd
 
-
+# Configure pandas display options
 pd.options.display.float_format = "{:.2f}".format
 
-
+# Configure logging
 logger = getLogger(__name__)
 
-
+# Constants
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 
