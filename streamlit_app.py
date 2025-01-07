@@ -60,7 +60,7 @@ logger = logging.getLogger(__name__)
 try:
     init_db()
     logger.info("Database initialized successfully")
-except Exception as e:
+except Exception as e:  # pylint: disable=broad-exception-caught
     logger.error("Failed to initialize database: %s", e)
 
 # Load HTML template
@@ -97,7 +97,7 @@ def get_system_info() -> Dict[str, Any]:
         logger.info("System info collected successfully")
         return system_info
 
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         logger.error("Error collecting system info: %s", e)
         return {"error": str(e)}
 
@@ -379,10 +379,10 @@ def convert_df_to_candlestick_list(df: pd.DataFrame) -> List[Dict[str, Any]]:
         Each dict contains: time, open, high, low, close.
     """
     _df = df.copy()
-    
+
     # Calculate 30-day MA
-    _df['ma30'] = _df['close'].rolling(window=30).mean()
-    
+    _df["ma30"] = _df["close"].rolling(window=30).mean()
+
     _df["time"] = _df.index
     numeric_cols = ["open", "high", "low", "close", "ma30"]
     _df[numeric_cols] = _df[numeric_cols].astype(float)
@@ -473,7 +473,9 @@ def submit_callback() -> None:
         st.warning("Please select a price before submitting.")
         return
 
-    total_attempts = st.session_state.score["right"] + st.session_state.score["wrong"] + 1
+    total_attempts = (
+        st.session_state.score["right"] + st.session_state.score["wrong"] + 1
+    )
     st.session_state.guesses.append((total_attempts, user_choice, future_price))
 
     if user_choice == future_price:
@@ -622,13 +624,13 @@ def log_game_results() -> None:
         },
         "system_info": st.session_state.system_info,
     }
-    
+
     # Store in database
     if store_game_results(results):
         logger.info("Game results stored in database successfully")
     else:
         logger.warning("Failed to store results in database, falling back to JSON")
-    
+
     # Also keep JSON logging for backup
     os.makedirs("logs", exist_ok=True)
     log_file = "logs/game_history.json"
@@ -638,14 +640,14 @@ def log_game_results() -> None:
                 history = json.load(f)
         else:
             history = []
-            
+
         history.append(results)
-        
+
         with open(log_file, "w") as f:
             json.dump(history, f, indent=2)
-            
+
         logger.info("Game results logged to JSON file")
-    except Exception as e:
+    except Exception as e:  # pylint: disable=broad-exception-caught
         logger.error("Failed to log results to JSON file: %s", e)
 
 
